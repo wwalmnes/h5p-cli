@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function commitCommand(): Command {
   return new Command('commit')
@@ -6,7 +7,6 @@ export function commitCommand(): Command {
     .argument('<message>', 'Commit message')
     .argument('[libraries...]', 'Library names')
     .action((message: string, libraries: string[]) => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const lf = '\u000A';
       const color = { default: '\x1B[0m', emphasize: '\x1B[1m' };
 

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import buildLibraries from '../../../assets/utils/commands/build-libraries';
 
 export function buildCommand(): Command {
   return new Command('build')
@@ -6,10 +7,9 @@ export function buildCommand(): Command {
     .argument('<libraries...>', 'Library names')
     .option('-t', 'Run tests')
     .action((libraries: string[], options: { t?: boolean }) => {
-      const buildLibraries = require('../../../assets/utils/commands/build-libraries.js') as any;
       const args: string[] = [];
       if (options.t) args.push('-t');
       args.push(...libraries);
-      buildLibraries.apply(null, args);
+      buildLibraries(...args);
     });
 }

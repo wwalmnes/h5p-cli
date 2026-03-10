@@ -1,15 +1,9 @@
-const output = require('../utility/output');
-const Input = require('../utility/input');
-const translation = require('../utility/translation');
+import * as output from '../utility/output';
+import Input from '../utility/input';
+import * as translation from '../utility/translation';
 
-/**
- * Exports function for checking translations of libraries against standard language.
- * May supply flag for showing diff.
- *
- * @param {Array} inputList
- */
-module.exports = function (...inputList) {
-  return new Promise ((resolve, reject) => {
+const checkTranslations = function (...inputList: string[]): Promise<void> {
+  return new Promise((resolve, reject) => {
     const input = new Input(inputList);
     const diff = input.hasFlag('-diff');
     input.init()
@@ -19,8 +13,8 @@ module.exports = function (...inputList) {
         const languages = input.getLanguages();
         translation.validateTranslation(libraries, languages)
           .then((result) => {
-            for (let lib of result) {
-              for (let comp of lib) {
+            for (const lib of result) {
+              for (const comp of lib) {
                 outputComparison(diff, comp);
                 if (comp.failed) {
                   ok = false;
@@ -38,17 +32,13 @@ module.exports = function (...inputList) {
   });
 };
 
-/**
- * Output result of comparison
- *
- * @param {boolean} diff If true it will output diffs
- * @param {Object} comparison Comparison of languages
- */
-const outputComparison = (diff, comparison) => {
+const outputComparison = (diff: boolean, comparison: any): void => {
   output.printResults(comparison);
   if (diff && Array.isArray(comparison.errors)) {
-    comparison.errors.forEach(err => {
+    comparison.errors.forEach((err: string) => {
       output.printError(err);
-    })
+    });
   }
 };
+
+export default checkTranslations;

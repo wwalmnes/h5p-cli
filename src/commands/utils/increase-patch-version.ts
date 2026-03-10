@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function increasePatchVersionCommand(): Command {
   return new Command('increase-patch-version')
@@ -6,7 +7,6 @@ export function increasePatchVersionCommand(): Command {
     .argument('[libraries...]', 'Library names')
     .option('-f', 'Force increase even if no new changes')
     .action((libraries: string[], options: { f?: boolean }) => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const lf = '\u000A';
       const color = { default: '\x1B[0m', emphasize: '\x1B[1m', green: '\x1B[32m', yellow: '\x1B[33m', red: '\x1B[31m' };
 

@@ -1,4 +1,7 @@
 import { Command } from 'commander';
+import pack from '../../../assets/utils/commands/pack';
+import validate from '../../../assets/utils/commands/validate';
+import Input from '../../../assets/utils/utility/input';
 
 export function packCommand(): Command {
   return new Command('pack')
@@ -7,10 +10,6 @@ export function packCommand(): Command {
     .option('-r', 'Recursive packaging')
     .option('-f', 'Skip library validation')
     .action(async (libraries: string[], options: { r?: boolean; f?: boolean }) => {
-      const pack = require('../../../assets/utils/commands/pack.js') as any;
-      const validate = require('../../../assets/utils/commands/validate.js') as any;
-      const Input = require('../../../assets/utils/utility/input.js') as any;
-
       const inputList: string[] = [];
       if (options.r) inputList.push('-r');
       if (options.f) inputList.push('-f');
@@ -19,14 +18,14 @@ export function packCommand(): Command {
       try {
         const input = new Input(inputList);
         if (!input.hasFlag('-f')) {
-          const result = await validate.apply(null, inputList);
+          const result = await validate(...inputList);
           const notValid = result.some((item: any) => item.status !== 'ok');
           if (notValid) {
             console.log('validation failed; use \'-f\' to skip validation');
             return;
           }
         }
-        pack.apply(null, inputList);
+        pack(...inputList);
       } catch (error: any) {
         console.log(error.message);
       }

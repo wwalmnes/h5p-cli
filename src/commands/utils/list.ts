@@ -1,10 +1,10 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function utilsListCommand(): Command {
   return new Command('list')
     .description('List all H5P libraries')
     .action(() => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const color = {
         default: '\x1B[0m',
         emphasize: '\x1B[1m',

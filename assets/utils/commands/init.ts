@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import readline from 'readline';
 
 const libraryJson = {
   "title": "ChangeMe",
@@ -31,8 +31,8 @@ const h5pignore = `node_modules
 package.json
 README.md`;
 
-const createLibraryJson = function(answers) {
-  let extendedLibrary =
+const createLibraryJson = function(answers: any) {
+  const extendedLibrary =
     Object.assign({}, libraryJson, {
       title: answers.title,
       description: answers.description,
@@ -50,21 +50,21 @@ const createLibraryJson = function(answers) {
   );
 };
 
-const createSemanticsJson = function(dir) {
+const createSemanticsJson = function(dir: string) {
   fs.writeFileSync(
     path.resolve(dir, 'semantics.json'),
     JSON.stringify(semantics, null, 2)
   );
 };
 
-const createH5PIgnore = function(dir) {
+const createH5PIgnore = function(dir: string) {
   fs.writeFileSync(
     path.resolve(dir, '.h5pignore'),
     h5pignore
   );
 };
 
-const createDir = function(dir) {
+const createDir = function(dir: string) {
   let dirExists = false;
   try {
     dirExists = fs.statSync(dir).isDirectory();
@@ -77,7 +77,7 @@ const createDir = function(dir) {
   }
 };
 
-const askQuestion = function(prompt) {
+const askQuestion = function(prompt: string): Promise<string> {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -95,8 +95,7 @@ const askQuestion = function(prompt) {
  * Initialize H5P library in given directory
  */
 function init() {
-
-  const answers = {};
+  const answers: any = {};
 
   askQuestion(commandPrompts.introduction)
     .then(response => {
@@ -159,7 +158,7 @@ function init() {
 const commandPrompts = {
   introduction: `This utility will walk you through creating an H5P library skeleton.
   It only covers the most common items, and tries to guess sensible defaults.
-  
+
   name: `,
   title: `
   version: (1.0.0)
@@ -174,8 +173,8 @@ const commandPrompts = {
   license: (MIT) `,
   confirm: `
   About to write to ${path}.
-  
+
   Is this ok? (yes)`
 };
 
-module.exports = init;
+export default init;

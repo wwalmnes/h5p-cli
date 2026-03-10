@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function packTranslationCommand(): Command {
   return new Command('pack-translation')
@@ -6,7 +7,6 @@ export function packTranslationCommand(): Command {
     .argument('<languageCode>', 'Language code')
     .argument('<libraries...>', 'Library names (last arg can be output .zip file)')
     .action((languageCode: string, libraries: string[]) => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const lf = '\u000A';
 
       // Extract optional zip file from end of libraries list

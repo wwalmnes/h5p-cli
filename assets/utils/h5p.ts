@@ -1,32 +1,32 @@
 /**
  * Requirements
  */
-var https = require('https');
-var child = require('child_process');
-var fs = require('fs');
-var archiver = require('archiver');
-var outputWriter = require('./utility/output');
-const h5pIgnoreParser = require('./utility/h5p-ignore-parser');
-const repository = require('./utility/repository');
-const languageCodes = require('./utility/language-codes');
+import https from 'https';
+import child from 'child_process';
+import fs from 'fs';
+import archiver from 'archiver';
+import * as outputWriter from './utility/output';
+import h5pIgnoreParser from './utility/h5p-ignore-parser';
+import repository from './utility/repository';
+import languageCodes from './utility/language-codes';
 
 /**
  * No options specified.
  * @contant
  */
-PROCESS_NIL = 0;
+const PROCESS_NIL = 0;
 
 /**
  * Do not check if repo is git repo.
  * @contant
  */
-PROCESS_SKIP_CHECK = 1;
+const PROCESS_SKIP_CHECK = 1;
 
 /**
  * Used to run operations in serial when heavy I/O/network is involved.
  * @contant
  */
-PROCESS_SERIAL = 2;
+const PROCESS_SERIAL = 2;
 
 /**
  * Local globals
@@ -1370,7 +1370,7 @@ function getVersionsAll(versions, repos, process, next) {
 /**
  * Export our api.
  */
-var h5p = module.exports = {};
+const h5p: any = {};
 
 /**
  * Return list of libraries.
@@ -2846,3 +2846,5 @@ h5p.updateTranslations = function (repos, next) {
 //  cd .. && "$h5p" increase-patch-version "$lib"\
 //  cd "$lib" && git add .\
 //fi'
+
+export default h5p;

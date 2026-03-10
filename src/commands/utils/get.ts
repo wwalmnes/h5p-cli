@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function getCommand(): Command {
   return new Command('get')
@@ -6,7 +7,6 @@ export function getCommand(): Command {
     .argument('[libraries...]', 'Library names')
     .option('--https', 'Use https:// urls for git repos instead of ssh urls')
     .action((libraries: string[], options: { https?: boolean }) => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const color = {
         default: '\x1B[0m',
         emphasize: '\x1B[1m',

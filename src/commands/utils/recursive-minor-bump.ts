@@ -1,11 +1,11 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function recursiveMinorBumpCommand(): Command {
   return new Command('recursive-minor-bump')
     .description('Bump minor version recursively')
     .argument('<libraries...>', 'Library names')
     .action((libraries: string[]) => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const lf = '\u000A';
       const color = { default: '\x1B[0m', emphasize: '\x1B[1m', green: '\x1B[32m', yellow: '\x1B[33m', red: '\x1B[31m' };
 

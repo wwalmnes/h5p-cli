@@ -1,14 +1,13 @@
-const output = require('../utility/output');
-const Input = require('../utility/input');
-const repository = require('../utility/repository');
-const { execSync } = require('child_process');
-const path = require('path');
-const process = require('process');
-const readline = require('readline');
+import * as output from '../utility/output';
+import Input from '../utility/input';
+import { getLibraryData } from '../utility/repository';
+import { execSync } from 'child_process';
+import path from 'path';
+import readline from 'readline';
 
 const c = output.color;
 
-async function bump(...inputList) {
+async function bump(...inputList: string[]) {
   const autoYes = inputList.includes('--yes') || inputList.includes('-y');
   inputList = inputList.filter(arg => arg !== '--yes' && arg !== '-y');
 
@@ -41,8 +40,7 @@ async function bump(...inputList) {
   }
 }
 
-// Helpers
-function detectLibrary(input) {
+function detectLibrary(input: Input): string | null {
   let libraries = input.getLibraries();
   if (!libraries.length) {
     const cwd = process.cwd();
@@ -55,7 +53,7 @@ function detectLibrary(input) {
   return libraries[0];
 }
 
-function runH5pBump(lib) {
+function runH5pBump(lib: string): boolean {
   let bumpOutput = '';
   try {
     bumpOutput = execSync(`h5p utils increase-patch-version ${lib}`, { encoding: 'utf8' });
@@ -72,12 +70,12 @@ function runH5pBump(lib) {
   return true;
 }
 
-function isValidSemver(...args) {
+function isValidSemver(...args: any[]): boolean {
   return args.every(n => typeof n === 'number');
 }
 
-function getVersion() {
-  const libData = repository.getLibraryData('.');
+function getVersion(): string | null {
+  const libData = getLibraryData('.');
   const { majorVersion, minorVersion, patchVersion } = libData;
   if (!isValidSemver(majorVersion, minorVersion, patchVersion)) {
     output.printLn(`${c.red}Failed to read version from library.json.${c.default}`);
@@ -88,7 +86,7 @@ function getVersion() {
   return version;
 }
 
-function stageChanges(autoYes) {
+function stageChanges(autoYes: boolean): boolean {
   try {
     execSync(`git restore --staged library.json`, { stdio: 'inherit' });
     if (autoYes) {
@@ -114,7 +112,7 @@ function stageChanges(autoYes) {
   return true;
 }
 
-function commitChanges(version) {
+function commitChanges(version: string): boolean {
   try {
     execSync(`git commit -m "Bump to ${version}"`, { stdio: 'inherit' });
     output.printLn(`${c.green}Committed version bump to ${version}.${c.default}`);
@@ -126,7 +124,7 @@ function commitChanges(version) {
   return true;
 }
 
-function tagAndPush(version, doTag, doPush) {
+function tagAndPush(version: string, doTag: boolean, doPush: boolean): void {
   let tagHandled = true;
 
   if (doTag) {
@@ -143,7 +141,6 @@ function tagAndPush(version, doTag, doPush) {
     output.printLn(`${c.yellow}Tag creation skipped.${c.default}`);
   }
 
-  // Only push if tag is handled correctly (or no tag was requested)
   if (doPush && tagHandled) {
     try {
       output.printLn(`${c.blue}Pushing commits…${c.default}`);
@@ -166,7 +163,7 @@ function tagAndPush(version, doTag, doPush) {
   }
 }
 
-function promptTagAndPush(version) {
+function promptTagAndPush(version: string): void {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -183,5 +180,4 @@ function promptTagAndPush(version) {
   });
 }
 
-module.exports = bump;
-
+export default bump;

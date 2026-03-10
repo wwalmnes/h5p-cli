@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import h5p from '../../../assets/utils/h5p';
 
 export function pushCommand(): Command {
   return new Command('push')
@@ -6,7 +7,6 @@ export function pushCommand(): Command {
     .argument('[libraries...]', 'Library names')
     .option('--tags', 'Push tags')
     .action((libraries: string[], options: { tags?: boolean }) => {
-      const h5p = require('../../../assets/utils/h5p.js') as any;
       const color = {
         default: '\x1B[0m',
         emphasize: '\x1B[1m',

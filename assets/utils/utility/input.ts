@@ -1,13 +1,20 @@
+import h5p from '../h5p';
+
 const defaultFileName = process.env.H5P_DEFAULT_PACK || 'libraries.h5p';
-const h5p = require('../h5p');
 
 class Input {
+  inputList: string[];
+  flags: string[];
+  fileNames: string[];
+  remainingInputs: string[];
+  libraries: string[] = [];
+  languages: string[] = [];
 
   /**
    * Input list
-   * @param {Array} inputList List of inputs
+   * @param inputList List of inputs
    */
-  constructor(inputList = []) {
+  constructor(inputList: string[] = []) {
     this.inputList = inputList;
 
     this.flags = this.inputList.filter(Input.isFlag);
@@ -18,9 +25,9 @@ class Input {
       .filter(x => !Input.isFileName(x));
   }
 
-  init(skipCheck = false) {
+  init(skipCheck = false): Promise<void> {
     return h5p.findDirectories(skipCheck)
-      .then((dirs) => {
+      .then((dirs: string[]) => {
         if (this.remainingInputs.indexOf('*') >= 0) {
           this.libraries = dirs;
           this.remainingInputs = this.remainingInputs.filter(i => {
@@ -40,10 +47,10 @@ class Input {
 
   /**
    * Determines if input contains flag
-   * @param {string|Array} flag Flag as a string, e.g. '-r'
-   * @return {boolean} True if flag was found
+   * @param flag Flag as a string, e.g. '-r'
+   * @returns True if flag was found
    */
-  hasFlag(flag) {
+  hasFlag(flag: string | string[]): boolean {
     if (Array.isArray(flag)) {
       return flag.reduce((prev, singleFlag) => {
         return prev || this.flags.indexOf(singleFlag) >= 0;
@@ -55,9 +62,9 @@ class Input {
 
   /**
    * Get file name from input, or default file name
-   * @return {string} File name
+   * @returns File name
    */
-  getFileName() {
+  getFileName(): string {
     if (this.fileNames.length) {
       return this.fileNames[this.fileNames.length - 1];
     }
@@ -68,44 +75,44 @@ class Input {
 
   /**
    * Get libraries from input if it was provided.
-   * @return {Array} Libraries
+   * @returns Libraries
    */
-  getLibraries() {
+  getLibraries(): string[] {
     return this.libraries;
   }
 
-  getLanguages() {
+  getLanguages(): string[] {
     return this.languages;
   }
 
   /**
    * Check if input string is a flag
-   * @param {string} input String to check if is flag
-   * @return {boolean} True if input is a flag
+   * @param input String to check if is flag
+   * @returns True if input is a flag
    */
-  static isFlag(input) {
+  static isFlag(input: string): boolean {
     return input.charAt(0) === '-';
   }
 
   /**
    * Checks if input is a file name
-   * @param {string} input String to check if is file name
-   * @return {Boolean} True if input is a file name
+   * @param input String to check if is file name
+   * @returns True if input is a file name
    */
-  static isFileName(input) {
+  static isFileName(input: string): boolean {
     return input.match(/\.h5p$/) !== null;
   }
 
-  static isLibrary(input, directories) {
+  static isLibrary(input: string, directories: string[]): boolean {
     return directories.indexOf(input) >= 0;
   }
 
   /**
    * Remove trailing dash from input
-   * @param {string} input Input string
-   * @return {string} Input without trailing dash
+   * @param input Input string
+   * @returns Input without trailing dash
    */
-  static removeTrailingDash(input) {
+  static removeTrailingDash(input: string): string {
     if (input.charAt(input.length - 1) === '/') {
       input = input.substr(0, input.length - 1);
     }
@@ -114,4 +121,4 @@ class Input {
   }
 }
 
-module.exports = Input;
+export default Input;
