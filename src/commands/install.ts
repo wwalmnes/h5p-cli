@@ -1,5 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
+import config from '../../configLoader';
 
 const installArgsSchema = z.object({
   library: z.string(),
@@ -13,8 +15,6 @@ export function installCommand(): Command {
     .argument('[mode]', 'Mode (view or edit)')
     .action(async (library: string, mode: string | undefined) => {
       const args = installArgsSchema.parse({ library, mode });
-      const logic = require('../../logic.js') as any;
-      const config = require('../../configLoader.js') as any;
       try {
         console.log(`> downloading ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
         await logic.getWithDependencies('download', args.library, args.mode);

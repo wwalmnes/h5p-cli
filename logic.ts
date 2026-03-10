@@ -1,18 +1,18 @@
-const { execSync } = require("child_process");
-const fs = require('fs');
-const superAgent = require('superagent');
-const admZip = require("adm-zip");
-const config = require('./configLoader.js');
-const { upgradeContent } = require('./logic-content-upgrade.js');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import superAgent from 'superagent';
+import admZip from 'adm-zip';
+import config from './configLoader';
+import { upgradeContent } from './logic-content-upgrade.js';
 // builds content from template and input
-const fromTemplate = (template, input) => {
+const fromTemplate = (template: any, input: any) => {
   for (let item in input) {
     template = template.replaceAll(`{${item}}`, input[item]);
   }
   return template;
 }
 // retrieves org & repoName from git url
-const parseGitUrl = (gitUrl) => {
+const parseGitUrl = (gitUrl: any) => {
   const type = gitUrl.slice(0, 4);
   switch (type) {
     case 'git@': {
@@ -42,7 +42,7 @@ const parseGitUrl = (gitUrl) => {
   }
 }
 // get file from source and optionally parse it as JSON
-const getFile = async (source, parseJson) => {
+const getFile = async (source: any, parseJson?: any) => {
   const local = source.indexOf('http') !== 0 ? true : false;
   let output;
   if (local) {
@@ -52,7 +52,7 @@ const getFile = async (source, parseJson) => {
     output = fs.readFileSync(source, 'utf-8');
   }
   else {
-    output = (await superAgent.get(source).set('User-Agent', 'h5p-cli').ok(res => [200, 404].includes(res.status))).text;
+    output = (await superAgent.get(source).set('User-Agent', 'h5p-cli').ok((res: any) => [200, 404].includes(res.status))).text;
   }
   if (output == '404: Not Found') {
     return '';
@@ -63,8 +63,8 @@ const getFile = async (source, parseJson) => {
   return output;
 }
 // clone repo and retrieve file
-const getRepoFile = (gitUrl, path, branch = 'master', parseJson, cleanStart) => {
-  const { repoName } = parseGitUrl(gitUrl);
+const getRepoFile = (gitUrl: any, path: any, branch = 'master', parseJson?: any, cleanStart?: any) => {
+  const { repoName } = parseGitUrl(gitUrl) as any;
   const target = `${config.folders.temp}/${repoName}_${branch}`;
   const filePath = `${target}/${path}`;
   if (cleanStart) {
@@ -80,10 +80,10 @@ const getRepoFile = (gitUrl, path, branch = 'master', parseJson, cleanStart) => 
   return parseJson ? JSON.parse(data) : data;
 }
 // generates list of files and their relative paths in a folder tree
-const getFileList = (folder) => {
-  const output = [];
+const getFileList = (folder: any) => {
+  const output: any[] = [];
   let toDo = [folder];
-  let list = [];
+  let list: any[] = [];
   const compute = () => {
     for (let item of list) {
       const dirs = fs.readdirSync(item);
@@ -105,23 +105,23 @@ const getFileList = (folder) => {
   }
   return output;
 }
-module.exports = {
+const logic: any = {
   // debug console log
-  log: function (message) {
+  log: function (message: any) {
     if (process.argv[2] === 'server') {
       return;
     }
     console.log(message);
   },
   // debug process.stdout.write
-  write: function (message) {
+  write: function (message: any) {
     if (process.argv[2] === 'server') {
       return;
     }
     process.stdout.write(message);
   },
   // imports content type from zip archive file in the .h5p format
-  import: (folder, archive) => {
+  import: (folder: any, archive: any) => {
     const target = `${config.folders.temp}/${folder}`;
     new admZip(archive).extractAllTo(target);
     fs.renameSync(`${target}/content`, `content/${folder}`);
@@ -130,9 +130,9 @@ module.exports = {
     return folder;
   },
   // creates zip archive export file in the .h5p format
-  export: async (library, folder) => {
-    const registry = await module.exports.getRegistry();
-    const libraryDirs = await module.exports.parseLibraryFolders();
+  export: async (library: any, folder: any) => {
+    const registry = await logic.getRegistry();
+    const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
     const target = `${config.folders.temp}/${folder}`;
     fs.rmSync(target, { recursive: true, force: true });
@@ -140,8 +140,8 @@ module.exports = {
     fs.cpSync(`content/${folder}`, `${target}/content`, { recursive: true });
     fs.renameSync(`${target}/content/h5p.json`, `${target}/h5p.json`);
     fs.rmSync(`${target}/content/sessions`, { recursive: true, force: true });
-    let libs = await module.exports.computeDependencies(library, 'view', null, libFolder);
-    const editLibs = await module.exports.computeDependencies(library, 'edit', null, libFolder);
+    let libs = await logic.computeDependencies(library, 'view', null, libFolder);
+    const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
     libs = {...libs, ...editLibs};
     for (let item in libs) {
       const folder = libraryDirs[libs[item].id];
@@ -167,7 +167,7 @@ module.exports = {
   },
   /* retrieves list of h5p librarie
   ignoreFile - if true file is overwritten with online data */
-  getRegistry: async (ignoreFile) => {
+  getRegistry: async (ignoreFile?: any) => {
     let list;
     if (!ignoreFile && fs.existsSync(config.registry)) {
       list = JSON.parse(fs.readFileSync(config.registry, 'utf-8'));
@@ -176,8 +176,8 @@ module.exports = {
       list = await getFile(config.urls.registry, true);
     }
     const output = {
-      regular: {},
-      reversed: {}
+      regular: {} as any,
+      reversed: {} as any
     }
     for (let item in list) {
       if (list[item].repo) {
@@ -206,22 +206,22 @@ module.exports = {
   mode - 'view' or 'edit' to compute non-editor or editor dependencies
   version - optional version to compute; defaults to 'master'
   folder - optional local library folder to use instead of git repo; use "" to ignore */
-  computeDependencies: async (library, mode, version, folder) => {
-    module.exports.log(`> ${library} deps ${mode}`);
+  computeDependencies: async (library: any, mode: any, version?: any, folder?: any) => {
+    logic.log(`> ${library} deps ${mode}`);
     version = version || 'master';
     let level = -1;
-    let registry = {};
-    const toDo = {};
-    const cache = {};
-    const done = {};
-    const weights = {};
+    let registry: any = {};
+    const toDo: any = {};
+    const cache: any = {};
+    const done: any = {};
+    const weights: any = {};
     toDo[library] = {
       parent: '',
       version,
       folder
     };
-    const libraryDirs = await module.exports.parseLibraryFolders();
-    const getOptionals = async (dep, org, repoName, version, dir) => {
+    const libraryDirs = await logic.parseLibraryFolders();
+    const getOptionals = async (dep: any, org: any, repoName: any, version: any, dir: any) => {
       if (cache[dep].optionals) {
         return cache[dep].optionals;
       }
@@ -230,8 +230,8 @@ module.exports = {
       cache[dep].optionals = parseSemanticLibraries(cache[dep].semantics);
       return cache[dep].optionals;
     }
-    const latestPatch = (org, repo, version) => {
-      const tags = module.exports.tags(org, repo);
+    const latestPatch = (org: any, repo: any, version: any) => {
+      const tags = logic.tags(org, repo);
       let patch = -1;
       for (let item of tags) {
         if (item.indexOf(version) != 0) {
@@ -249,7 +249,7 @@ module.exports = {
       return patch > -1 ? `${version}.${patch}` : version;
     }
     // determine if dependency needs to be processed
-    const handleDepListEntry = (machineName, parent, ver, dir) => {
+    const handleDepListEntry = (machineName: any, parent: any, ver: any, dir: any) => {
       const lib = registry.reversed[machineName];
       const entry = lib?.shortName;
       if (!entry) {
@@ -269,20 +269,20 @@ module.exports = {
       return;
     }
     // determine if a library is a soft dependency of its parent
-    const isOptional = (parent, machineName) => {
+    const isOptional = (parent: any, machineName: any) => {
       if (!parent) {
         return false;
       }
       if (parent && parent.optional) {
         return true;
       }
-      const finder = (element) => element.machineName === machineName;
+      const finder = (element: any) => element.machineName === machineName;
       if (parent?.preloadedDependencies?.find(finder) !== undefined || parent?.editorDependencies?.find(finder) !== undefined) {
         return false;
       }
       return true;
     }
-    const compute = async (org, dep, version) => {
+    const compute = async (org: any, dep: any, version: any) => {
       const parent = toDo[dep].parent ? `/${toDo[dep].parent}` : '';
       const lastParent = registry.regular[toDo[dep].parent]?.requiredBy[registry.regular[toDo[dep].parent]?.requiredBy.length - 1] || '';
       const requiredByPath = lastParent + parent;
@@ -296,7 +296,7 @@ module.exports = {
       }
       done[level][dep] = registry.regular[dep];
       let list;
-      const { repoName } = registry.regular[dep]?.repo?.url ? parseGitUrl(registry.regular[dep].repo.url) : dep;
+      const { repoName } = registry.regular[dep]?.repo?.url ? parseGitUrl(registry.regular[dep].repo.url) as any : dep;
       if (cache[dep]) {
         list = cache[dep];
       }
@@ -318,7 +318,7 @@ module.exports = {
       done[level][dep].fullscreen = list.fullscreen;
       done[level][dep].optional = registry.regular[dep].optional === false ? false : isOptional(cache[toDo[dep].parent], list.machineName);
       cache[dep].optional = done[level][dep].optional;
-      module.exports.write(`>> ${dep} required by ${toDo[dep].parent} (${done[level][dep].optional ? 'optional' : 'required'}) ... `);
+      logic.write(`>> ${dep} required by ${toDo[dep].parent} (${done[level][dep].optional ? 'optional' : 'required'}) ... `);
       done[level][dep].preloadedJs = list.preloadedJs || [];
       done[level][dep].preloadedCss = list.preloadedCss || [];
       done[level][dep].preloadedDependencies = list.preloadedDependencies || [];
@@ -351,21 +351,21 @@ module.exports = {
         }
       }
       delete toDo[dep];
-      module.exports.log('done');
+      logic.log('done');
     }
-    registry = await module.exports.getRegistry();
+    registry = await logic.getRegistry();
     if (!folder && !registry.regular[library]) {
       throw new Error(`unregistered ${library} library`);
     }
     while (Object.keys(toDo).length) {
       level++;
-      module.exports.log(`>> on level ${level}`);
+      logic.log(`>> on level ${level}`);
       done[level] = {};
       for (let item in toDo) {
         await compute(registry.regular[item].org, item, toDo[item].version);
       }
     }
-    let output = {};
+    let output: any = {};
     for (let i = level; i >= 0; i--) {
       const keys = Object.keys(done[i]);
       keys.sort((a, b) => {
@@ -380,21 +380,21 @@ module.exports = {
         }
       }
     }
-    module.exports.write('\n');
+    logic.write('\n');
     return output;
   },
   // list tags for library using git
-  tags: (org, repo, mainBranch = 'master') => {
+  tags: (org: any, repo: any, mainBranch = 'master') => {
     const library = getRepoFile(fromTemplate(config.urls.library.clone, { org, repo }), 'library.json', mainBranch, true);
     const label = `${repo}_${mainBranch}`;
     const folder = `${config.folders.temp}/${label}`;
     if (!fs.existsSync(folder)) {
-      module.exports.clone(org, repo, mainBranch, label);
+      logic.clone(org, repo, mainBranch, label);
     }
     execSync(`git checkout ${mainBranch}`, { cwd: folder, stdio : 'pipe' });
     execSync(`git pull origin ${mainBranch}`, { cwd: folder, stdio : 'pipe' });
     const tags = execSync('git tag', { cwd: folder }).toString().split('\n');
-    const output = [];
+    const output: any[] = [];
     for (let item of tags) {
       if (!item) {
         continue;
@@ -409,7 +409,7 @@ module.exports = {
     return output;
   },
   // download & unzip repository
-  download: async (org, repo, version, target) => {
+  download: async (org: any, repo: any, version: any, target: any) => {
     const blob = (await superAgent.get(fromTemplate(config.urls.library.zip, { org, repo, version })))._body;
     const zipFile = `${config.folders.temp}/temp.zip`;
     fs.writeFileSync(zipFile, blob);
@@ -418,15 +418,15 @@ module.exports = {
     fs.renameSync(`${config.folders.libraries}/${repo}-master`, target);
   },
   // clone repository using git
-  clone: (org, repo, branch, target) => {
+  clone: (org: any, repo: any, branch: any, target: any) => {
     return execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, { cwd: config.folders.libraries }).toString();
   },
   /* clones/downloads dependencies to libraries folder using git and runs relevant npm commands
   mode - 'view' or 'edit' to fetch non-editor or editor libraries
   latest - if true master branch versions of libraries are used
   toSkip - optional array of libraries to skip; after a library is parsed by the function it's auto-added to the array so it's skipped for efficiency */
-  getWithDependencies: async (action, library, mode, latest, toSkip = []) => {
-    const list = await module.exports.computeDependencies(library, mode);
+  getWithDependencies: async (action: any, library: any, mode: any, latest: any, toSkip: any[] = []) => {
+    const list = await logic.computeDependencies(library, mode);
     for (let item in list) {
       if (toSkip.indexOf(item) != -1) {
         continue;
@@ -458,16 +458,16 @@ module.exports = {
       }
       console.log(`>> + installing ${list[item].repoName} ${listVersion}`);
       if (action == 'download') {
-        await module.exports.download(list[item].org, list[item].repoName, version, folder);
+        await logic.download(list[item].org, list[item].repoName, version, folder);
       }
       else {
-        console.log(module.exports.clone(list[item].org, list[item].repoName, version, label));
+        console.log(logic.clone(list[item].org, list[item].repoName, version, label));
       }
       const packageFile = `${folder}/package.json`;
       if (!fs.existsSync(packageFile)) {
         continue;
       }
-      const info = JSON.parse(fs.readFileSync(packageFile));
+      const info = JSON.parse(fs.readFileSync(packageFile, 'utf-8'));
       if (!info?.scripts?.build) {
         continue;
       }
@@ -481,11 +481,11 @@ module.exports = {
   },
   /* checks if dependencies are installed for a given library;
   returns a report with boolean statuses; the overall status is reflected under the "ok" attribute;*/
-  verifySetup: async (library) => {
-    const registry = await module.exports.getRegistry();
-    const libraryDirs = await module.exports.parseLibraryFolders();
+  verifySetup: async (library: any) => {
+    const registry = await logic.getRegistry();
+    const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
-    const output = {
+    const output: any = {
       registry: registry.regular[library] ? true : false,
       libraries: {},
       ok: true
@@ -493,8 +493,8 @@ module.exports = {
     if (!output.registry) {
       output.ok = false;
     }
-    let list = await module.exports.computeDependencies(library, 'view', null, libFolder);
-    list = {...list, ...await module.exports.computeDependencies(library, 'edit', null, libFolder)};
+    let list = await logic.computeDependencies(library, 'view', null, libFolder);
+    list = {...list, ...await logic.computeDependencies(library, 'edit', null, libFolder)};
     for (let item in list) {
       if (!list[item]?.id) {
         output.libraries[item] = {
@@ -518,16 +518,16 @@ module.exports = {
     return output;
   },
   // generates h5p.json file with info describing the library in the specified folder
-  generateInfo: async (folder, library) => {
-    const registry = await module.exports.getRegistry();
-    const libraryDirs = await module.exports.parseLibraryFolders();
+  generateInfo: async (folder: any, library: any) => {
+    const registry = await logic.getRegistry();
+    const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
     const target = `content/${folder}`;
-    let libs = await module.exports.computeDependencies(library, 'view', null, libFolder);
-    const editLibs = await module.exports.computeDependencies(library, 'edit', null, libFolder);
+    let libs = await logic.computeDependencies(library, 'view', null, libFolder);
+    const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
     libs = {...libs, ...editLibs};
-    const map = {};
-    const preloadedDependencies = [];
+    const map: any = {};
+    const preloadedDependencies: any[] = [];
     for (let item in libs) {
       for (let predep of libs[item].preloadedDependencies) {
         if (map[predep.machineName]) {
@@ -554,11 +554,11 @@ module.exports = {
     fs.writeFileSync(`${target}/h5p.json`, JSON.stringify(info));
   },
   // upgrades content via current main library upgrades.js scripts
-  upgrade: async (folder, library) => {
-    const registry = await module.exports.getRegistry();
-    const libraryDirs = await module.exports.parseLibraryFolders();
+  upgrade: async (folder: any, library: any) => {
+    const registry = await logic.getRegistry();
+    const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
-    const lib = (await module.exports.computeDependencies(library, 'view', null, libFolder))[library];
+    const lib = (await logic.computeDependencies(library, 'view', null, libFolder))[library];
     const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
     /*
      * Content upgrade scripts are only supposed to be able to upgrade metadata attributed, @see https://github.com/h5p/h5p-php-library/blob/master/js/h5p-content-upgrade-process.js#L130-L132
@@ -569,11 +569,11 @@ module.exports = {
       'title', 'authors', 'changes', 'source', 'license', 'licenseVersion', 'licenseExtras', 'authorComments',
       'yearsFrom', 'yearsTo'
     ];
-    const metadata = {};
+    const metadata: any = {};
     for (let item of metadataAttributesInH5PJSON) {
       metadata[item] = info[item];
     }
-    let mainLib = {};
+    let mainLib: any = {};
     for (let item of info.preloadedDependencies) {
       if (item.machineName == lib.id) {
         mainLib = item;
@@ -587,14 +587,14 @@ module.exports = {
     if (lib.version.major <= mainLib.majorVersion && lib.version.minor <= mainLib.minorVersion) {
       return;
     }
-    const getUpgradesScript = (machineName) => {
+    const getUpgradesScript = (machineName: any) => {
       const upgradesFile = `${config.folders.libraries}/${libraryDirs[machineName]}/upgrades.js`;
       if (!fs.existsSync(upgradesFile)) {
         return;
       }
       return eval(fs.readFileSync(upgradesFile, 'utf-8'));
     };
-    const getLatestLibraryVersion = (machineName) => {
+    const getLatestLibraryVersion = (machineName: any) => {
       const libraryJson = `${config.folders.libraries}/${libraryDirs[machineName]}/library.json`;
       if (!fs.existsSync(libraryJson)) {
         return;
@@ -606,7 +606,7 @@ module.exports = {
       };
     }
     const contentFile = `content/${folder}/content.json`;
-    let content = fs.readFileSync(contentFile, 'utf-8');
+    let content: any = fs.readFileSync(contentFile, 'utf-8');
     const backupContent = content;
     content = JSON.parse(content);
     // Incorporate H5P.json info into general params structure to avoid extra handling
@@ -626,18 +626,18 @@ module.exports = {
     fs.writeFileSync(`content/${folder}/${label}_content.json`, backupContent);
     fs.writeFileSync(`content/${folder}/${label}_h5p.json`, JSON.stringify(info));
     fs.writeFileSync(contentFile, JSON.stringify(upgradedParams));
-    module.exports.generateInfo(folder, library);
+    logic.generateInfo(folder, library);
   },
   parseLibraryFolders: async () => {
-    const registry = await module.exports.getRegistry();
-    const output = {};
+    const registry = await logic.getRegistry();
+    const output: any = {};
     const dirs = fs.readdirSync(config.folders.libraries);
     for (let folder of dirs) {
       const libraryFile = `${config.folders.libraries}/${folder}/library.json`;
       if (!fs.existsSync(libraryFile)) {
         continue;
       }
-      const info = await module.exports.getFile(libraryFile, true);
+      const info = await logic.getFile(libraryFile, true);
       const id = info.machineName;
       output[id] = folder;
       if (!registry.reversed[id]) {
@@ -647,7 +647,7 @@ module.exports = {
           "title": info.title,
           "author": info.author,
           "runnable": info.runnable,
-          "shortName": module.exports.machineToShort(id)
+          "shortName": logic.machineToShort(id)
         }
         fs.writeFileSync(config.registry, JSON.stringify(registry.reversed));
         console.log(`> registered local library ${id}`);
@@ -655,16 +655,16 @@ module.exports = {
     }
     return output;
   },
-  machineToShort: (machineName) => {
+  machineToShort: (machineName: any) => {
     machineName = machineName.replace('H5PEditor', 'H5P-Editor');
     return machineName.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().replace('.', '-');
   },
-  registryEntryFromRepoUrl: function(gitUrl) {
-    let { host, org, repoName } = parseGitUrl(gitUrl);
+  registryEntryFromRepoUrl: function(gitUrl: any) {
+    let { host, org, repoName } = parseGitUrl(gitUrl) as any;
     const list = getRepoFile(gitUrl, 'library.json', 'master', true);
-    const shortName = module.exports.machineToShort(list.machineName);
+    const shortName = logic.machineToShort(list.machineName);
     const type = host.split('.')[0];
-    const output = {};
+    const output: any = {};
     output[list.machineName] = {
       id: list.machineName,
       title: list.title,
@@ -686,8 +686,8 @@ module.exports = {
   getFileList
 }
 // determines if provided path has duplicate entries; entries are separated by '/';
-const pathHasDuplicates = (path) => {
-  const ledger = {};
+const pathHasDuplicates = (path: any) => {
+  const ledger: any = {};
   const list = path.split('/');
   for (let item of list) {
     if (ledger[item]) {
@@ -700,13 +700,13 @@ const pathHasDuplicates = (path) => {
   return false;
 }
 // parses semantics array of objects for entries of library type
-const parseSemanticLibraries = (entries) => {
+const parseSemanticLibraries = (entries: any) => {
   if (!Array.isArray(entries)) {
     return {};
   }
-  let toDo = [];
-  let list = [];
-  const output = {};
+  let toDo: any[] = [];
+  let list: any[] = [];
+  const output: any = {};
   const parseList = () => {
     toDo = [];
     for (let obj of list) { // go through semantics array entries
@@ -750,3 +750,4 @@ const parseSemanticLibraries = (entries) => {
   }
   return output;
 }
+export default logic;

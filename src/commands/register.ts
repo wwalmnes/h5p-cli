@@ -1,14 +1,14 @@
 import { Command } from 'commander';
 import { z } from 'zod';
 import * as fs from 'fs';
+import logic from '../../logic';
+import config from '../../configLoader';
 
 const registerArgsSchema = z.object({
   input: z.string(),
 });
 
 export async function runRegister(input: string): Promise<any> {
-  const logic = require('../../logic.js') as any;
-  const config = require('../../configLoader.js') as any;
   const isUrl = ['http', 'git@'].includes(input.slice(0, 4));
   let registry = await logic.getRegistry();
   const entry = isUrl

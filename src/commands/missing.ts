@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const missingArgsSchema = z.object({
   library: z.string(),
@@ -11,7 +12,6 @@ export function missingCommand(): Command {
     .argument('<library>', 'Library name')
     .action(async (library: string) => {
       const args = missingArgsSchema.parse({ library });
-      const logic = require('../../logic.js') as any;
       try {
         const libraryDirs = await logic.parseLibraryFolders();
         const registry = await logic.getRegistry();

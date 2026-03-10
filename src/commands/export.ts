@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const exportArgsSchema = z.object({
   library: z.string(),
@@ -13,7 +14,6 @@ export function exportCommand(): Command {
     .argument('[folder]', 'Output folder')
     .action(async (library: string, folder: string | undefined) => {
       const args = exportArgsSchema.parse({ library, folder });
-      const logic = require('../../logic.js') as any;
       try {
         const file = await logic.export(args.library, args.folder);
         console.log(file);

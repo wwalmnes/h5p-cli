@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import * as fs from 'fs';
 import { runRegister } from './register';
+import logic from '../../logic';
+import config from '../../configLoader';
 
 const setupArgsSchema = z.object({
   library: z.string(),
@@ -20,8 +22,6 @@ const handleMissingOptionals = (missingOptionals: Record<string, any>, result: a
 };
 
 export async function runSetup(library: string, version?: string, download?: string): Promise<void> {
-  const logic = require('../../logic.js') as any;
-  const config = require('../../configLoader.js') as any;
   const isUrl = ['http', 'git@'].includes(library.slice(0, 4));
   const url = library;
   const missingOptionals: Record<string, any> = {};

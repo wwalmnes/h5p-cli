@@ -1,13 +1,13 @@
 import { Command } from 'commander';
 import * as fs from 'fs';
 import { runSetup } from './setup';
+import logic from '../../logic';
+import config from '../../configLoader';
 
 export function coreCommand(): Command {
   return new Command('core')
     .description('Installs core h5p libraries')
     .action(async () => {
-      const logic = require('../../logic.js') as any;
-      const config = require('../../configLoader.js') as any;
       try {
         for (const item of config.core.clone) {
           const folder = `${config.folders.libraries}/${item}`;

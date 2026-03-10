@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const listArgsSchema = z.object({
   reversed: z.string().optional(),
@@ -13,7 +14,6 @@ export function listCommand(): Command {
     .argument('[ignoreFile]', 'Pass 1 to ignore local registry file')
     .action(async (reversed: string | undefined, ignoreFile: string | undefined) => {
       const args = listArgsSchema.parse({ reversed, ignoreFile });
-      const logic = require('../../logic.js') as any;
       try {
         console.log('> fetching h5p library registry');
         const result = await logic.getRegistry(parseInt(args.ignoreFile ?? '0'));

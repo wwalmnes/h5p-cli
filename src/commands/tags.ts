@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const tagsArgsSchema = z.object({
   org: z.string(),
@@ -15,7 +16,6 @@ export function tagsCommand(): Command {
     .argument('<mainBranch>', 'Main branch name')
     .action((org: string, library: string, mainBranch: string) => {
       const args = tagsArgsSchema.parse({ org, library, mainBranch });
-      const logic = require('../../logic.js') as any;
       try {
         console.log('> fetching h5p library tags');
         const result = logic.tags(args.org, args.library, args.mainBranch);

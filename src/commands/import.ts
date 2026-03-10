@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const importArgsSchema = z.object({
   folder: z.string(),
@@ -13,7 +14,6 @@ export function importCommand(): Command {
     .argument('[archive]', 'Archive path')
     .action((folder: string, archive: string | undefined) => {
       const args = importArgsSchema.parse({ folder, archive });
-      const logic = require('../../logic.js') as any;
       try {
         const output = logic.import(args.folder, args.archive);
         console.log(`content/${output}`);

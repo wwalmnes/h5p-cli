@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const depsArgsSchema = z.object({
   library: z.string(),
@@ -17,7 +18,6 @@ export function depsCommand(): Command {
     .argument('[folder]', 'Folder')
     .action(async (library: string, mode: string | undefined, version: string | undefined, folder: string | undefined) => {
       const args = depsArgsSchema.parse({ library, mode, version, folder });
-      const logic = require('../../logic.js') as any;
       try {
         const result = await logic.computeDependencies(args.library, args.mode, args.version, args.folder);
         for (const item in result) {

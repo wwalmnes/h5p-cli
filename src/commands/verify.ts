@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
+import logic from '../../logic';
 
 const verifyArgsSchema = z.object({
   library: z.string(),
@@ -11,7 +12,6 @@ export function verifyCommand(): Command {
     .argument('<library>', 'Library name')
     .action(async (library: string) => {
       const args = verifyArgsSchema.parse({ library });
-      const logic = require('../../logic.js') as any;
       try {
         const result = await logic.verifySetup(args.library);
         console.log(result);
