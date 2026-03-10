@@ -1,0 +1,9 @@
+import { Command } from 'commander';
+
+export function serverCommand(): Command {
+  return new Command('server')
+    .description('Run the dev server')
+    .action(() => {
+      require('../../server.js');
+    });
+}
