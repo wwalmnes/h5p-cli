@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import logic from '../../logic';
+import { InstallAdapter } from '../adapters/install-adapter';
+import { InstallService } from '../services/install-service';
 import config from '../../configLoader';
 
 const installArgsSchema = z.object({
@@ -8,7 +9,8 @@ const installArgsSchema = z.object({
   mode: z.string().optional(),
 });
 
-export function installCommand(): Command {
+export function installCommand(service?: InstallService): Command {
+  const svc = service ?? new InstallService(new InstallAdapter(), config.folders.libraries);
   return new Command('install')
     .description('Installs dependencies for h5p library')
     .argument('<library>', 'Library name')
@@ -16,9 +18,7 @@ export function installCommand(): Command {
     .action(async (library: string, mode: string | undefined) => {
       const args = installArgsSchema.parse({ library, mode });
       try {
-        console.log(`> downloading ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
-        await logic.getWithDependencies('download', args.library, args.mode);
-        console.log(`> done installing ${args.library}`);
+        await svc.install(args.library, args.mode);
       } catch (error) {
         console.log('> error');
         console.log(error);

@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import logic from '../../logic';
+import { DepsAdapter } from '../adapters/deps-adapter';
+import { DepsService } from '../services/deps-service';
 
 const depsArgsSchema = z.object({
   library: z.string(),
@@ -9,7 +10,8 @@ const depsArgsSchema = z.object({
   folder: z.string().optional(),
 });
 
-export function depsCommand(): Command {
+export function depsCommand(service?: DepsService): Command {
+  const svc = service ?? new DepsService(new DepsAdapter());
   return new Command('deps')
     .description('Computes dependencies for h5p library')
     .argument('<library>', 'Library name')
@@ -19,10 +21,7 @@ export function depsCommand(): Command {
     .action(async (library: string, mode: string | undefined, version: string | undefined, folder: string | undefined) => {
       const args = depsArgsSchema.parse({ library, mode, version, folder });
       try {
-        const result = await logic.computeDependencies(args.library, args.mode, args.version, args.folder);
-        for (const item in result) {
-          console.log(result[item].id ? item : `!!! unregistered ${result[item].optional ? 'optional' : 'required'} ${item} library`);
-        }
+        await svc.deps(args.library, args.mode, args.version, args.folder);
       } catch (error) {
         console.log('> error');
         console.log(error);

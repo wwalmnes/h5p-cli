@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import logic from '../../logic';
+import { InstallAdapter } from '../adapters/install-adapter';
+import { CloneService } from '../services/clone-service';
 import config from '../../configLoader';
 
 const cloneArgsSchema = z.object({
@@ -8,7 +9,8 @@ const cloneArgsSchema = z.object({
   mode: z.string().optional(),
 });
 
-export function cloneCommand(): Command {
+export function cloneCommand(service?: CloneService): Command {
+  const svc = service ?? new CloneService(new InstallAdapter(), config.folders.libraries);
   return new Command('clone')
     .description('Clones dependencies for h5p library')
     .argument('<library>', 'Library name')
@@ -16,9 +18,7 @@ export function cloneCommand(): Command {
     .action(async (library: string, mode: string | undefined) => {
       const args = cloneArgsSchema.parse({ library, mode });
       try {
-        console.log(`> cloning ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
-        await logic.getWithDependencies('clone', args.library, args.mode);
-        console.log(`> done installing ${args.library}`);
+        await svc.clone(args.library, args.mode);
       } catch (error) {
         console.log('> error');
         console.log(error);

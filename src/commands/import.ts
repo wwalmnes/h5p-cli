@@ -1,13 +1,15 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import logic from '../../logic';
+import { ImportAdapter } from '../adapters/import-adapter';
+import { ImportService } from '../services/import-service';
 
 const importArgsSchema = z.object({
   folder: z.string(),
   archive: z.string().optional(),
 });
 
-export function importCommand(): Command {
+export function importCommand(service?: ImportService): Command {
+  const svc = service ?? new ImportService(new ImportAdapter());
   return new Command('import')
     .description('Imports content type from .h5p zipped file')
     .argument('<folder>', 'Target folder')
@@ -15,8 +17,7 @@ export function importCommand(): Command {
     .action((folder: string, archive: string | undefined) => {
       const args = importArgsSchema.parse({ folder, archive });
       try {
-        const output = logic.import(args.folder, args.archive);
-        console.log(`content/${output}`);
+        svc.import(args.folder, args.archive);
       } catch (error) {
         console.log('> error');
         console.log(error);

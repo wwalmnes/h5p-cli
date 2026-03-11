@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import logic from '../../logic';
+import { TagsAdapter } from '../adapters/tags-adapter';
+import { TagsService } from '../services/tags-service';
 
 const tagsArgsSchema = z.object({
   org: z.string(),
@@ -8,7 +9,8 @@ const tagsArgsSchema = z.object({
   mainBranch: z.string(),
 });
 
-export function tagsCommand(): Command {
+export function tagsCommand(service?: TagsService): Command {
+  const svc = service ?? new TagsService(new TagsAdapter());
   return new Command('tags')
     .description('List tags for a library')
     .argument('<org>', 'GitHub organization')
@@ -17,9 +19,7 @@ export function tagsCommand(): Command {
     .action((org: string, library: string, mainBranch: string) => {
       const args = tagsArgsSchema.parse({ org, library, mainBranch });
       try {
-        console.log('> fetching h5p library tags');
-        const result = logic.tags(args.org, args.library, args.mainBranch);
-        console.log(result);
+        svc.tags(args.org, args.library, args.mainBranch);
       } catch (error) {
         console.log('> error');
         console.log(error);

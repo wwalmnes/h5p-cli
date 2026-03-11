@@ -1,13 +1,15 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import logic from '../../logic';
+import { ListAdapter } from '../adapters/list-adapter';
+import { ListService } from '../services/list-service';
 
 const listArgsSchema = z.object({
   reversed: z.string().optional(),
   ignoreFile: z.string().optional(),
 });
 
-export function listCommand(): Command {
+export function listCommand(service?: ListService): Command {
+  const svc = service ?? new ListService(new ListAdapter());
   return new Command('list')
     .description('Lists h5p libraries from the registry')
     .argument('[reversed]', 'Pass 1 to show reversed list')
@@ -15,11 +17,7 @@ export function listCommand(): Command {
     .action(async (reversed: string | undefined, ignoreFile: string | undefined) => {
       const args = listArgsSchema.parse({ reversed, ignoreFile });
       try {
-        console.log('> fetching h5p library registry');
-        const result = await logic.getRegistry(parseInt(args.ignoreFile ?? '0'));
-        for (const item in result.regular) {
-          console.log(`${parseInt(args.reversed ?? '0') ? result.regular[item].id : item} (${result.regular[item].org})`);
-        }
+        await svc.list(parseInt(args.reversed ?? '0'), parseInt(args.ignoreFile ?? '0'));
       } catch (error) {
         console.log('> error');
         console.log(error);
