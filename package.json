@@ -12,7 +12,9 @@
     "postinstall": "patch-package",
     "build": "tsup src/index.ts --format cjs --outDir dist --no-splitting",
     "dev": "tsup src/index.ts --format cjs --outDir dist --watch",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "bin": {
     "h5p": "./h5p.js"
@@ -40,6 +42,7 @@
   "devDependencies": {
     "@types/node": "^20.19.37",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.0.0"
   }
 }
