@@ -10,8 +10,8 @@ export function initCommand(): Command {
   return new Command('init')
     .description('Initialize a new h5p library')
     .argument('<library>', 'Library name')
-    .action(async (library: string) => {
+    .action((library: string) => {
       const args = initArgsSchema.parse({ library });
-      await init(args.library);
+      init();
     });
 }

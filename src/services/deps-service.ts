@@ -6,7 +6,7 @@ export class DepsService {
     private logger: { log: (...args: any[]) => void } = console
   ) {}
 
-  async deps(library: string, mode?: string, version?: string, folder?: string): Promise<void> {
+  async deps(library: string, mode?: 'view' | 'edit', version?: string, folder?: string): Promise<void> {
     const result = await this.adapter.computeDependencies(library, mode, version, folder);
     for (const item in result) {
       if (result[item].id) {

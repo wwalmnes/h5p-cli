@@ -6,7 +6,7 @@ export class ListService {
     private logger: { log: (...args: any[]) => void } = console
   ) {}
 
-  async list(reversed?: number, ignoreFile?: number): Promise<void> {
+  async list(reversed?: boolean, ignoreFile?: boolean): Promise<void> {
     this.logger.log('> fetching h5p library registry');
     const result = await this.adapter.getRegistry(ignoreFile);
     for (const item in result.regular) {

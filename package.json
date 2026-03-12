@@ -14,7 +14,8 @@
     "dev": "tsup src/index.ts --format cjs --outDir dist --watch",
     "prepare": "npm run build",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typetest": "tsc -p tsconfig.json --noEmit"
   },
   "bin": {
     "h5p": "./h5p.js"

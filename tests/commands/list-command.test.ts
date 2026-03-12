@@ -22,21 +22,21 @@ describe('listCommand', () => {
     const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
     const cmd = listCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p']);
-    expect(mockSvc.list).toHaveBeenCalledWith(0, 0);
+    expect(mockSvc.list).toHaveBeenCalledWith(false, false);
   });
 
   it('calls service.list with reversed=1', async () => {
     const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
     const cmd = listCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', '1']);
-    expect(mockSvc.list).toHaveBeenCalledWith(1, 0);
+    expect(mockSvc.list).toHaveBeenCalledWith(true, false);
   });
 
   it('calls service.list with ignoreFile=1', async () => {
     const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
     const cmd = listCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', '0', '1']);
-    expect(mockSvc.list).toHaveBeenCalledWith(0, 1);
+    expect(mockSvc.list).toHaveBeenCalledWith(false, true);
   });
 
   it('logs error on rejection', async () => {

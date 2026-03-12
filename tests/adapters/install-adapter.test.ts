@@ -28,7 +28,7 @@ describe('InstallAdapter', () => {
   it('delegates getWithDependencies to logic for download', async () => {
     (logic.getWithDependencies as ReturnType<typeof vi.fn>).mockResolvedValue(['h5p-blanks']);
     await adapter.getWithDependencies('download', 'h5p-blanks', 'edit');
-    expect(logic.getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', 'edit', undefined, undefined);
+    expect(logic.getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', 'edit', false, undefined);
   });
 
   it('propagates rejection', async () => {

@@ -7,7 +7,7 @@ import fs from 'fs';
 import archiver from 'archiver';
 import * as outputWriter from './utility/output';
 import h5pIgnoreParser from './utility/h5p-ignore-parser';
-import repository from './utility/repository';
+import * as repository from './utility/repository';
 import languageCodes from './utility/language-codes';
 
 /**
@@ -83,7 +83,7 @@ const runAll = (runner, argsList, callback) => {
 /**
  * Make ssh errors short and understandable.
  */
-function sshError(error, url) {
+function sshError(error, url?) {
   if (error.indexOf('Host key verification failed.') !== -1) error = 'Host key verification failed.' + (url ? ' Try running ssh -T ' + url.split(':', 1)[0] : '') + '\n';
   if (error.indexOf('Permission denied') !== -1) error = 'Permission denied.\nMake sure ssh-agent is running.' + (url ? ' (ssh -T ' + url.split(':', 1)[0] + ' should not ask for password/passphrase)' : '') + '\n';
   return error;
@@ -150,6 +150,7 @@ function getLibrary(libraryName, next) {
       var errors = '';
       var loaded = 0;
 
+      var dependency;
       for (var i = 0; i < library.dependencies.length; i++) {
         dependency = library.dependencies[i];
         getLibrary(dependency, function (error) {
@@ -210,7 +211,7 @@ function checkRepository(dir, next) {
  * Find all repos in the current working dir.
  * @deprecated Use h5p.findDirectories instead
  */
-function findRepositories(next, skipCheck) {
+function findRepositories(next, skipCheck?) {
   fs.readdir('.', function (error, files) {
     if (error) return next(error);
 
@@ -240,7 +241,7 @@ function findRepositories(next, skipCheck) {
  * Stage and commit all on the given repo.
  */
 function commitRepository(dir, message, next) {
-  var result = {
+  var result: any = {
     name: dir
   };
 
@@ -298,7 +299,7 @@ function pullRepository(dir) {
     env: env
   });
 
-  const repo = {
+  const repo: any = {
     name: dir
   };
 
@@ -358,7 +359,7 @@ function diffRepository(dir, next) {
  * @param {Function} process
  * @param {Function} next
  */
-function processRepos(repos, options, process, next) {
+function processRepos(repos, options, process, next?) {
   if (typeof options !== 'number') {
     // Options not specified, shift args
     next = process;
@@ -525,7 +526,7 @@ function serial(obj, process, finished) {
    * @private
    * @param {String} err
    */
-  var check = function (err) {
+  var check = function (err?) {
     // We need to use a real async function in order for the stack to clear.
     setTimeout(function () {
       i++;
@@ -549,7 +550,7 @@ function serial(obj, process, finished) {
  * @return {Promise}
  */
 let getLibraryStatus = function (repo) {
-  const status = {
+  const status: any = {
     name: repo
   };
 
@@ -563,7 +564,7 @@ let getLibraryStatus = function (repo) {
         return;
       }
 
-      const library = JSON.parse(data);
+      const library = JSON.parse(data.toString());
       const target = library.machineName + '-' + library.majorVersion + '.' + library.minorVersion;
       status.msg = library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion;
       outputWriter.printResults(status);
@@ -647,7 +648,7 @@ function spawnGit(dir, options, next) {
 function spawn(type, options, dir, next) {
   var envVars = {cwd: process.cwd(), env: env, detached: true};
   if (dir) {
-    envVars += '/' + dir;
+    envVars.cwd += '/' + dir;
   }
   var proc = child.spawn(type, options, envVars);
 
@@ -716,7 +717,7 @@ function checkoutRepository(options, dir, next) {
   }
 
   spawnGit(dir, args, function (error, output) {
-    var status = {
+    var status: any = {
       name: dir
     };
 
@@ -764,7 +765,7 @@ function pushRepository(options, dir, next) {
   }
 
   spawnGit(dir, args, function (error, output) {
-    var status = {
+    var status: any = {
       name: dir
     };
 
@@ -801,7 +802,7 @@ function pushRepository(options, dir, next) {
  */
 function mergeRepository(branch, dir, next) {
   spawnGit(dir, ['merge', branch, '--no-ff'], function (error, output) {
-    var status = {
+    var status: any = {
       name: dir
     };
 
@@ -849,7 +850,7 @@ function mergeRepository(branch, dir, next) {
  */
 function readJson(repo, file, next) {
   try {
-    next(null, JSON.parse(fs.readFileSync(repo + file)));
+    next(null, JSON.parse(fs.readFileSync(repo + file).toString()));
   }
   catch (err) {
     if (err.toString().indexOf('no such file or directory') !== -1 || err.toString().indexOf('not a directory') !== -1) {
@@ -930,7 +931,7 @@ function archiveDir(archive, path, alias) {
  * @param {String} parent Parent object
  * @param {String} parentName Property name of parent object
  */
-function removeUntranslatables(field, name, parent, parentName) {
+function removeUntranslatables(field, name?, parent?, parentName?) {
   if(field instanceof Array) {
     const fieldParent = JSON.parse(JSON.stringify(field));
     for (var i = field.length; i >= 0; i--) {
@@ -1013,7 +1014,7 @@ function itemUntranslatable(property, value, parent) {
         return true;
       }
       // If this is a number, don't include it
-      if (!isNaN(value)) {
+      if (!isNaN(Number(value))) {
         return true;
       }
       if (!value.replaceAll(new RegExp(/<\/?[a-z][^>]*>/ig), '')) { // empty html tags
@@ -1754,7 +1755,7 @@ h5p.createLanguageFile = function (repo, languageCode, next) {
  */
 h5p.createDefaultLanguage = function (libraryDir) {
   const file = `${libraryDir}/semantics.json`;
-  return fs.existsSync(file) ? removeUntranslatables(JSON.parse(fs.readFileSync(file))) : {};
+  return fs.existsSync(file) ? removeUntranslatables(JSON.parse(fs.readFileSync(file).toString())) : {};
 };
 
 /**
@@ -1941,11 +1942,13 @@ h5p.findDependencyInconsistencies = function () {
 
   // Check through all repos
   processRepos(['*'], function (repo, done) {
+    var libraryRef: any;
     libraryData(repo, function (error, library) {
       if (error) {
         return skipped(repo, error, done);
       }
 
+      libraryRef = library;
       var preloadedDependencies = library.preloadedDependencies || [];
 
       preloadedDependencies.forEach(function (dependency) {
@@ -1960,7 +1963,7 @@ h5p.findDependencyInconsistencies = function () {
 
     readSemantics(repo, function (error, semantics) {
       if (semantics) {
-        findLibrariesInSemantics(semantics, dependency => addDependency(library, dependency));
+        findLibrariesInSemantics(semantics, (dependency: any) => addDependency(libraryRef, dependency));
       }
       done();
     });
@@ -2035,7 +2038,7 @@ h5p.increasePatchVersion = function (force, repos, next) {
 h5p.tagVersion = function (repos, next) {
   processRepos(repos, function (repo, done) {
     libraryData(repo, function (error, library) {
-      var status = {
+      var status: any = {
         name: repo
       };
 
@@ -2071,7 +2074,7 @@ h5p.tagVersion = function (repos, next) {
 h5p.tagVersionAll = function (repos, next) {
   const runner = (repo, done) => {
     libraryData(repo, function (error, library) {
-      var status = {
+      var status: any = {
         name: repo
       };
       if (error) {
@@ -2115,7 +2118,7 @@ h5p.tagVersionAll = function (repos, next) {
  */
 h5p.tag = function (tagName, repos, next) {
   processRepos(repos, function (repo, done) {
-    var status = {
+    var status: any = {
       name: repo
     };
 
@@ -2141,7 +2144,7 @@ h5p.tag = function (tagName, repos, next) {
 h5p.tagAll = function (tagName, repos, next) {
   const argsList = [];
   const runner = function (tagName, repo, done) {
-    const status = {
+    const status: any = {
       name: repo
     };
     spawnGit(repo, ['tag', tagName], function (error, output) {
@@ -2321,7 +2324,7 @@ h5p.importLanguageFiles = function (dir, next) {
 
     // Get libraries with dir sub folders
     processRepos(repos, function (repo, done) {
-      var status = {
+      var status: any = {
         name: repo
       };
 
@@ -2349,7 +2352,7 @@ h5p.importLanguageFiles = function (dir, next) {
             return nextFile(null);
           }
 
-          var fileStatus = {
+          var fileStatus: any = {
             lang: lang[1].toUpperCase()
           };
 
@@ -2421,7 +2424,7 @@ h5p.importLanguageFiles = function (dir, next) {
 h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
   processRepos(repos, function (repo, done) {
     // Keep track of the status for the current repo
-    var status = {
+    var status: any = {
       name: repo
     };
 
@@ -2478,7 +2481,7 @@ h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
 h5p.copyTranslation = function (from, to, repos, next) {
   processRepos(repos, function (repo, done) {
     // Keep track of the status for the current repo
-    var status = {
+    var status: any = {
       name: repo
     };
 
@@ -2503,7 +2506,7 @@ h5p.copyTranslation = function (from, to, repos, next) {
         }
 
         // Add last commit id and date to translation
-        var target = {};
+        var target: any = {};
         if (output) {
           output = output.split(' ');
           target.commit = output[0];
@@ -2623,7 +2626,7 @@ h5p.readJSONFiles = function (fileNames, next) {
     });
   }, function (error, fileStatus) {
     // All files have been read. Make it easy to map up content.
-    var fileResults = {};
+    var fileResults: Record<string, any> = {};
     for (var i = 0; i < fileStatus.length; i++) {
       var file = fileStatus[i];
 
@@ -2669,7 +2672,7 @@ var writeJSONFile = function (file, content, next) {
  * @param {boolean} [cleanup] Trigger removal of state for all fields
  * @returns {Array}
  */
-var updateTranslationFields = function (semantics, translation, handler, cleanup) {
+var updateTranslationFields = function (semantics, translation?, handler?, cleanup?) {
   var updated = false;
   if (translation === undefined) {
     translation = [];
@@ -2725,8 +2728,8 @@ var updateTranslationFields = function (semantics, translation, handler, cleanup
  * @param {boolean} [cleanup] Trigger removal of state for all fields
  * @returns {object}
  */
-var updateTranslationField = function (field, oldTranslation, handler, cleanup) {
-  var updatedTranslation = {};
+var updateTranslationField = function (field, oldTranslation, handler, cleanup?) {
+  var updatedTranslation: any = {};
   var updated = false;
   for (var attr in field) {
     if (attr === 'field') {
@@ -2765,7 +2768,7 @@ var updateTranslationField = function (field, oldTranslation, handler, cleanup) 
 h5p.updateTranslations = function (repos, next) {
   processRepos(repos, function (repo, done) {
     // Keep track of the status for the current repo
-    var status = {
+    var status: any = {
       name: repo
     };
 

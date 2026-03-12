@@ -6,7 +6,9 @@ import config from '../../configLoader';
 
 const installArgsSchema = z.object({
   library: z.string(),
-  mode: z.string().optional(),
+  mode: z.union([z.literal('view'), z.literal('edit')], {
+    errorMap: () => ({ message: 'Mode must be "view" or "edit"' }),
+  }).optional(),
 });
 
 export function installCommand(service?: InstallService): Command {
@@ -15,8 +17,17 @@ export function installCommand(service?: InstallService): Command {
     .description('Installs dependencies for h5p library')
     .argument('<library>', 'Library name')
     .argument('[mode]', 'Mode (view or edit)')
-    .action(async (library: string, mode: string | undefined) => {
-      const args = installArgsSchema.parse({ library, mode });
+    .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
+      const result = installArgsSchema.safeParse({ library, mode });
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          console.error(issue.message);
+        }
+        return;
+      }
+
+      const args = result.data;
+
       try {
         await svc.install(args.library, args.mode);
       } catch (error) {

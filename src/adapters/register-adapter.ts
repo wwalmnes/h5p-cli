@@ -3,7 +3,7 @@ import logic from '../../logic';
 
 export interface IRegisterAdapter {
   getRegistry(): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }>;
-  registryEntryFromRepoUrl(gitUrl: string): Promise<Record<string, any>>;
+  registryEntryFromRepoUrl(gitUrl: string): Record<string, any>;
   readJsonFile(path: string): Record<string, any>;
   writeJsonFile(path: string, data: Record<string, any>): void;
 }
@@ -13,7 +13,7 @@ export class RegisterAdapter implements IRegisterAdapter {
     return logic.getRegistry();
   }
 
-  registryEntryFromRepoUrl(gitUrl: string): Promise<Record<string, any>> {
+  registryEntryFromRepoUrl(gitUrl: string): Record<string, any> {
     return logic.registryEntryFromRepoUrl(gitUrl);
   }
 

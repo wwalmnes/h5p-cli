@@ -15,7 +15,7 @@ export class MissingAdapter implements IMissingAdapter {
     return logic.getRegistry();
   }
 
-  computeDependencies(library: string, mode: string, version: null, folder?: string): Promise<Record<string, any>> {
+  computeDependencies(library: string, mode: 'view' | 'edit', version: null, folder?: string): Promise<Record<string, any>> {
     return logic.computeDependencies(library, mode, version, folder);
   }
 }
