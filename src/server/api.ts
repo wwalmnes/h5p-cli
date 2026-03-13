@@ -1,21 +1,24 @@
-const fs = require('fs');
-const path = require('path');
-const he = require('he');
-const imageSize = require('image-size');
-const logic = require('./logic.js');
-const config = require('./configLoader.js');
-const l10n = require('./assets/l10n.json');
-const supportedLanguages = require(`${require.main.path}/${config.folders.assets}/languageCatcher.js`);
+import fs from 'fs';
+import path from 'path';
+import he from 'he';
+import imageSize from 'image-size';
+import logic from '../../logic';
+import config from '../../configLoader';
+import l10n from '../../assets/l10n.json';
+console.log('config.folders: ', config.folders);
+console.log('require: ', process.cwd());
+// const supportedLanguages = require(`${require.main!.path}/${config.folders.assets}/languageCatcher.js`);
+import supportedLanguages from '../../assets/languageCatcher';
 let session = {
   name: 'main-session',
   language: 'en',
   status: ''
 }
-module.exports = {
+export default {
   // load favicon.ico file
-  favicon: (request, response, next) => {
+  favicon: (request: any, response: any, next: any) => {
     try {
-      const icon = fs.readFileSync(`${require.main.path}/favicon.ico`);
+      const icon = fs.readFileSync(`${require.main!.path}/favicon.ico`);
       response.set('Content-Type', 'image/x-icon');
       response.end(icon);
     }
@@ -24,21 +27,21 @@ module.exports = {
     }
   },
   // renders dashboard
-  dashboard: async (request, response, next) => {
+  dashboard: async (request: any, response: any, next: any) => {
     try {
       manageSession(null, {
         language: request.query?.language,
         name: request.query?.session
       });
-      const html = fs.readFileSync(`${require.main.path}/${config.folders.assets}/templates/dashboard.html`, 'utf-8');
+      const html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/dashboard.html`, 'utf-8');
       const labels = await getLangLabels();
       const languageFiles = logic.getFileList(`${config.folders.libraries}/h5p-editor-php-library/language`);
-      const languages = {};
+      const languages: Record<string, any> = {};
       for (let item of languageFiles) {
         const key = item.match(/language\/(.*?)\.js/)?.[1];
         languages[key] = supportedLanguages[key];
       }
-      let input = {
+      let input: Record<string, any> = {
         assets: config.folders.assets,
         api: config.api,
         status: session.status,
@@ -55,7 +58,7 @@ module.exports = {
     }
   },
   // lists runnable libraries
-  contentTypes: async (request, response, next) => {
+  contentTypes: async (request: any, response: any, next: any) => {
     try {
       const registry = await logic.getRegistry();
       const libraryDirs = await logic.parseLibraryFolders();
@@ -90,7 +93,7 @@ module.exports = {
     }
   },
   // updates session file used for resume functionality
-  setUserData: (request, response, next) => {
+  setUserData: (request: any, response: any, next: any) => {
     try {
       manageSession(request.params.folder, {
         language: request.query?.language,
@@ -114,7 +117,7 @@ module.exports = {
     }
   },
   // deletes the session file used for resume functionality
-  resetUserData: (request, response, next) => {
+  resetUserData: (request: any, response: any, next: any) => {
     try {
       const dataFile = `content/${request.params.folder}/sessions/${session.name}.json`;
       response.set('Content-Type', 'application/json');
@@ -131,7 +134,7 @@ module.exports = {
     }
   },
   // retrieves session data for resume functionality
-  getUserData: (request, response, next) => {
+  getUserData: (request: any, response: any, next: any) => {
     try {
       manageSession(request.params.folder, {
         language: request.query?.language,
@@ -146,7 +149,7 @@ module.exports = {
     }
   },
   // import zipped archive of content type
-  import: (request, response, next) => {
+  import: (request: any, response: any, next: any) => {
     try {
       request.params.folder = request.params.folder.replaceAll(/[^a-zA-Z0-9 -]/g, '');
       request.params.folder = request.params.folder.replaceAll(' ', '-');
@@ -160,7 +163,7 @@ module.exports = {
     }
   },
   // download zipped archive of content type
-  export: async (request, response, next) => {
+  export: async (request: any, response: any, next: any) => {
     try {
       const file = await logic.export(request.params.library, request.params.folder);
       response.download(file);
@@ -170,7 +173,7 @@ module.exports = {
     }
   },
   // create empty content type
-  create: async (request, response, next) => {
+  create: async (request: any, response: any, next: any) => {
     try {
       request.params.folder = request.params.folder.replaceAll(/[^a-zA-Z0-9 -]/g, '');
       request.params.folder = request.params.folder.replaceAll(' ', '-');
@@ -195,7 +198,7 @@ module.exports = {
     }
   },
   // deletes a content folder
-  remove: (request, response, next) => {
+  remove: (request: any, response: any, next: any) => {
     try {
       fs.rmSync(`content/${request.params.folder}`, { recursive: true, force: true });
       response.set('Content-Type', 'application/json');
@@ -206,7 +209,7 @@ module.exports = {
     }
   },
   // lists content folders
-  projects: async (request, response, next) => {
+  projects: async (request: any, response: any, next: any) => {
     try {
       const registry = await logic.getRegistry();
       const limit = parseInt(request.query.limit) || 10;
@@ -214,12 +217,12 @@ module.exports = {
       const start = page * limit;
       const end = start + limit;
       const libraryDirs = await logic.parseLibraryFolders();
-      const output = {
+      const output: { list: any[]; total: number } = {
         list: [],
         total: 0
       }
       const dirs = fs.readdirSync('content');
-      const list = [];
+      const list: any[] = [];
       for (let item of dirs) {
         if (!fs.existsSync(`content/${item}/h5p.json`)) {
           continue;
@@ -281,11 +284,11 @@ module.exports = {
     }
   },
   // renders view & edit modes on the same page
-  splitView: async (request, response, next) => {
+  splitView: async (request: any, response: any, next: any) => {
     try {
-      const splitView_html = fs.readFileSync(`${require.main.path}/${config.folders.assets}/templates/splitView.html`, 'utf-8');
+      const splitView_html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/splitView.html`, 'utf-8');
       const labels = await getLangLabels();
-      let input = {
+      let input: Record<string, any> = {
         assets: config.folders.assets,
         viewFrameSRC: `/view/${request.params.library}/${request.params.folder}?simple=1`,
         editFrameSRC: `/edit/${request.params.library}/${request.params.folder}?simple=1`
@@ -299,7 +302,7 @@ module.exports = {
     }
   },
   // editor file upload
-  uploadFile: (request, response, next) => {
+  uploadFile: (request: any, response: any, next: any) => {
     try {
       const form = JSON.parse(request.body.field);
       const targetFolder = `content/${request.params.folder}/${form.type}s`;
@@ -317,12 +320,12 @@ module.exports = {
         throw new Error(valid);
       }
 
-      const path = `${form.type}s/${request.file.filename}.${ext}`;
+      const filePath = `${form.type}s/${request.file.filename}.${ext}`;
       const targetFile = `${targetFolder}/${request.file.filename}.${ext}`;
       fs.renameSync(`${request.file.path}`, targetFile);
-      const output = {
+      const output: Record<string, any> = {
         mime: request.file.mimetype,
-        path
+        path: filePath
       }
       if (form.type == 'image') {
         const info = imageSize(targetFile);
@@ -339,7 +342,7 @@ module.exports = {
     }
   },
   // updates content.json file with data from content type editor form
-  saveContent: (request, response, next) => {
+  saveContent: (request: any, response: any, next: any) => {
     try {
       const input = JSON.parse(request.body.parameters);
       const currentParams = fs.readFileSync(`content/${request.params.folder}/content.json`, 'utf-8');
@@ -356,7 +359,7 @@ module.exports = {
       }
       fs.writeFileSync(infoFile, JSON.stringify(info));
       const contentFiles = parseContentFiles([input.params]);
-      const list = [];
+      const list: string[] = [];
       for (let item in contentFiles) {
         const parts = item.split('/');
         list.push(parts[parts.length - 1]);
@@ -384,14 +387,14 @@ module.exports = {
     }
   },
   // return translations entries for library and dependencies
-  ajaxTranslations: async (request, response, next) => {
+  ajaxTranslations: async (request: any, response: any, next: any) => {
     try {
       const library = request.params.library;
       const registry = await logic.getRegistry();
       const libraryDirs = await logic.parseLibraryFolders();
       const libFolder = libraryDirs[registry.regular[library].id];
       const libs = await logic.computeDependencies(library, 'view', null, libFolder);
-      const translations = {};
+      const translations: Record<string, any> = {};
       for (let item of request.body.libraries) {
         const entry = libs[registry.reversed[item.split(' ')[0]].shortName];
         const folder = libraryDirs[entry.id];
@@ -410,7 +413,7 @@ module.exports = {
     }
   },
   // endpoint that lists library data; used as ajax request by the content type editors;
-  ajaxLibraries: async (request, response, next) => {
+  ajaxLibraries: async (request: any, response: any, next: any) => {
     try {
       const output = await ajaxLibraries({
         library: request.params.library,
@@ -425,7 +428,7 @@ module.exports = {
     }
   },
   // html page that initializes and renders h5p content type editors
-  edit: async (request, response, next) => {
+  edit: async (request: any, response: any, next: any) => {
     try {
       const baseUrl = config.api;
       const library = request.params.library;
@@ -435,12 +438,12 @@ module.exports = {
       if (!await verifySetup(library, response)) {
         return;
       }
-      const metadataSemantics = fs.readFileSync(`${require.main.path}/${config.folders.assets}/metadataSemantics.json`, 'utf-8');
-      const copyrightSemantics = fs.readFileSync(`${require.main.path}/${config.folders.assets}/copyrightSemantics.json`, 'utf-8');
+      const metadataSemantics = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/metadataSemantics.json`, 'utf-8');
+      const copyrightSemantics = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/copyrightSemantics.json`, 'utf-8');
       const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
       const jsonContent = fs.readFileSync(`./content/${folder}/content.json`, 'utf8');
-      let preloadedJs = [];
-      let preloadedCss = [];
+      let preloadedJs: string[] = [];
+      let preloadedCss: string[] = [];
       for (let item in libs) {
         if (item == library) {
           continue;
@@ -463,15 +466,15 @@ module.exports = {
       const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
       const mathDisplayLabel = libraryDirs[mathDisplay.id];
       preloadedJs.push(`"/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js"`);
-      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(`${require.main.path}/${config.folders.assets}/libraryConfig.json`, 'utf-8'), {
+      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(`${require.main!.path}/${config.folders.assets}/libraryConfig.json`, 'utf-8'), {
         baseUrl,
         mathDisplayLabel
       }));
-      const html = fs.readFileSync(`${require.main.path}/${config.folders.assets}/templates/edit.html`, 'utf-8');
+      const html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/edit.html`, 'utf-8');
       const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
       info.language = session.language;
       const id = libs[library].id;
-      let mainLibrary = {};
+      let mainLibrary: any = {};
       for (let item of info.preloadedDependencies) {
         if (item.machineName == id) {
           mainLibrary = item;
@@ -489,7 +492,7 @@ module.exports = {
       const labels = await getLangLabels();
       const machineName = `${libs[library].id} ${libs[library].version.major}.${libs[library].version.minor}`;
       const libraryDirectories = JSON.stringify((await ajaxLibraries({ machineName: id })).directories);
-      let input = {
+      let input: Record<string, any> = {
         assets: config.folders.assets,
         libraries: config.folders.libraries,
         title: info.title,
@@ -522,7 +525,7 @@ module.exports = {
     }
   },
   // html page that initializes and renders h5p content types
-  view: async (request, response, next) => {
+  view: async (request: any, response: any, next: any) => {
     try {
       const baseUrl = config.api;
       const library = request.params.library;
@@ -540,11 +543,11 @@ module.exports = {
         name: request.query?.session
       }, true);
       const userData = getSession(request.params.folder);
-      let metadata = await logic.getFile(`content/${folder}/h5p.json`, true);
+      let metadata: any = await logic.getFile(`content/${folder}/h5p.json`, true);
       metadata.language = session.language;
       metadata = JSON.stringify(metadata);
-      let preloadedJs = [];
-      let preloadedCss = [];
+      let preloadedJs: string[] = [];
+      let preloadedCss: string[] = [];
       for (let item in libs) {
         const entry = libs[item];
         if (!entry.id) {
@@ -564,14 +567,14 @@ module.exports = {
       const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
       const mathDisplayLabel = libraryDirs[mathDisplay.id];
       preloadedJs.push(`/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js`);
-      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(`${require.main.path}/${config.folders.assets}/libraryConfig.json`, 'utf-8'), {
+      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(`${require.main!.path}/${config.folders.assets}/libraryConfig.json`, 'utf-8'), {
         baseUrl,
         mathDisplayLabel
       }));
-      const html = fs.readFileSync(`${require.main.path}/${config.folders.assets}/templates/view.html`, 'utf-8');
+      const html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/view.html`, 'utf-8');
       const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
       const id = libs[library].id;
-      let mainLibrary = {};
+      let mainLibrary: any = {};
       for (let item of info.preloadedDependencies) {
         if (item.machineName == id) {
           mainLibrary = item;
@@ -581,7 +584,7 @@ module.exports = {
       const machineName = `${id} ${libs[library].version.major}.${libs[library].version.minor}`;
       const labels = await getLangLabels();
       const libraryDirectories = JSON.stringify((await ajaxLibraries({ machineName: id })).directories);
-      let input = {
+      let input: Record<string, any> = {
         assets: config.folders.assets,
         libraries: config.folders.libraries,
         title: JSON.stringify(info.title),
@@ -619,19 +622,10 @@ module.exports = {
   }
 }
 
-/**
- * Validate file for upload by mime type and extension.
- * @param {string} uploadFieldType Upload field type.
- * @param {string} mimeType File's mime type.
- * @param {string} extension File's extension.
- * @returns {string} Error message or 'OK'.
- */
-const validateFileForUpload = (uploadFieldType, mimeType, extension) => {
-  let allowed;
+const validateFileForUpload = (uploadFieldType: string, mimeType: string, extension: string): string => {
+  let allowed: Record<string, string[]>;
 
-  // Set allowed extensions per mime type depending on upload field type
   switch (uploadFieldType) {
-    // Image upload field
     case 'image':
       allowed = {
         'image/png': ['png'],
@@ -640,7 +634,6 @@ const validateFileForUpload = (uploadFieldType, mimeType, extension) => {
       };
       break;
 
-    // Audio upload field
     case 'audio':
       allowed = {
         'audio/mpeg': ['mp3'],
@@ -652,7 +645,6 @@ const validateFileForUpload = (uploadFieldType, mimeType, extension) => {
       };
       break;
 
-    // Video upload field
     case 'video':
       allowed = {
         'video/mp4': ['mp4'],
@@ -661,12 +653,11 @@ const validateFileForUpload = (uploadFieldType, mimeType, extension) => {
       };
       break;
 
-    // File upload field
     case 'file':
       const allowedExtensions = config.files.patterns.allowed.toString()
         .replace(/[^a-zA-Z0-9|]/g, '')
         .split('|');
-      allowed = { '*': allowedExtensions }; // Allow allowedExtensions for all mime types
+      allowed = { '*': allowedExtensions };
       break;
 
     default:
@@ -680,12 +671,7 @@ const validateFileForUpload = (uploadFieldType, mimeType, extension) => {
   return [message, extensionsToUse].filter(Boolean).join(' ');
 }
 
-/**
- * List extension options as human language string.
- * @param {string[]} extensions List of extensions.
- * @returns {string} Human language string.
- */
-const listExtensions = (extensions = []) => {
+const listExtensions = (extensions: string[] = []): string => {
   if (!Array.isArray(extensions) || !extensions.length) {
     return '';
   }
@@ -697,11 +683,10 @@ const listExtensions = (extensions = []) => {
   }
 };
 
-// parses content.json objects for entries of file type
-const parseContentFiles = (entries) => {
-  let toDo = [];
-  let list = [];
-  const output = {};
+const parseContentFiles = (entries: any[]): Record<string, any> => {
+  let toDo: any[] = [];
+  let list: any[] = [];
+  const output: Record<string, any> = {};
   const valid = ['path', 'mime'];
   const parseList = () => {
     toDo = [];
@@ -727,17 +712,16 @@ const parseContentFiles = (entries) => {
   }
   return output;
 }
-/* generates lists of JavaScript & CSS files to load
-as well as translations and directories entries for use in content types */
-const computePreloaded = async (library, baseUrl) => {
+
+const computePreloaded = async (library: string, baseUrl: string) => {
   const registry = await logic.getRegistry();
   const libraryDirs = await logic.parseLibraryFolders();
   const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
-  const directories = {};
-  const translations = {};
-  const languages = [];
-  let preloadedJs = [];
-  let preloadedCss = [];
+  const directories: Record<string, string> = {};
+  const translations: Record<string, any> = {};
+  const languages: string[] = [];
+  let preloadedJs: string[] = [];
+  let preloadedCss: string[] = [];
   for (let item in libs) {
     const entry = libs[item];
     if (!entry.id) {
@@ -781,11 +765,12 @@ const computePreloaded = async (library, baseUrl) => {
   }
   return { library, preloadedJs, preloadedCss, languages, translations, directories };
 }
-const ajaxLibraries = async (options) => {
+
+const ajaxLibraries = async (options: { library?: string; libraries?: any[]; machineName?: string }) => {
   const baseUrl = config.api;
   const registry = await logic.getRegistry();
   const libraryDirs = await logic.parseLibraryFolders();
-  let libraries = [options.library];
+  let libraries: string[] = [options.library!];
   if (Array.isArray(options.libraries)) {
     libraries = [];
     for (let item of options.libraries) {
@@ -800,12 +785,12 @@ const ajaxLibraries = async (options) => {
     libraries = [];
     libraries.push(registry.reversed[options.machineName].shortName);
   }
-  const toDo = [];
+  const toDo: Promise<any>[] = [];
   for (let item of libraries) {
     toDo.push(computePreloaded(item, baseUrl));
   }
   const preloaded = await Promise.all(toDo);
-  let output;
+  let output: any;
   if (options.machineName) {
     const library = libraries[0];
     const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
@@ -845,12 +830,14 @@ const ajaxLibraries = async (options) => {
   }
   return output;
 }
-const handleError = (error, response) => {
+
+const handleError = (error: any, response: any) => {
   console.log(error);
   response.set('Content-Type', 'application/json');
   response.end(JSON.stringify({ error: error.toString() }));
 }
-const verifySetup = async (library, response) => {
+
+const verifySetup = async (library: string, response: any) => {
   const setupStatus = await logic.verifySetup(library);
   if (!setupStatus.ok) {
     session.status = `"${library}" is not properly set up. Please run "h5p setup ${library}" for setup.
@@ -862,10 +849,11 @@ For a setup status report run "h5p verify ${library}".`;
     return true;
   }
 }
-const manageSession = (folder, options, getSessions) => {
+
+const manageSession = (folder: string | null, options: Record<string, any>, getSessions?: boolean): string[] => {
   for (let key in options) {
     if (typeof options[key] !== 'undefined') {
-      session[key] = options[key];
+      (session as any)[key] = options[key];
     }
   }
   const sessionFolder = `content/${folder}/sessions`;
@@ -884,26 +872,25 @@ const manageSession = (folder, options, getSessions) => {
   }
   return [];
 }
-const getSession = (folder) => {
+
+const getSession = (folder: string): any => {
   const dataFile = `content/${folder}/sessions/${session.name}.json`;
-  let userData = {};
+  let userData: any = {};
   if (fs.existsSync(dataFile)) {
     userData = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
   }
   return userData;
 }
-const getLangLabels = async () => {
-  let langFile = `${require.main.path}/${config.folders.assets}/languages/${session.language}.json`;
+
+const getLangLabels = async (): Promise<any> => {
+  let langFile = `${require.main!.path}/${config.folders.assets}/languages/${session.language}.json`;
   if (!fs.existsSync(langFile)) {
     langFile = `${config.folders.assets}/languages/en.json`;
   }
   return await logic.getFile(langFile, true);
 }
 
- /* Reset content user data.
- * @param {string} folder Folder name (contentId) if content to reset user data for.
- */
-const resetContentUserData = (folder) => {
+const resetContentUserData = (folder: string): void => {
   const sessionsDir = `content/${folder}/sessions`;
   fs.readdirSync(sessionsDir).forEach((file) => {
     if (path.extname(file) !== '.json') {
@@ -911,8 +898,8 @@ const resetContentUserData = (folder) => {
     }
     const dataFile = path.join(sessionsDir, file);
     const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
-    data.resume.forEach(entry => {
-      entry.state = null; // Means to reset state for H5P core
+    data.resume.forEach((entry: any) => {
+      entry.state = null;
     });
     fs.writeFileSync(dataFile, JSON.stringify(data, null, 2));
   });
