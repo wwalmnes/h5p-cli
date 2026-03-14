@@ -46,7 +46,7 @@ describe('core — end-to-end', () => {
     // Dynamically import so vi.mock hoisting is in effect for all transitive imports
     const { coreCommand } = await import('../../src/commands/core');
 
-    const cmd = coreCommand(); // no injection — uses real config wiring
+    const cmd = coreCommand();
     await cmd.parseAsync(['node', 'h5p']);
 
     const missingLibs = EXPECTED_CORE_LIBRARIES.filter(

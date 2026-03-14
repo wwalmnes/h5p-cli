@@ -1,0 +1,69 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createEmptyProject, type Fixture } from '../helpers/fixture';
+
+vi.mock('../../logic', () => ({
+  default: {
+    clone: vi.fn(),
+    computeDependencies: vi.fn().mockResolvedValue({}),
+    getWithDependencies: vi.fn().mockResolvedValue([]),
+    getRegistry: vi.fn().mockResolvedValue({
+      regular: {
+        'H5P.Blanks': { id: 'h5p-blanks', org: 'h5p' },
+        'H5P.MultiChoice': { id: 'h5p-multi-choice', org: 'h5p' },
+      },
+      reversed: {},
+    }),
+    registryEntryFromRepoUrl: vi.fn(),
+    machineToShort: vi.fn(),
+    tags: vi.fn(),
+    export: vi.fn(),
+    import: vi.fn(),
+    verifySetup: vi.fn(),
+  },
+}));
+
+describe('list — end-to-end', () => {
+  let fixture: Fixture;
+  let originalCwd: string;
+
+  beforeEach(() => {
+    fixture = createEmptyProject();
+    originalCwd = process.cwd();
+    process.chdir(fixture.dir);
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fixture.cleanup();
+    vi.clearAllMocks();
+  });
+
+  it('fetches the registry without ignoreFile by default', async () => {
+    const logic = await import('../../logic');
+    const { listCommand } = await import('../../src/commands/list');
+
+    await listCommand().parseAsync(['node', 'h5p']);
+
+    expect(logic.default.getRegistry).toHaveBeenCalledWith(false);
+  });
+
+  it('passes ignoreFile=true when second argument is "1"', async () => {
+    const logic = await import('../../logic');
+    const { listCommand } = await import('../../src/commands/list');
+
+    await listCommand().parseAsync(['node', 'h5p', '0', '1']);
+
+    expect(logic.default.getRegistry).toHaveBeenCalledWith(true);
+  });
+
+  it('logs each library name from the registry', async () => {
+    const { listCommand } = await import('../../src/commands/list');
+
+    await listCommand().parseAsync(['node', 'h5p']);
+
+    const logged = (console.log as ReturnType<typeof vi.fn>).mock.calls.flat() as string[];
+    expect(logged.some(l => l.includes('H5P.Blanks'))).toBe(true);
+    expect(logged.some(l => l.includes('H5P.MultiChoice'))).toBe(true);
+  });
+});
