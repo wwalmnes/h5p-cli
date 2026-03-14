@@ -14,7 +14,6 @@ import { branchesCommand } from './commands/branches';
 import { registerCommand } from './commands/register';
 import { verifyCommand } from './commands/verify';
 import { serverCommand } from './commands/server';
-import { helpCommand } from './commands/help';
 import { utilsCommand } from './commands/utils/index';
 
 const pkg = require('../package.json');
@@ -40,7 +39,6 @@ program.addCommand(branchesCommand());
 program.addCommand(registerCommand());
 program.addCommand(verifyCommand());
 program.addCommand(serverCommand());
-program.addCommand(helpCommand());
 program.addCommand(utilsCommand());
 
 // Replicate the original guard: skip setupFolders for 'utils', 'help', no-arg
