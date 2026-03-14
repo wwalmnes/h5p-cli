@@ -1,4 +1,7 @@
-const config = require(`${require.main.path}/config.js`);
+const fs = require('fs');
+const _userConfig = `${process.cwd()}/config.js`;
+const _bundleConfig = `${require.main.path}/config.js`;
+const config = fs.existsSync(_userConfig) ? require(_userConfig) : require(_bundleConfig);
 // scaffolding for h5peditor.js
 global.window = {
   parent: {

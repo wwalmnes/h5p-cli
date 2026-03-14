@@ -10,8 +10,8 @@
   },
   "scripts": {
     "postinstall": "patch-package",
-    "build": "tsup src/index.ts src/server/server.ts src/server/api.ts --format cjs --outDir dist --no-splitting",
-    "dev": "tsup src/index.ts src/server/server.ts src/server/api.ts --format cjs --outDir dist --watch",
+    "build": "tsup src/index.ts src/server/server.ts src/server/api.ts config.ts --format cjs --outDir dist --no-splitting",
+    "dev": "tsup src/index.ts src/server/server.ts src/server/api.ts config.ts --format cjs --outDir dist --watch",
     "prepare": "npm run build",
     "test": "vitest run",
     "test:unit": "vitest run tests/commands tests/services tests/adapters",

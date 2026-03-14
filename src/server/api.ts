@@ -3,10 +3,9 @@ import path from 'path';
 import he from 'he';
 import imageSize from 'image-size';
 import logic from '../../logic';
-import config from '../../configLoader';
+// import config from '../../configLoader';
+import config from '../../config';
 import l10n from '../../assets/l10n.json';
-console.log('config.folders: ', config.folders);
-console.log('require: ', process.cwd());
 // const supportedLanguages = require(`${require.main!.path}/${config.folders.assets}/languageCatcher.js`);
 import supportedLanguages from '../../assets/languageCatcher';
 let session = {
@@ -14,11 +13,13 @@ let session = {
   language: 'en',
   status: ''
 }
+
+const rootFolder = path.resolve(__dirname, '../');
 export default {
   // load favicon.ico file
   favicon: (request: any, response: any, next: any) => {
     try {
-      const icon = fs.readFileSync(`${require.main!.path}/favicon.ico`);
+      const icon = fs.readFileSync(path.join(rootFolder, 'favicon.ico'));
       response.set('Content-Type', 'image/x-icon');
       response.end(icon);
     }
@@ -33,7 +34,7 @@ export default {
         language: request.query?.language,
         name: request.query?.session
       });
-      const html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/dashboard.html`, 'utf-8');
+      const html = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'templates', 'dashboard.html'), 'utf-8');
       const labels = await getLangLabels();
       const languageFiles = logic.getFileList(`${config.folders.libraries}/h5p-editor-php-library/language`);
       const languages: Record<string, any> = {};
@@ -286,7 +287,7 @@ export default {
   // renders view & edit modes on the same page
   splitView: async (request: any, response: any, next: any) => {
     try {
-      const splitView_html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/splitView.html`, 'utf-8');
+      const splitView_html = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'templates', 'splitView.html'), 'utf-8');
       const labels = await getLangLabels();
       let input: Record<string, any> = {
         assets: config.folders.assets,
@@ -438,8 +439,8 @@ export default {
       if (!await verifySetup(library, response)) {
         return;
       }
-      const metadataSemantics = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/metadataSemantics.json`, 'utf-8');
-      const copyrightSemantics = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/copyrightSemantics.json`, 'utf-8');
+      const metadataSemantics = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'metadataSemantics.json'), 'utf-8');
+      const copyrightSemantics = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'copyrightSemantics.json'), 'utf-8');
       const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
       const jsonContent = fs.readFileSync(`./content/${folder}/content.json`, 'utf8');
       let preloadedJs: string[] = [];
@@ -466,11 +467,11 @@ export default {
       const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
       const mathDisplayLabel = libraryDirs[mathDisplay.id];
       preloadedJs.push(`"/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js"`);
-      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(`${require.main!.path}/${config.folders.assets}/libraryConfig.json`, 'utf-8'), {
+      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
         baseUrl,
         mathDisplayLabel
       }));
-      const html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/edit.html`, 'utf-8');
+      const html = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'templates/edit.html'), 'utf-8');
       const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
       info.language = session.language;
       const id = libs[library].id;
@@ -567,11 +568,11 @@ export default {
       const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
       const mathDisplayLabel = libraryDirs[mathDisplay.id];
       preloadedJs.push(`/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js`);
-      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(`${require.main!.path}/${config.folders.assets}/libraryConfig.json`, 'utf-8'), {
+      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
         baseUrl,
         mathDisplayLabel
       }));
-      const html = fs.readFileSync(`${require.main!.path}/${config.folders.assets}/templates/view.html`, 'utf-8');
+      const html = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'templates', 'view.html'), 'utf-8');
       const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
       const id = libs[library].id;
       let mainLibrary: any = {};
@@ -883,7 +884,7 @@ const getSession = (folder: string): any => {
 }
 
 const getLangLabels = async (): Promise<any> => {
-  let langFile = `${require.main!.path}/${config.folders.assets}/languages/${session.language}.json`;
+  let langFile = path.join(rootFolder, config.folders.assets, 'languages', `${session.language}.json`);
   if (!fs.existsSync(langFile)) {
     langFile = `${config.folders.assets}/languages/en.json`;
   }

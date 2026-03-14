@@ -1,8 +1,10 @@
 import express from 'express';
-import config from '../../configLoader';
+import config from '../../config';
 import multerLib from 'multer';
 import api from './api';
+import path from 'path';
 
+const rootFolder = path.resolve(__dirname, '../');
 const multer = multerLib({ dest: `./${config.folders.temp}` });
 let app = express();
 app.use(express.json());
@@ -29,7 +31,7 @@ app.post('/edit/:library/:folder', multer.none(), api.saveContent);
 app.get('/content-user-data/:folder/:type/:id', api.getUserData);
 app.post('/content-user-data/:folder/:type/:id', api.setUserData);
 app.delete('/content-user-data/:folder', api.resetUserData);
-app.use(`/${config.folders.assets}`, express.static(`${require.main!.path}/${config.folders.assets}`))
+app.use(`/${config.folders.assets}`, express.static(path.join(rootFolder, config.folders.assets)))
 app.use(express.static('./'));
 
 let port = config.port;
