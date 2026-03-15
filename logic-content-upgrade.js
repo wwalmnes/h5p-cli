@@ -189,7 +189,7 @@ const upgradeParams = (params, upgradeFunction, extras = {}) => {
  * @param {number} minor The new minor version number.
  * @returns {string} Upgraded library name.
  */
-upgradeLibrary = (versionedName, getLatestLibraryVersion) => {
+var upgradeLibrary = (versionedName, getLatestLibraryVersion) => {
   const machineName = versionedName.split(' ')[0];
   const latestVersion = getLatestLibraryVersion(machineName);
   return `${machineName} ${latestVersion.major}.${latestVersion.minor}`;
