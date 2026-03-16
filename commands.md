@@ -325,3 +325,22 @@ For utility subcommands:
 h5p utils help           # list all utils subcommands
 h5p utils help <cmd>     # detailed help for a specific utils subcommand
 ```
+
+---
+
+## `h5p utils`
+
+Utility commands for multi-repo git workflows, versioning, translations, packaging, and validation.
+
+```
+h5p utils <subcommand> [args]
+```
+
+See [commands-utils.md](./commands-utils.md) for the full reference.
+
+For quick help in the terminal:
+
+```bash
+h5p utils help           # list all utils subcommands
+h5p utils help <cmd>     # detailed help for a specific subcommand
+```
