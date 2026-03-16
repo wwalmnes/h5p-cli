@@ -1,5 +1,5 @@
 import express from 'express';
-import config from '../../config';
+import config from '../config';
 import multerLib from 'multer';
 import api from './api';
 import path from 'path';

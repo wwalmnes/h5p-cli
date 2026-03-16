@@ -4,7 +4,7 @@ import he from 'he';
 import imageSize from 'image-size';
 import logic from '../../logic';
 // import config from '../../configLoader';
-import config from '../../config';
+import config from '../config';
 import l10n from '../../assets/l10n.json';
 // const supportedLanguages = require(`${require.main!.path}/${config.folders.assets}/languageCatcher.js`);
 import supportedLanguages from '../../assets/languageCatcher';

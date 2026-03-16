@@ -1,5 +1,5 @@
 import fs from 'fs';
-import defaultConfig from './config';
+import defaultConfig from './src/config';
 
 const userConfigFile = `${process.cwd()}/config.js`;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
