@@ -5,6 +5,7 @@ import {
   machineToShort,
   pathHasDuplicates,
   parseSemanticLibraries,
+  normalizeRegistry,
 } from '../../src/lib/h5p-utils';
 
 describe('fromTemplate', () => {
@@ -115,5 +116,51 @@ describe('parseSemanticLibraries', () => {
   it('ignores entries with no library type', () => {
     const semantics = [{ type: 'text', label: 'Title' }];
     expect(parseSemanticLibraries(semantics)).toEqual({});
+  });
+});
+
+describe('normalizeRegistry', () => {
+  it('keys regular by shortName and reversed by id', () => {
+    const raw = {
+      'H5P.Blanks': { id: 'H5P.Blanks', shortName: 'h5p-blanks', org: 'h5p', repoName: 'h5p-blanks' },
+    };
+    const { regular, reversed } = normalizeRegistry(raw);
+    expect(regular['h5p-blanks'].id).toBe('H5P.Blanks');
+    expect(reversed['H5P.Blanks'].shortName).toBe('h5p-blanks');
+  });
+
+  it('derives repoName from repo.url when absent', () => {
+    const raw = {
+      'H5P.Test': { id: 'H5P.Test', shortName: 'h5p-test', org: 'h5p', repo: { url: 'https://github.com/h5p/h5p-test' } },
+    };
+    const { regular } = normalizeRegistry(raw);
+    expect(regular['h5p-test'].repoName).toBe('h5p-test');
+  });
+
+  it('derives org from repo.url when absent', () => {
+    const raw = {
+      'H5P.Test': { id: 'H5P.Test', shortName: 'h5p-test', repoName: 'h5p-test', repo: { url: 'https://github.com/h5p/h5p-test' } },
+    };
+    const { regular } = normalizeRegistry(raw);
+    expect(regular['h5p-test'].org).toBe('h5p');
+  });
+
+  it('falls back to repoName as shortName when shortName is absent', () => {
+    const raw = {
+      'H5P.Test': { id: 'H5P.Test', repoName: 'h5p-test', org: 'h5p' },
+    };
+    const { regular } = normalizeRegistry(raw);
+    expect(regular['h5p-test']).toBeDefined();
+    expect(regular['h5p-test'].shortName).toBe('h5p-test');
+  });
+
+  it('strips resume, fullscreen, and xapiVerbs fields', () => {
+    const raw = {
+      'H5P.Test': { id: 'H5P.Test', shortName: 'h5p-test', org: 'h5p', repoName: 'h5p-test', resume: true, fullscreen: 1, xapiVerbs: [] },
+    };
+    const { regular } = normalizeRegistry(raw);
+    expect(regular['h5p-test'].resume).toBeUndefined();
+    expect(regular['h5p-test'].fullscreen).toBeUndefined();
+    expect(regular['h5p-test'].xapiVerbs).toBeUndefined();
   });
 });

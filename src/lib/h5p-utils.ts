@@ -120,3 +120,27 @@ export const machineToShort = (machineName: string): string => {
   machineName = machineName.replace('H5PEditor', 'H5P-Editor');
   return machineName.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase().replace('.', '-');
 }
+
+// normalizes raw registry JSON into { regular, reversed } lookup maps
+export const normalizeRegistry = (rawList: Record<string, any>): { regular: Record<string, any>; reversed: Record<string, any> } => {
+  const output = { regular: {} as Record<string, any>, reversed: {} as Record<string, any> };
+  for (const item in rawList) {
+    if (rawList[item].repo) {
+      if (!rawList[item].repoName) {
+        rawList[item].repoName = rawList[item].repo.url.split('/').slice(-1)[0];
+      }
+      if (!rawList[item].org) {
+        rawList[item].org = rawList[item].repo.url.split('/').slice(3, 4)[0];
+      }
+    }
+    if (!rawList[item].shortName) {
+      rawList[item].shortName = rawList[item].repoName;
+    }
+    delete rawList[item].resume;
+    delete rawList[item].fullscreen;
+    delete rawList[item].xapiVerbs;
+    output.reversed[rawList[item].id] = rawList[item];
+    output.regular[rawList[item].shortName] = rawList[item];
+  }
+  return output;
+}

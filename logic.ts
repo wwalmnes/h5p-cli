@@ -4,7 +4,7 @@ import superAgent from 'superagent';
 import admZip from 'adm-zip';
 import config from './configLoader';
 import { upgradeContent } from './logic-content-upgrade.js';
-import { fromTemplate, parseGitUrl, machineToShort } from './src/lib/h5p-utils';
+import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './src/lib/h5p-utils';
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies';
 import type { IComputeDependenciesPort, LibraryEntry, LibraryVersion, LibraryDependencyRef, Registry, DependencyMap } from './src/lib/compute-dependencies';
 import type { ParsedGitUrl } from './src/lib/h5p-utils';
@@ -166,28 +166,7 @@ const logic = {
     else {
       list = await getFile(config.urls.registry, true);
     }
-    const output: Registry = {
-      regular: {},
-      reversed: {}
-    }
-    for (let item in list) {
-      if (list[item].repo) {
-        if (!list[item].repoName) {
-          list[item].repoName = list[item].repo.url.split('/').slice(-1)[0];
-        }
-        if (!list[item].org) {
-          list[item].org = list[item].repo.url.split('/').slice(3, 4)[0];
-        }
-      }
-      if (!list[item].shortName) {
-        list[item].shortName = list[item].repoName;
-      }
-      delete list[item].resume;
-      delete list[item].fullscreen;
-      delete list[item].xapiVerbs;
-      output.reversed[list[item].id] = list[item];
-      output.regular[list[item].shortName] = list[item];
-    }
+    const output = normalizeRegistry(list) as Registry;
     if (ignoreFile) {
       fs.writeFileSync(config.registry, JSON.stringify(list));
     }
@@ -202,7 +181,7 @@ const logic = {
   },
   // list tags for library using git
   tags: (org: string, repo: string, mainBranch = 'master'): string[] => {
-    const library = getRepoFile(fromTemplate(config.urls.library.clone, { org, repo }), 'library.json', mainBranch, true);
+    getRepoFile(fromTemplate(config.urls.library.clone, { org, repo }), 'library.json', mainBranch, true);
     const label = `${repo}_${mainBranch}`;
     const folder = `${config.folders.temp}/${label}`;
     if (!fs.existsSync(folder)) {
@@ -454,7 +433,7 @@ const logic = {
       if (!fs.existsSync(libraryFile)) {
         continue;
       }
-      const info = await logic.getFile(libraryFile, true) as any;
+      const info = await getFile(libraryFile, true) as any;
       const id = info.machineName;
       output[id] = folder;
       if (!registry.reversed[id]) {
