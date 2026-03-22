@@ -39,8 +39,14 @@
     "superagent": "^8.0.4",
     "zod": "^3.25.76"
   },
-"devDependencies": {
+  "devDependencies": {
+    "@types/archiver": "^7.0.0",
+    "@types/express": "^5.0.6",
+    "@types/gitignore-parser": "^0.0.3",
+    "@types/he": "^1.2.3",
+    "@types/multer": "^2.1.0",
     "@types/node": "^20.19.37",
+    "@types/sanitize-html": "^2.16.1",
     "@types/tmp": "^0.2.6",
     "tmp": "^0.2.4",
     "tsup": "^8.5.1",

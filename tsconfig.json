@@ -6,7 +6,7 @@
     "esModuleInterop": true,
     "allowJs": true,
     "checkJs": false,
-    "strict": false,
+    "strict": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "outDir": "dist",

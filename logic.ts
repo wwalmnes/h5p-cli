@@ -1,6 +1,8 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
+// @ts-ignore - no type declarations for superagent v8 in this project
 import superAgent from 'superagent';
+// @ts-ignore - no type declarations for adm-zip in this project
 import admZip from 'adm-zip';
 import config from './configLoader';
 import { upgradeContent } from './logic-content-upgrade.js';
@@ -112,7 +114,7 @@ const logic = {
     process.stdout.write(message);
   },
   // imports content type from zip archive file in the .h5p format
-  import: (folder: string, archive: string): string => {
+  import: (folder: string, archive?: string): string => {
     const target = `${config.folders.temp}/${folder}`;
     new admZip(archive).extractAllTo(target);
     fs.renameSync(`${target}/content`, `content/${folder}`);
@@ -121,7 +123,7 @@ const logic = {
     return folder;
   },
   // creates zip archive export file in the .h5p format
-  export: async (library: string, folder: string): Promise<string> => {
+  export: async (library: string, folder?: string): Promise<string> => {
     const registry = await logic.getRegistry();
     const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
@@ -176,8 +178,8 @@ const logic = {
   mode - 'view' or 'edit' to compute non-editor or editor dependencies
   version - optional version to compute; defaults to 'master'
   folder - optional local library folder to use instead of git repo; use "" to ignore */
-  computeDependencies: (library: string, mode: 'view' | 'edit', version?: string | null, folder?: string): Promise<DependencyMap> => {
-    return _computeDependencies(library, mode, version, folder, new DefaultComputeDependenciesPort());
+  computeDependencies: (library: string, mode?: 'view' | 'edit', version?: string | null, folder?: string): Promise<DependencyMap> => {
+    return _computeDependencies(library, mode ?? 'view', version, folder, new DefaultComputeDependenciesPort());
   },
   // list tags for library using git
   tags: (org: string, repo: string, mainBranch = 'master'): string[] => {
@@ -221,8 +223,8 @@ const logic = {
   mode - 'view' or 'edit' to fetch non-editor or editor libraries
   latest - if true master branch versions of libraries are used
   toSkip - optional array of libraries to skip; after a library is parsed by the function it's auto-added to the array so it's skipped for efficiency */
-  getWithDependencies: async (action: 'clone' | 'download', library: string, mode: 'view' | 'edit', latest: boolean, toSkip: string[] = []): Promise<string[]> => {
-    const list = await logic.computeDependencies(library, mode);
+  getWithDependencies: async (action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip: string[] = []): Promise<string[]> => {
+    const list = await logic.computeDependencies(library, mode ?? 'view');
     for (let item in list) {
       if (toSkip.indexOf(item) != -1) {
         continue;
@@ -237,8 +239,8 @@ const logic = {
           throw new Error(`unregistered ${item} library`);
         }
       }
-      const label = `${list[item].id}-${list[item].version.major}.${list[item].version.minor}`;
-      const listVersion = `${list[item].version.major}.${list[item].version.minor}.${list[item].version.patch}`;
+      const label = `${list[item].id}-${list[item].version!.major}.${list[item].version!.minor}`;
+      const listVersion = `${list[item].version!.major}.${list[item].version!.minor}.${list[item].version!.patch}`;
       const version = latest ? 'master' : listVersion;
       const folder = `${config.folders.libraries}/${label}`;
       if (fs.existsSync(folder)) {
@@ -294,7 +296,7 @@ const logic = {
     for (let item in list) {
       if (!list[item]?.id) {
         output.libraries[item] = {
-          optional: list[item].optional,
+          optional: list[item].optional ?? false,
           present: false
         }
         if (!list[item].optional) {
@@ -302,9 +304,9 @@ const logic = {
         }
         continue;
       }
-      const label = `${list[item].id}-${list[item].version.major}.${list[item].version.minor}`;
+      const label = `${list[item].id}-${list[item].version!.major}.${list[item].version!.minor}`;
       output.libraries[label] = {
-        optional: list[item].optional,
+        optional: list[item].optional ?? false,
         present: fs.existsSync(`${config.folders.libraries}/${libraryDirs[list[item].id]}`)
       }
       if (!list[item].optional && !output.libraries[label].present) {
@@ -325,7 +327,7 @@ const logic = {
     const map: Record<string, boolean> = {};
     const preloadedDependencies: LibraryDependencyRef[] = [];
     for (let item in libs) {
-      for (let predep of libs[item].preloadedDependencies) {
+      for (let predep of libs[item].preloadedDependencies ?? []) {
         if (map[predep.machineName]) {
           continue;
         }
@@ -335,8 +337,8 @@ const logic = {
     }
     preloadedDependencies.push({
       machineName: libs[library].id,
-      minorVersion: libs[library].version.minor,
-      majorVersion: libs[library].version.major,
+      minorVersion: libs[library].version!.minor,
+      majorVersion: libs[library].version!.major,
     });
     const info = {
       title: folder,
@@ -380,7 +382,7 @@ const logic = {
     mainLib.minorVersion = Number(mainLib.minorVersion);
     lib.version!.major = Number(lib.version!.major);
     lib.version!.minor = Number(lib.version!.minor);
-    if (lib.version.major <= mainLib.majorVersion && lib.version.minor <= mainLib.minorVersion) {
+    if (lib.version!.major <= mainLib.majorVersion && lib.version!.minor <= mainLib.minorVersion) {
       return;
     }
     const getUpgradesScript = (machineName: string) => {
@@ -412,7 +414,7 @@ const logic = {
       library: `${info.mainLibrary} ${mainLib.majorVersion}.${mainLib.minorVersion}`,
     };
     const { params: upgradedParams, metadata: upgradedMetadata } =
-      upgradeContent(input, getUpgradesScript, getLatestLibraryVersion);
+      upgradeContent(input, getUpgradesScript, getLatestLibraryVersion) as { params: unknown; metadata: Record<string, unknown> };
     for (let attribute in metadata) {
       if (upgradedMetadata[attribute] !== undefined && upgradedMetadata[attribute] !== null) {
         info[attribute] = upgradedMetadata[attribute];

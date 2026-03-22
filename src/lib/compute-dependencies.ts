@@ -39,6 +39,7 @@ export interface LibraryEntry {
 export interface Registry {
   regular: Record<string, LibraryEntry>;
   reversed: Record<string, LibraryEntry>;
+  runnable?: Record<string, LibraryEntry>;
 }
 
 export type DependencyMap = Record<string, LibraryEntry>;
@@ -124,13 +125,13 @@ export async function computeDependencies(
       if (!done[level][machineName] || done[level][machineName].optional) {
         done[level][machineName] = { optional, parent } as any as LibraryEntry;
       }
-      const parentVersion = `${done[level][parent].version.major}.${done[level][parent].version.minor}.${done[level][parent].version.patch}`;
+      const parentVersion = `${done[level][parent].version!.major}.${done[level][parent].version!.minor}.${done[level][parent].version!.patch}`;
       process.stdout.write(`\n!!! ${optional ? 'optional' : 'required'} library ${machineName} ${ver} not found in registry; required by ${parent} (${parentVersion}) `);
       return;
     }
     const version = ver == 'master' ? ver : latestPatch(lib.org, entry, ver);
     if (!done[level][entry]?.id && !toDo[entry]?.parent) {
-      toDo[entry] = { parent, version, folder: dir };
+      toDo[entry] = { parent, version, folder: dir ?? undefined };
     }
     weights[entry] = weights[entry] ? weights[entry] + 1 : 1;
     return;
@@ -151,7 +152,7 @@ export async function computeDependencies(
   }
   const compute = async (org: string, dep: string, version: string) => {
     const parent = toDo[dep].parent ? `/${toDo[dep].parent}` : '';
-    const lastParent = registry.regular[toDo[dep].parent]?.requiredBy[registry.regular[toDo[dep].parent]?.requiredBy.length - 1] || '';
+    const lastParent = registry.regular[toDo[dep].parent]?.requiredBy?.[registry.regular[toDo[dep].parent]?.requiredBy?.length ?? 0 - 1] ?? '';
     const requiredByPath = lastParent + parent;
     if (pathHasDuplicates(requiredByPath)) {
       delete toDo[dep];
@@ -193,9 +194,9 @@ export async function computeDependencies(
     if (!done[level][dep].requiredBy) {
       done[level][dep].requiredBy = [];
     }
-    done[level][dep].requiredBy.push(requiredByPath);
+    done[level][dep].requiredBy!.push(requiredByPath);
     done[level][dep].level = level;
-    let ver = version == 'master' ? version : `${done[level][dep].version.major}.${done[level][dep].version.minor}.${done[level][dep].version.patch}`;
+    let ver = version == 'master' ? version : `${done[level][dep].version!.major}.${done[level][dep].version!.minor}.${done[level][dep].version!.patch}`;
     const optionals = await getOptionals(dep, org, repoName, ver, toDo[dep].folder);
     if (list.preloadedDependencies) {
       for (let item of list.preloadedDependencies) {

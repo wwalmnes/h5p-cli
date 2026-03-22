@@ -32,9 +32,9 @@ const PROCESS_SERIAL = 2;
  * Local globals
  */
 var apiVersion = 1;
-var registry;
-var collection; // A collection is used to avoid circular dependencies
-var pullushers; // A collection ready for pushing or pulling
+var registry: any;
+var collection: any; // A collection is used to avoid circular dependencies
+var pullushers: any; // A collection ready for pushing or pulling
 var env = process.env;
 env.GIT_SSH = __dirname + '/bin/h5p-ssh';
 // TODO: Try to start ssh-agent if env['SSH_AUTH_SOCK'] is missing?
@@ -50,10 +50,10 @@ var ignoredRepos = (process.env.H5P_IGNORE_REPOS !== undefined ? process.env.H5P
 var semiIgnoredRepos = (process.env.H5P_SEMI_IGNORE_REPOS !== undefined ? process.env.H5P_SEMI_IGNORE_REPOS.split(',') : []);
 
 // run callback based functions in parallel; returns cli.results compatible array;
-const runAll = (runner, argsList, callback) => {
-  const handle = (runner, args) => {
+const runAll = (runner: any, argsList: any, callback: any) => {
+  const handle = (runner: any, args: any) => {
     return new Promise ((resolve, reject) => {
-      runner.apply(null, [...args, ...[(status) => {
+      runner.apply(null, [...args, ...[(status: any) => {
         resolve(status);
       }]]);
     });
@@ -83,7 +83,7 @@ const runAll = (runner, argsList, callback) => {
 /**
  * Make ssh errors short and understandable.
  */
-function sshError(error, url?) {
+function sshError(error: any, url?: any) {
   if (error.indexOf('Host key verification failed.') !== -1) error = 'Host key verification failed.' + (url ? ' Try running ssh -T ' + url.split(':', 1)[0] : '') + '\n';
   if (error.indexOf('Permission denied') !== -1) error = 'Permission denied.\nMake sure ssh-agent is running.' + (url ? ' (ssh -T ' + url.split(':', 1)[0] + ' should not ask for password/passphrase)' : '') + '\n';
   return error;
@@ -93,7 +93,7 @@ function sshError(error, url?) {
  * Skip ssh warnings.
  * (typically comes when a host has multiple IPs, like github.com)
  */
-function skipWarnings(output) {
+function skipWarnings(output: any) {
   if (output.substr(0, 8) === 'Warning:' || output.substr(0, 12) === 'Cloning into') output = '';
   return output;
 }
@@ -101,7 +101,7 @@ function skipWarnings(output) {
 /**
  * Run given callback with h5p registry as params.
  */
-function getRegistry(next) {
+function getRegistry(next: any) {
   if (registry) return next(null, registry.libraries);
 
   https.get('https://h5p.org/registry.json', function (response) {
@@ -119,7 +119,7 @@ function getRegistry(next) {
         registry = JSON.parse(jsonBuffer);
       }
       catch (error) {
-        return next('Cannot parse registry information: ' + error.message);
+        return next('Cannot parse registry information: ' + (error as any).message);
       }
 
       if (registry.apiVersion !== apiVersion) return next('API Version mismatch.\nMake sure this tool is up to date.');
@@ -134,9 +134,9 @@ function getRegistry(next) {
 /**
  * Recursive function that adds the given library + its dependencies to the collection.
  */
-function getLibrary(libraryName, next) {
+function getLibrary(libraryName: any, next: any) {
   if (libraryName === '') return next();
-  getRegistry(function (error, libraries) {
+  getRegistry(function (error: any, libraries: any) {
     if (error) return next(error);
     if (collection[libraryName]) return next(); // Already have this.
 
@@ -150,10 +150,10 @@ function getLibrary(libraryName, next) {
       var errors = '';
       var loaded = 0;
 
-      var dependency;
+      var dependency: any;
       for (var i = 0; i < library.dependencies.length; i++) {
         dependency = library.dependencies[i];
-        getLibrary(dependency, function (error) {
+        getLibrary(dependency, function (error: any) {
           if (error) errors += '\n' + dependency + ': ' + error;
           loaded++;
 
@@ -169,14 +169,14 @@ function getLibrary(libraryName, next) {
   });
 }
 
-function sshToHttps(url){
+function sshToHttps(url: any){
   return url.replace("git@github.com:", "https://github.com/");
 }
 
 /**
  * Clone repo at given url into given dir.
  */
-function cloneRepository(dir, url, fetchWithHttps = false, next) {
+function cloneRepository(dir: any, url: any, fetchWithHttps = false, next: any) {
   if(fetchWithHttps) {
     url = sshToHttps(url);
   }
@@ -200,7 +200,7 @@ function cloneRepository(dir, url, fetchWithHttps = false, next) {
 /**
  * Check if dir is a repo.
  */
-function checkRepository(dir, next) {
+function checkRepository(dir: any, next: any) {
   fs.stat(dir + '/.git/config', function (error, stats) {
     if (error) return next(null);
     next(dir);
@@ -211,7 +211,7 @@ function checkRepository(dir, next) {
  * Find all repos in the current working dir.
  * @deprecated Use h5p.findDirectories instead
  */
-function findRepositories(next, skipCheck?) {
+function findRepositories(next: any, skipCheck?: any) {
   fs.readdir('.', function (error, files) {
     if (error) return next(error);
 
@@ -220,10 +220,10 @@ function findRepositories(next, skipCheck?) {
       return;
     }
 
-    var repos = [];
+    var repos: any[] = [];
     var processed = 0;
     for (var i = 0; i < files.length; i++) {
-      checkRepository(files[i], function (repo) {
+      checkRepository(files[i], function (repo: any) {
         if (repo) {
           repos.push(repo);
         }
@@ -240,7 +240,7 @@ function findRepositories(next, skipCheck?) {
 /**
  * Stage and commit all on the given repo.
  */
-function commitRepository(dir, message, next) {
+function commitRepository(dir: any, message: any, next: any) {
   var result: any = {
     name: dir
   };
@@ -277,7 +277,7 @@ function commitRepository(dir, message, next) {
       var lines = buffer.split('\n');
       lines.pop(); // Empty
 
-      var line = lines.shift().replace(/\[|\]/g, '').split(' ', 3);
+      var line = lines.shift()!.replace(/\[|\]/g, '').split(' ', 3);
       if (line[0] !== '#') {
         result.branch = line[0];
         result.commit = line[1];
@@ -293,7 +293,7 @@ function commitRepository(dir, message, next) {
 /**
  * Pull the current branch for the given repo.
  */
-function pullRepository(dir) {
+function pullRepository(dir: any) {
   const proc = child.spawn('git', ['pull'], {
     cwd: process.cwd() + '/' + dir,
     env: env
@@ -331,7 +331,7 @@ function pullRepository(dir) {
 /**
  * Get the diff for the given repo.
  */
-function diffRepository(dir, next) {
+function diffRepository(dir: any, next: any) {
   var proc = child.spawn('git', ['diff'], {cwd: process.cwd() + '/' + dir});
   proc.on('error', function (error) {
     next(error);
@@ -359,7 +359,7 @@ function diffRepository(dir, next) {
  * @param {Function} process
  * @param {Function} next
  */
-function processRepos(repos, options, process, next?) {
+function processRepos(repos: any, options: any, process: any, next?: any) {
   if (typeof options !== 'number') {
     // Options not specified, shift args
     next = process;
@@ -367,7 +367,7 @@ function processRepos(repos, options, process, next?) {
     options = PROCESS_NIL;
   }
 
-  findRepositories(function (error, validRepos) {
+  findRepositories(function (error: any, validRepos: any) {
     if (error) return next(error);
 
     var all = !repos.length || (repos.length === 1 && repos[0] === '*');
@@ -376,7 +376,7 @@ function processRepos(repos, options, process, next?) {
       repos = validRepos;
     }
 
-    var each = function (id, value, done) {
+    var each = function (id: any, value: any, done: any) {
       if (ignoredRepos.indexOf(value) !== -1 || !(options & PROCESS_SKIP_CHECK) && semiIgnoredRepos.indexOf(value) !== -1) {
         // Ignore repo
         done({
@@ -426,7 +426,7 @@ function processRepos(repos, options, process, next?) {
  * @param dirs
  * @param options
  */
-function processRepositories(repos, dirs, options) {
+function processRepositories(repos: any, dirs: any, options: any) {
   if (typeof options !== 'number') {
     options = PROCESS_NIL;
   }
@@ -449,8 +449,8 @@ function processRepositories(repos, dirs, options) {
  * @param {Function} process task
  * @param {Function} finished callback
  */
-function parallel(arr, process, finished) {
-  var results = [];
+function parallel(arr: any, process: any, finished: any) {
+  var results: any[] = [];
 
   /**
    * Callback for when processing is done
@@ -458,7 +458,7 @@ function parallel(arr, process, finished) {
    * @private
    * @param {Object} status
    */
-  var done = function (status) {
+  var done = function (status: any) {
     results.push(status);
     if (results.length === arr.length) {
       finished(null, results);
@@ -479,11 +479,11 @@ function parallel(arr, process, finished) {
  * @param options
  * @return {Promise.<*>}
  */
-function getReposStatus(repositories, validRepositories, all, options) {
+function getReposStatus(repositories: any, validRepositories: any, all: any, options: any) {
   return Promise.all(
     repositories
-      .filter(repo => all || isValidRepo(repo, validRepositories, options))
-      .map(repo => getLibraryStatus(repo))
+      .filter((repo: any) => all || isValidRepo(repo, validRepositories, options))
+      .map((repo: any) => getLibraryStatus(repo))
   );
 }
 
@@ -495,12 +495,12 @@ function getReposStatus(repositories, validRepositories, all, options) {
  * @param {Function} process
  * @param {Function} finished
  */
-function serial(obj, process, finished) {
+function serial(obj: any, process: any, finished: any) {
   var id, isArray = obj instanceof Array;
 
   // Keep track of each property that belongs to this object.
   if (!isArray) {
-    var ids = [];
+    var ids: any[] = [];
     for (id in obj) {
       if (obj.hasOwnProperty(id)) {
         ids.push(id);
@@ -526,7 +526,7 @@ function serial(obj, process, finished) {
    * @private
    * @param {String} err
    */
-  var check = function (err?) {
+  var check = function (err?: any) {
     // We need to use a real async function in order for the stack to clear.
     setTimeout(function () {
       i++;
@@ -549,7 +549,7 @@ function serial(obj, process, finished) {
  * @param repo
  * @return {Promise}
  */
-let getLibraryStatus = function (repo) {
+let getLibraryStatus = function (repo: any) {
   const status: any = {
     name: repo
   };
@@ -584,7 +584,7 @@ let getLibraryStatus = function (repo) {
  * @param options
  * @return {boolean} True if valid repo
  */
-let isValidRepo = function (value, validRepos, options) {
+let isValidRepo = function (value: any, validRepos: any, options: any) {
   if (ignoredRepos.indexOf(value) !== -1 || !(options & PROCESS_SKIP_CHECK) && semiIgnoredRepos.indexOf(value) !== -1) {
     // Ignore repo
     outputWriter.printResults({
@@ -596,7 +596,7 @@ let isValidRepo = function (value, validRepos, options) {
   }
 
   // Find valid repo and process
-  if (validRepos.some(repo => repo === value)) {
+  if (validRepos.some((repo: any) => repo === value)) {
     return true;
   }
 
@@ -617,7 +617,7 @@ let isValidRepo = function (value, validRepos, options) {
  * @param {Array} options
  * @param {Function} next
  */
-function spawnGit(dir, options, next) {
+function spawnGit(dir: any, options: any, next: any) {
   var proc = child.spawn('git', options, {cwd: process.cwd() + '/' + dir, env: env});
 
   var outBuff = '';
@@ -645,7 +645,7 @@ function spawnGit(dir, options, next) {
  * @param {string} file
  * @param {function} next
  */
-function spawn(type, options, dir, next) {
+function spawn(type: any, options: any, dir: any, next: any) {
   var envVars = {cwd: process.cwd(), env: env, detached: true};
   if (dir) {
     envVars.cwd += '/' + dir;
@@ -680,9 +680,9 @@ function spawn(type, options, dir, next) {
  * @param {Array} options
  * @param {Function} next
  */
-function toUTF8(file, next) {
+function toUTF8(file: any, next: any) {
   // Detect charset
-  spawn('file', ['-i', file], null, function (err, result) {
+  spawn('file', ['-i', file], null, function (err: any, result: any) {
     if (err) {
       return next(err);
     }
@@ -691,7 +691,7 @@ function toUTF8(file, next) {
       return next('unable to detect charset');
     }
 
-    var iconv = spawn('iconv', ['-f', input[1], '-t', 'utf-8', file], null, function (err, utf8) {
+    var iconv = spawn('iconv', ['-f', input[1], '-t', 'utf-8', file], null, function (err: any, utf8: any) {
       next(err, utf8);
     });
   });
@@ -705,7 +705,7 @@ function toUTF8(file, next) {
  * @param {String} dir
  * @param {Function} next
  */
-function checkoutRepository(options, dir, next) {
+function checkoutRepository(options: any, dir: any, next: any) {
   var args = ['checkout'];
   if (options instanceof Array) {
     for (var i = 0; i < options.length; i++) {
@@ -716,7 +716,7 @@ function checkoutRepository(options, dir, next) {
     args.push(options);
   }
 
-  spawnGit(dir, args, function (error, output) {
+  spawnGit(dir, args, function (error: any, output: any) {
     var status: any = {
       name: dir
     };
@@ -756,7 +756,7 @@ function checkoutRepository(options, dir, next) {
  * @param {String} dir
  * @param {Function} next
  */
-function pushRepository(options, dir, next) {
+function pushRepository(options: any, dir: any, next: any) {
   var args = ['push'];
   if (options !== undefined) {
     for (var i = 0; i < options.length; i++) {
@@ -764,7 +764,7 @@ function pushRepository(options, dir, next) {
     }
   }
 
-  spawnGit(dir, args, function (error, output) {
+  spawnGit(dir, args, function (error: any, output: any) {
     var status: any = {
       name: dir
     };
@@ -800,8 +800,8 @@ function pushRepository(options, dir, next) {
  * @param {String} dir
  * @param {Function} next
  */
-function mergeRepository(branch, dir, next) {
-  spawnGit(dir, ['merge', branch, '--no-ff'], function (error, output) {
+function mergeRepository(branch: any, dir: any, next: any) {
+  spawnGit(dir, ['merge', branch, '--no-ff'], function (error: any, output: any) {
     var status: any = {
       name: dir
     };
@@ -848,11 +848,11 @@ function mergeRepository(branch, dir, next) {
  *    Function that handles the data from reading file,
  *    takes two arguments (error, data)
  */
-function readJson(repo, file, next) {
+function readJson(repo: any, file: any, next: any) {
   try {
     next(null, JSON.parse(fs.readFileSync(repo + file).toString()));
   }
-  catch (err) {
+  catch (err: any) {
     if (err.toString().indexOf('no such file or directory') !== -1 || err.toString().indexOf('not a directory') !== -1) {
       err = 'not a library';
     }
@@ -870,7 +870,7 @@ function readJson(repo, file, next) {
  *    Function that handles the data from reading file,
  *    takes two arguments (error, data)
  */
-function libraryData(repo, next) {
+function libraryData(repo: any, next: any) {
   readJson(repo, '/library.json', next);
 }
 
@@ -884,14 +884,14 @@ function libraryData(repo, next) {
  *    Function that handles the data from reading file,
  *    takes two arguments (error, data)
  */
-function readSemantics(repo, next) {
+function readSemantics(repo: any, next: any) {
   readJson(repo, '/semantics.json', next);
 }
 
 /**
  * Recursive archiving of the given path.
  */
-function archiveDir(archive, path, alias) {
+function archiveDir(archive: any, path: any, alias?: any) {
   if (alias === undefined) alias = path;
 
   if (path.match(ignorePattern) !== null) {
@@ -931,7 +931,7 @@ function archiveDir(archive, path, alias) {
  * @param {String} parent Parent object
  * @param {String} parentName Property name of parent object
  */
-function removeUntranslatables(field, name?, parent?, parentName?) {
+function removeUntranslatables(field: any, name?: any, parent?: any, parentName?: any) {
   if(field instanceof Array) {
     const fieldParent = JSON.parse(JSON.stringify(field));
     for (var i = field.length; i >= 0; i--) {
@@ -960,7 +960,7 @@ function removeUntranslatables(field, name?, parent?, parentName?) {
     
     // Remove unnecessary nested 'field' structures with only empty objects
     const hasOnlyFields = field?.fields && Array.isArray(field.fields);
-    if (hasOnlyFields && field.fields.every(subField => {
+    if (hasOnlyFields && field.fields.every((subField: any) => {
       return typeof subField === 'object' && Object.keys(subField).length === 0;
     })) {
       // Remove just the empty 'fields', let the rest be
@@ -992,7 +992,7 @@ function removeUntranslatables(field, name?, parent?, parentName?) {
  * @param {object} value value of the property.
  * @return {boolean} true, if item is untranslatable.
  */
-function itemUntranslatable(property, value, parent) {
+function itemUntranslatable(property: any, value: any, parent: any) {
   switch (property) {
     case 'label':
     case 'entity':
@@ -1053,7 +1053,7 @@ function itemUntranslatable(property, value, parent) {
  * @param {string} path
  * @param {function} next
  */
-function readFile(path, next) {
+function readFile(path: any, next: any) {
   fs.readFile(path, function (err, data) {
     if (err) {
       next(err.toString().indexOf('no such file or directory') !== -1 || err.toString().indexOf('not a directory') !== -1 ? 'not a library' : err);
@@ -1070,8 +1070,8 @@ function readFile(path, next) {
  * @param {string} repo
  * @param {function} next
  */
-function isHeadDetached(repo, next) {
-  readFile(repo + '/.git/HEAD', function (err, head) {
+function isHeadDetached(repo: any, next: any) {
+  readFile(repo + '/.git/HEAD', function (err: any, head: any) {
     if (err) return next(err); // Pass errors
 
     next(null, head.toString().substr(0, 3) !== 'ref');
@@ -1085,7 +1085,7 @@ function isHeadDetached(repo, next) {
  * @param {string} [msg]
  * @param {function} next
  */
-function skipped(name, msg, next) {
+function skipped(name: any, msg: any, next: any) {
   next({
     name: name,
     skipped: true,
@@ -1100,7 +1100,7 @@ function skipped(name, msg, next) {
  * @param {string|Object} [msg]
  * @param {function} next
  */
-function ok(name, msg, next) {
+function ok(name: any, msg: any, next: any) {
   next({
     name: name,
     msg: msg
@@ -1114,7 +1114,7 @@ function ok(name, msg, next) {
  * @param {string|Object} [msg]
  * @param {function} next
  */
-function failed(name, msg, next) {
+function failed(name: any, msg: any, next: any) {
   next({
     name: name,
     failed: true,
@@ -1133,21 +1133,21 @@ function failed(name, msg, next) {
  * @returns {Array}
  *  Returns found semantics field with dependency to machineName
  */
-function semanticBump(semantics, minorVersion, machineName) {
-  var foundFields = [];
+function semanticBump(semantics: any, minorVersion: any, machineName: any) {
+  var foundFields: any[] = [];
 
   if (!semantics) {
     return foundFields;
   }
 
   // Handle semantic types
-  semantics.forEach(function (field) {
+  semantics.forEach(function (field: any) {
 
     // Handle library selector with options
     if (field.type === 'library') {
 
       // Go through options
-      field.options.forEach(function (option, index) {
+      field.options.forEach(function (option: any, index: any) {
         if (option.split(' ')[0] === machineName) {
           var majorVersion = option.split(' ')[1].split('.')[0];
 
@@ -1182,11 +1182,11 @@ function semanticBump(semantics, minorVersion, machineName) {
  * @param {function} next Function which handles dependency
  * @param {boolean} [skipWriting] Skip updating files
  */
-function recursiveBump(target, minorVersion, next, skipWriting) {
+function recursiveBump(target: any, minorVersion: any, next: any, skipWriting: any) {
 
   // Check through all repos
-  processRepos(['*'], function (repo, done) {
-    libraryData(repo, function (error, library) {
+  processRepos(['*'], function (repo: any, done: any) {
+    libraryData(repo, function (error: any, library: any) {
       if (error) {
         return skipped(repo, error, done);
       }
@@ -1194,7 +1194,7 @@ function recursiveBump(target, minorVersion, next, skipWriting) {
 
       var preloadedDependencies = library.preloadedDependencies || [];
 
-      preloadedDependencies.forEach(function (dependency) {
+      preloadedDependencies.forEach(function (dependency: any) {
 
         if (dependency.machineName === target) {
           dependency.minorVersion = minorVersion;
@@ -1217,7 +1217,7 @@ function recursiveBump(target, minorVersion, next, skipWriting) {
       });
 
       var editorDependencies = library.editorDependencies || [];
-      editorDependencies.forEach(function (dep) {
+      editorDependencies.forEach(function (dep: any) {
         if (dep.machineName === target) {
           dep.minorVersion = minorVersion;
           process.stdout.write('Editor dependency ' +
@@ -1240,7 +1240,7 @@ function recursiveBump(target, minorVersion, next, skipWriting) {
 
     });
 
-    readSemantics(repo, function (error, semantics) {
+    readSemantics(repo, function (error: any, semantics: any) {
       var foundFields = semanticBump(semantics, minorVersion, target);
       if (foundFields.length) {
         for (var i = 0; i < foundFields.length; i++) {
@@ -1276,9 +1276,9 @@ function recursiveBump(target, minorVersion, next, skipWriting) {
  * @param {function} process Callback for processing each repo.
  * @param {function} next Callback for when processing is done (displays results).
  */
-function getVersions(versions, repos, process, next) {
-  processRepos(repos, function (repo, done) {
-    isHeadDetached(repo, function (error, yes) {
+function getVersions(versions: any, repos: any, process: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
+    isHeadDetached(repo, function (error: any, yes: any) {
       if (error) {
         return failed(repo, error, done);
       }
@@ -1287,7 +1287,7 @@ function getVersions(versions, repos, process, next) {
       }
 
       // Find tagged versions
-      spawnGit(repo, ['tag', '-l', '--sort=version:refname'], function (error, output) {
+      spawnGit(repo, ['tag', '-l', '--sort=version:refname'], function (error: any, output: any) {
         if (error) {
           return failed(repo, error, done);
         }
@@ -1311,7 +1311,7 @@ function getVersions(versions, repos, process, next) {
           process(repo, toDiff, false, done);
         }
         else {
-          spawnGit(repo, ['rev-list', '--max-parents=0', 'HEAD'], function (error, output) {
+          spawnGit(repo, ['rev-list', '--max-parents=0', 'HEAD'], function (error: any, output: any) {
             var firstCommit = output.split('\n')[0];
             process(repo, firstCommit, true, done);
           });
@@ -1321,10 +1321,10 @@ function getVersions(versions, repos, process, next) {
   }, next, true);
 }
 
-function getVersionsAll(versions, repos, process, next) {
+function getVersionsAll(versions: any, repos: any, process: any, next: any) {
   const argsList = [];
-  const runner = function (repo, done) {
-    isHeadDetached(repo, function (error, yes) {
+  const runner = function (repo: any, done: any) {
+    isHeadDetached(repo, function (error: any, yes: any) {
       if (error) {
         return failed(repo, error, done);
       }
@@ -1332,7 +1332,7 @@ function getVersionsAll(versions, repos, process, next) {
         return skipped(repo, 'detached HEAD', done);
       }
       // Find tagged versions
-      spawnGit(repo, ['tag', '-l', '--sort=version:refname'], function (error, output) {
+      spawnGit(repo, ['tag', '-l', '--sort=version:refname'], function (error: any, output: any) {
         if (error) {
           return failed(repo, error, done);
         }
@@ -1354,7 +1354,7 @@ function getVersionsAll(versions, repos, process, next) {
           process(repo, toDiff, false, done);
         }
         else {
-          spawnGit(repo, ['rev-list', '--max-parents=0', 'HEAD'], function (error, output) {
+          spawnGit(repo, ['rev-list', '--max-parents=0', 'HEAD'], function (error: any, output: any) {
             var firstCommit = output.split('\n')[0];
             process(repo, firstCommit, true, done);
           });
@@ -1376,8 +1376,8 @@ const h5p: any = {};
 /**
  * Return list of libraries.
  */
-h5p.list = function (next) {
-  getRegistry(function (error, libraries) {
+h5p.list = function (next: any) {
+  getRegistry(function (error: any, libraries: any) {
     next(error, libraries);
   });
 };
@@ -1385,11 +1385,11 @@ h5p.list = function (next) {
 /**
  * Creates a new collection and fills it up with the given library and its dependencies.
  */
-h5p.get = function (libraries, next) {
+h5p.get = function (libraries: any, next: any) {
   collection = {}; // Start a new collection
 
-  var loop = function (i) {
-    getLibrary(libraries[i], function (error) {
+  var loop = function (i: any) {
+    getLibrary(libraries[i], function (error: any) {
       i += 1;
       if (i === libraries.length) return next(error);
       loop(i);
@@ -1401,7 +1401,7 @@ h5p.get = function (libraries, next) {
 /**
  * Clone the next library in the collection.
  */
-h5p.clone = function (fetchWithHttps = false, next) {
+h5p.clone = function (fetchWithHttps = false, next: any) {
   for (var lib in collection) {
     cloneRepository(lib, collection[lib].repository, fetchWithHttps, next);
     delete collection[lib];
@@ -1417,7 +1417,7 @@ h5p.clone = function (fetchWithHttps = false, next) {
  * @param {string} [path]
  * @return {Promise}
  */
-h5p.findDirectories = function (skipCheck, path) {
+h5p.findDirectories = function (skipCheck: any, path?: any) {
   return new Promise((resolve, reject) => {
     path = path || '.';
     fs.readdir(path, function (error, files) {
@@ -1432,10 +1432,10 @@ h5p.findDirectories = function (skipCheck, path) {
         return;
       }
 
-      var repos = [];
+      var repos: any[] = [];
       var processed = 0;
       for (var i = 0; i < files.length; i++) {
-        checkRepository(files[i], function (repo) {
+        checkRepository(files[i], function (repo: any) {
           if (repo) {
             repos.push(repo);
           }
@@ -1457,13 +1457,13 @@ h5p.findDirectories = function (skipCheck, path) {
 /**
  * Commit all changes to all libraries.
  */
-h5p.commit = function (message, next) {
-  findRepositories(function (error, repos) {
+h5p.commit = function (message: any, next: any) {
+  findRepositories(function (error: any, repos: any) {
     if (error) return next(error);
 
-    var results = [];
+    var results: any[] = [];
     for (var i = 0; i < repos.length; i++) {
-      commitRepository(repos[i], message, function (result) {
+      commitRepository(repos[i], message, function (result: any) {
         results.push(result);
         if (results.length === repos.length) {
           next(null, results);
@@ -1473,10 +1473,10 @@ h5p.commit = function (message, next) {
   });
 };
 
-h5p.commitRepos = function (message, repos, next) {
-  var results = [];
+h5p.commitRepos = function (message: any, repos: any, next: any) {
+  var results: any[] = [];
   for (var i = 0; i < repos.length; i++) {
-    commitRepository(repos[i], message, function (result) {
+    commitRepository(repos[i], message, function (result: any) {
       results.push(result);
       if (results.length === repos.length) {
         next(null, results);
@@ -1488,10 +1488,10 @@ h5p.commitRepos = function (message, repos, next) {
 /**
  * Will prepare a collection of repos for pushing/pulling.
  */
-h5p.update = function (repos, next) {
+h5p.update = function (repos: any, next: any) {
   pullushers = []; // Start a new collection
 
-  processRepos(repos, function (repo, done) {
+  processRepos(repos, function (repo: any, done: any) {
     pullushers.push(repo);
     done();
   }, next);
@@ -1502,7 +1502,7 @@ h5p.update = function (repos, next) {
  */
 h5p.pull = function () {
   return Promise.all(
-    pullushers.map(repo => {
+    pullushers.map((repo: any) => {
       return pullRepository(repo);
     })
   );
@@ -1511,7 +1511,7 @@ h5p.pull = function () {
 /**
  * Push the next library in the collection.
  */
-h5p.push = function (options, next) {
+h5p.push = function (options: any, next: any) {
   // TODO: Use pushRepository and progress
   var repo = pullushers.shift();
   if (!repo) {
@@ -1523,7 +1523,7 @@ h5p.push = function (options, next) {
       args.push(options[i]);
     }
   }
-  spawnGit(repo, args, function (error, output) {
+  spawnGit(repo, args, function (error: any, output: any) {
     var res = error.substr(0, 2);
     if (res === 'Ev') {
       return next(-1);
@@ -1548,7 +1548,7 @@ h5p.push = function (options, next) {
 /**
  * Push all libraries in the collection.
  */
-h5p.pushAll = function (options) {
+h5p.pushAll = function (options: any) {
   console.log('pushing ', pullushers);
   var args = ['push'];
   if (options !== undefined) {
@@ -1556,9 +1556,9 @@ h5p.pushAll = function (options) {
       args.push(options[i]);
     }
   }
-  const pushRepo = (repo) => {
+  const pushRepo = (repo: any) => {
     return new Promise((resolve, reject) => {
-      spawnGit(repo, args, function (error, output) {
+      spawnGit(repo, args, function (error: any, output: any) {
         var res = error.substr(0, 2);
         if (res === 'Ev') {
           return reject(-1);
@@ -1593,13 +1593,13 @@ h5p.pushAll = function (options) {
 /**
  * Push the next library in the collection.
  */
-h5p.checkout = function (branch, repos, next) {
-  processRepos(repos, function (repo, done) {
+h5p.checkout = function (branch: any, repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
     checkoutRepository(branch, repo, done);
   }, next);
 };
 
-h5p.checkoutAll = function (branch, repos, next) {
+h5p.checkoutAll = function (branch: any, repos: any, next: any) {
   const argsList = [];
   for (let repo of repos) {
     argsList.push([branch, repo]);
@@ -1614,16 +1614,16 @@ h5p.checkoutAll = function (branch, repos, next) {
  * @param {Array} [repos] list
  * @param {Function} progress callback
  */
-h5p.newBranch = function (branch, repos, progress) {
+h5p.newBranch = function (branch: any, repos: any, progress: any) {
   // Keeps track of previous result
-  var result;
+  var result: any;
 
-  processRepos(repos, PROCESS_SERIAL, function (repo, done) {
+  processRepos(repos, PROCESS_SERIAL, function (repo: any, done: any) {
     // Progress update
     progress(result, repo);
 
     // Checkout repo
-    checkoutRepository(['-b', branch], repo, function (status) {
+    checkoutRepository(['-b', branch], repo, function (status: any) {
       if (status.failed || status.skipped) {
         // Failed or skipped
         result = status;
@@ -1634,7 +1634,7 @@ h5p.newBranch = function (branch, repos, progress) {
       }
 
       // Push our new branch to origin
-      pushRepository(['-u', 'origin', branch], repo, function (status) {
+      pushRepository(['-u', 'origin', branch], repo, function (status: any) {
         result = status;
         if (!result.skipped && !result.failed) {
           delete result.msg;
@@ -1655,19 +1655,19 @@ h5p.newBranch = function (branch, repos, progress) {
  * @param {Array} [repos] list
  * @param {Function} progress callback
  */
-h5p.rmBranch = function (branch, repos, progress) {
+h5p.rmBranch = function (branch: any, repos: any, progress: any) {
   // Keeps track of previous result
-  var result;
+  var result: any;
 
-  processRepos(repos, PROCESS_SERIAL, function (repo, done) {
+  processRepos(repos, PROCESS_SERIAL, function (repo: any, done: any) {
     // Progress update
     progress(result, repo);
 
     // Delete locally
-    spawnGit(repo, ['branch', '-D', branch], function (error, output) {
+    spawnGit(repo, ['branch', '-D', branch], function (error: any, output: any) {
       result = {
         name: repo
-      };
+      } as any;
 
       if (error) {
         if (error.indexOf('not found.') !== -1) {
@@ -1682,7 +1682,7 @@ h5p.rmBranch = function (branch, repos, progress) {
       }
 
       // Go remote
-      pushRepository(['origin', ':' + branch], repo, function (status) {
+      pushRepository(['origin', ':' + branch], repo, function (status: any) {
         result = status;
         done();
       });
@@ -1697,12 +1697,12 @@ h5p.rmBranch = function (branch, repos, progress) {
 /**
  * Get diffs for all repos.
  */
-h5p.diff = function (next) {
-  findRepositories(function (error, repos) {
+h5p.diff = function (next: any) {
+  findRepositories(function (error: any, repos: any) {
     if (error) return next(error);
     var diffs = '', done = 0;
     for (var i = 0; i < repos.length; i++) {
-      diffRepository(repos[i], function (error, diff) {
+      diffRepository(repos[i], function (error: any, diff: any) {
         if (error) return next(error);
         diffs += diff;
         if (done++ === repos.length - 1) next(null, diffs);
@@ -1717,13 +1717,13 @@ h5p.diff = function (next) {
  * @public
  * @namespace h5p
  */
-h5p.merge = function (branch, repos, next) {
-  processRepos(repos, function (repo, done) {
+h5p.merge = function (branch: any, repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
     mergeRepository(branch, repo, done);
   }, next);
 };
 
-h5p.mergeAll = function (branch, repos, next) {
+h5p.mergeAll = function (branch: any, repos: any, next: any) {
   const argsList = [];
   for (let repo of repos) {
     argsList.push([branch, repo]);
@@ -1737,8 +1737,8 @@ h5p.mergeAll = function (branch, repos, next) {
  * @public
  * @namespace h5p
  */
-h5p.createLanguageFile = function (repo, languageCode, next) {
-  readSemantics(repo, function (error, semantics) {
+h5p.createLanguageFile = function (repo: any, languageCode: any, next: any) {
+  readSemantics(repo, function (error: any, semantics: any) {
     var languageFile = repo + '/language/' + languageCode + '.json';
     fs.writeFileSync(languageFile, JSON.stringify({
       semantics: removeUntranslatables(semantics)
@@ -1753,7 +1753,7 @@ h5p.createLanguageFile = function (repo, languageCode, next) {
  * @public
  * @namespace h5p
  */
-h5p.createDefaultLanguage = function (libraryDir) {
+h5p.createDefaultLanguage = function (libraryDir: any) {
   const file = `${libraryDir}/semantics.json`;
   return fs.existsSync(file) ? removeUntranslatables(JSON.parse(fs.readFileSync(file).toString())) : {};
 };
@@ -1765,17 +1765,17 @@ h5p.createDefaultLanguage = function (libraryDir) {
  * @param {string} file Filename of packed repos
  * @return {Promise} Resolves with status of packed repos
  */
-h5p.pack = function (repos, file) {
+h5p.pack = function (repos: any, file: any) {
   const output = fs.createWriteStream(file);
   const archive = archiver('zip');
-  archive.on('error', function (err) {
-    outputWriter.printError(err);
+  archive.on('error', function (err: any) {
+    outputWriter.printError(String(err));
   });
   archive.pipe(output);
   return h5p.findDirectories(PROCESS_SKIP_CHECK)
-    .then((directories) => processRepositories(repos, directories, PROCESS_SKIP_CHECK))
-    .then((processedRepositories) => {
-      processedRepositories.forEach(function (repo) {
+    .then((directories: any) => processRepositories(repos, directories, PROCESS_SKIP_CHECK))
+    .then((processedRepositories: any) => {
+      processedRepositories.forEach(function (repo: any) {
         archiveDir(archive, repo.path, repo.target);
       });
       archive.finalize();
@@ -1791,12 +1791,12 @@ h5p.pack = function (repos, file) {
  *    Accepts two arguments (error, repos)
  * @param {boolean} [skipWriting]
  */
-h5p.recursiveMinorBump = function (repos, next, skipWriting) {
+h5p.recursiveMinorBump = function (repos: any, next: any, skipWriting: any) {
   collection = collection || [];
 
   // Increase minor version of library
-  processRepos(repos, function (repo, done) {
-    libraryData(repo, function (error, library) {
+  processRepos(repos, function (repo: any, done: any) {
+    libraryData(repo, function (error: any, library: any) {
       if (error) {
         return skipped(repo, error, done);
       }
@@ -1824,14 +1824,14 @@ h5p.recursiveMinorBump = function (repos, next, skipWriting) {
  * @param {Array} semantics 
  * @param {Function} addLibrary 
  */
-const findLibrariesInSemantics = function (semantics, addLibrary) {
-  semantics.forEach(function (field) {
+const findLibrariesInSemantics = function (semantics: any, addLibrary: any) {
+  semantics.forEach(function (field: any) {
 
     // Handle library selector with options
     if (field.type === 'library') {
 
       // Go through options
-      field.options.forEach(function (option, index) {
+      field.options.forEach(function (option: any, index: any) {
 
         const machineName = option.split(' ')[0];
         const majorVersion = option.split(' ')[1].split('.')[0];
@@ -1860,9 +1860,9 @@ const findLibrariesInSemantics = function (semantics, addLibrary) {
  */
 h5p.findDependencyInconsistencies = function () {
 
-  const libraries = {};
+  const libraries: Record<string, any> = {};
 
-  const addDependency = (library, dependency) => {
+  const addDependency = (library: any, dependency: any) => {
     const libraryId = library.machineName + '-' + library.majorVersion + '.' + library.minorVersion;
 
     if (!libraries.hasOwnProperty(libraryId)) {
@@ -1896,7 +1896,7 @@ h5p.findDependencyInconsistencies = function () {
    * @param {Array} dependencies 
    * @param {Object} flat 
    */
-  const flattenDependencyTree = (libraryId, dependencies, flat) => {
+  const flattenDependencyTree = (libraryId: any, dependencies: any, flat: any) => {
 
     for (let i = 0; i < dependencies.length; i++) {
       const dependency = dependencies[i];
@@ -1922,7 +1922,7 @@ h5p.findDependencyInconsistencies = function () {
    * Find duplicate dependencies to different versions
    */
   const findDuplicatesWithDifferentVersions = () => {
-    const flat = {};
+    const flat: Record<string, any> = {};
 
     for (let libraryId in libraries) {
       flat[libraryId] = {};
@@ -1941,9 +1941,9 @@ h5p.findDependencyInconsistencies = function () {
   }
 
   // Check through all repos
-  processRepos(['*'], function (repo, done) {
+  processRepos(['*'], function (repo: any, done: any) {
     var libraryRef: any;
-    libraryData(repo, function (error, library) {
+    libraryData(repo, function (error: any, library: any) {
       if (error) {
         return skipped(repo, error, done);
       }
@@ -1951,17 +1951,17 @@ h5p.findDependencyInconsistencies = function () {
       libraryRef = library;
       var preloadedDependencies = library.preloadedDependencies || [];
 
-      preloadedDependencies.forEach(function (dependency) {
+      preloadedDependencies.forEach(function (dependency: any) {
         addDependency(library, dependency);
       });
 
       var editorDependencies = library.editorDependencies || [];
-      editorDependencies.forEach(function (dep) {
+      editorDependencies.forEach(function (dep: any) {
         addDependency(library, dep);
       });
     });
 
-    readSemantics(repo, function (error, semantics) {
+    readSemantics(repo, function (error: any, semantics: any) {
       if (semantics) {
         findLibrariesInSemantics(semantics, (dependency: any) => addDependency(libraryRef, dependency));
       }
@@ -1980,14 +1980,14 @@ h5p.findDependencyInconsistencies = function () {
  * @param {Array} repos
  * @param {function} next
  */
-h5p.increasePatchVersion = function (force, repos, next) {
-  processRepos(repos, function (repo, done) {
-    libraryData(repo, function (error, library) {
+h5p.increasePatchVersion = function (force: any, repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
+    libraryData(repo, function (error: any, library: any) {
       if (error) {
         return skipped(repo, error, done);
       }
 
-      isHeadDetached(repo, function (err, yes) {
+      isHeadDetached(repo, function (err: any, yes: any) {
         if (err) {
           return skipped(repo, err, done);
         }
@@ -2006,7 +2006,7 @@ h5p.increasePatchVersion = function (force, repos, next) {
         }
 
         // Diff current version agains head to check for changes
-        spawnGit(repo, ['diff', library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion + '..HEAD'], function (error, output) {
+        spawnGit(repo, ['diff', library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion + '..HEAD'], function (error: any, output: any) {
           if (error) {
             if (error.indexOf('fatal: ambiguous argument') !== -1) {
               // Increase patch version if last version wasn't tagged
@@ -2035,9 +2035,9 @@ h5p.increasePatchVersion = function (force, repos, next) {
  * @param {Array} repos
  * @param {Function} next
  */
-h5p.tagVersion = function (repos, next) {
-  processRepos(repos, function (repo, done) {
-    libraryData(repo, function (error, library) {
+h5p.tagVersion = function (repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
+    libraryData(repo, function (error: any, library: any) {
       var status: any = {
         name: repo
       };
@@ -2050,7 +2050,7 @@ h5p.tagVersion = function (repos, next) {
       }
 
       var version = library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion;
-      spawnGit(repo, ['tag', version], function (error, output) {
+      spawnGit(repo, ['tag', version], function (error: any, output: any) {
         if (error !== '') {
           if (error.indexOf('already exists') !== -1) {
             status.skipped = true;
@@ -2071,9 +2071,9 @@ h5p.tagVersion = function (repos, next) {
   }, next);
 };
 
-h5p.tagVersionAll = function (repos, next) {
-  const runner = (repo, done) => {
-    libraryData(repo, function (error, library) {
+h5p.tagVersionAll = function (repos: any, next: any) {
+  const runner = (repo: any, done: any) => {
+    libraryData(repo, function (error: any, library: any) {
       var status: any = {
         name: repo
       };
@@ -2084,7 +2084,7 @@ h5p.tagVersionAll = function (repos, next) {
         return;
       }
       var version = library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion;
-      spawnGit(repo, ['tag', version], function (error, output) {
+      spawnGit(repo, ['tag', version], function (error: any, output: any) {
         if (error !== '') {
           if (error.indexOf('already exists') !== -1) {
             status.skipped = true;
@@ -2116,13 +2116,13 @@ h5p.tagVersionAll = function (repos, next) {
  * @param {Array} repos
  * @param {Function} next
  */
-h5p.tag = function (tagName, repos, next) {
-  processRepos(repos, function (repo, done) {
+h5p.tag = function (tagName: any, repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
     var status: any = {
       name: repo
     };
 
-    spawnGit(repo, ['tag', tagName], function (error, output) {
+    spawnGit(repo, ['tag', tagName], function (error: any, output: any) {
       if (error !== '') {
         if (error.indexOf('already exists') !== -1) {
           status.skipped = true;
@@ -2141,13 +2141,13 @@ h5p.tag = function (tagName, repos, next) {
   }, next);
 };
 
-h5p.tagAll = function (tagName, repos, next) {
+h5p.tagAll = function (tagName: any, repos: any, next: any) {
   const argsList = [];
-  const runner = function (tagName, repo, done) {
+  const runner = function (tagName: any, repo: any, done: any) {
     const status: any = {
       name: repo
     };
-    spawnGit(repo, ['tag', tagName], function (error, output) {
+    spawnGit(repo, ['tag', tagName], function (error: any, output: any) {
       if (error !== '') {
         if (error.indexOf('already exists') !== -1) {
           status.skipped = true;
@@ -2176,9 +2176,9 @@ h5p.tagAll = function (tagName, repos, next) {
  * @param {Array} repos List of libraries to process.
  * @param {function} next Callback for when processing is done (displays results).
  */
-h5p.changesSince = function (versions, repos, next) {
-  getVersions(versions, repos, function (repo, version, initialCommit, done) {
-    spawnGit(repo, ['diff', '--stat', version + '..HEAD'], function (error, output) {
+h5p.changesSince = function (versions: any, repos: any, next: any) {
+  getVersions(versions, repos, function (repo: any, version: any, initialCommit: any, done: any) {
+    spawnGit(repo, ['diff', '--stat', version + '..HEAD'], function (error: any, output: any) {
       if (error) {
         return failed(repo, error, done);
       }
@@ -2188,9 +2188,9 @@ h5p.changesSince = function (versions, repos, next) {
   }, next);
 };
 
-h5p.changesSinceAll = function (versions, repos, next) {
-  getVersionsAll(versions, repos, function (repo, version, initialCommit, done) {
-    spawnGit(repo, ['diff', '--stat', version + '..HEAD'], function (error, output) {
+h5p.changesSinceAll = function (versions: any, repos: any, next: any) {
+  getVersionsAll(versions, repos, function (repo: any, version: any, initialCommit: any, done: any) {
+    spawnGit(repo, ['diff', '--stat', version + '..HEAD'], function (error: any, output: any) {
       if (error) {
         return failed(repo, error, done);
       }
@@ -2203,9 +2203,9 @@ h5p.changesSinceAll = function (versions, repos, next) {
  * Finds file changes since release, and lists them, useful for determining patch
  * and minor version changes.
  */
-h5p.changesSinceRelease = function (repos, next) {
-  processRepos(repos, function (repo, done) {
-    spawnGit(repo, ['diff', '--stat', 'master..release'], function (error, output) {
+h5p.changesSinceRelease = function (repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
+    spawnGit(repo, ['diff', '--stat', 'master..release'], function (error: any, output: any) {
       if (error) {
         return failed(repo, {error: error, output: output}, done);
       }
@@ -2215,9 +2215,9 @@ h5p.changesSinceRelease = function (repos, next) {
   }, next);
 };
 
-h5p.changesSinceReleaseAll = function (repos, next) {
-  const runner = (repo, done) => {
-    spawnGit(repo, ['diff', '--stat', 'master..release'], function (error, output) {
+h5p.changesSinceReleaseAll = function (repos: any, next: any) {
+  const runner = (repo: any, done: any) => {
+    spawnGit(repo, ['diff', '--stat', 'master..release'], function (error: any, output: any) {
       if (error) {
         return failed(repo, {error: error, output: output}, done);
       }
@@ -2231,16 +2231,16 @@ h5p.changesSinceReleaseAll = function (repos, next) {
   runAll(runner, argsList, next);
 };
 
-h5p.compareTagsRelease = function (repos, next) {
-  processRepos(repos, function (repo, done) {
-    libraryData(repo, function (err, library) {
+h5p.compareTagsRelease = function (repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
+    libraryData(repo, function (err: any, library: any) {
       if (err) {
         return skipped(repo, err, done);
       }
 
       var libraryVersion = library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion;
 
-      spawnGit(repo, ['describe', '--abbrev=0', '--tags'], function (error, output) {
+      spawnGit(repo, ['describe', '--abbrev=0', '--tags'], function (error: any, output: any) {
         if (error) {
           return failed(repo, {error: error, output: output}, done);
         }
@@ -2260,15 +2260,15 @@ h5p.compareTagsRelease = function (repos, next) {
   }, next);
 }
 
-h5p.compareTagsReleaseAll = function (repos, next) {
+h5p.compareTagsReleaseAll = function (repos: any, next: any) {
   const argsList = [];
-  const runner = function (repo, done) {
-    libraryData(repo, function (err, library) {
+  const runner = function (repo: any, done: any) {
+    libraryData(repo, function (err: any, library: any) {
       if (err) {
         return skipped(repo, err, done);
       }
       var libraryVersion = library.majorVersion + '.' + library.minorVersion + '.' + library.patchVersion;
-      spawnGit(repo, ['describe', '--abbrev=0', '--tags'], function (error, output) {
+      spawnGit(repo, ['describe', '--abbrev=0', '--tags'], function (error: any, output: any) {
         if (error) {
           return failed(repo, {error: error, output: output}, done);
         }
@@ -2295,9 +2295,9 @@ h5p.compareTagsReleaseAll = function (repos, next) {
  * @param {Array} repos List of libraries to process.
  * @param {function} next Callback for when processing is done (displays results).
  */
-h5p.commitsSince = function (versions, repos, next) {
-  getVersions(versions, repos, function (repo, version, initialCommit, done) {
-    spawnGit(repo, ['log', '--oneline', version + '..HEAD'], function (error, output) {
+h5p.commitsSince = function (versions: any, repos: any, next: any) {
+  getVersions(versions, repos, function (repo: any, version: any, initialCommit: any, done: any) {
+    spawnGit(repo, ['log', '--oneline', version + '..HEAD'], function (error: any, output: any) {
       if (error) {
         return failed(repo, error, done);
       }
@@ -2306,9 +2306,9 @@ h5p.commitsSince = function (versions, repos, next) {
   }, next);
 };
 
-h5p.commitsSinceAll = function (versions, repos, next) {
-  getVersionsAll(versions, repos, function (repo, version, initialCommit, done) {
-    spawnGit(repo, ['log', '--oneline', version + '..HEAD'], function (error, output) {
+h5p.commitsSinceAll = function (versions: any, repos: any, next: any) {
+  getVersionsAll(versions, repos, function (repo: any, version: any, initialCommit: any, done: any) {
+    spawnGit(repo, ['log', '--oneline', version + '..HEAD'], function (error: any, output: any) {
       if (error) {
         return failed(repo, error, done);
       }
@@ -2317,13 +2317,13 @@ h5p.commitsSinceAll = function (versions, repos, next) {
   }, next);
 };
 
-h5p.importLanguageFiles = function (dir, next) {
+h5p.importLanguageFiles = function (dir: any, next: any) {
   // Check if dir exists.
   fs.readdir(dir, function (error, repos) {
     if (error) return next(error);
 
     // Get libraries with dir sub folders
-    processRepos(repos, function (repo, done) {
+    processRepos(repos, function (repo: any, done: any) {
       var status: any = {
         name: repo
       };
@@ -2345,7 +2345,7 @@ h5p.importLanguageFiles = function (dir, next) {
         }
 
         // Process language files
-        parallel(languageFiles, function (index, file, nextFile) {
+        parallel(languageFiles, function (index: any, file: any, nextFile: any) {
           var lang = file.match(/^([a-z]{2}).json$/);
           if (!lang) {
             // Not correct file format, skip
@@ -2357,7 +2357,7 @@ h5p.importLanguageFiles = function (dir, next) {
           };
 
           // Copy file
-          toUTF8(langDir + '/' + file, function (err, json) {
+          toUTF8(langDir + '/' + file, function (err: any, json: any) {
             if (err) {
               fileStatus.failed = true;
               fileStatus.msg = err;
@@ -2377,7 +2377,7 @@ h5p.importLanguageFiles = function (dir, next) {
 
             nextFile(fileStatus);
           });
-        }, function (err, results) {
+        }, function (err: any, results: any) {
 
           // Process results
           var added = [];
@@ -2421,8 +2421,8 @@ h5p.importLanguageFiles = function (dir, next) {
  * @param {function} next
  * @param {boolean} [populate] Populates language files with the original text
  */
-h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
-  processRepos(repos, function (repo, done) {
+h5p.addOriginalTexts = function (languageCode: any, repos: any, next: any, populate: any) {
+  processRepos(repos, function (repo: any, done: any) {
     // Keep track of the status for the current repo
     var status: any = {
       name: repo
@@ -2434,7 +2434,7 @@ h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
       translation: repo + '/language/' + languageCode + '.json'
     };
 
-    h5p.readJSONFiles(fileNames, function (files) {
+    h5p.readJSONFiles(fileNames, function (files: any) {
       // Error handling
       if (files.semantics.error) {
         status.msg = files.semantics.error;
@@ -2449,7 +2449,7 @@ h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
 
       // Update translation
       var translation = files.translation.content || {};
-      translation.semantics = updateTranslationFields(files.semantics.content, translation.semantics, function (field, attr, source, target) {
+      translation.semantics = updateTranslationFields(files.semantics.content, translation.semantics, function (field: any, attr: any, source: any, target: any) {
         if (attr === 'label' || attr === 'description' || attr === 'entity' || attr === 'placeholder' || (attr === 'default' && field.type === 'text')) {
           target['english' + attr[0].toUpperCase() + attr.substr(1)] = field[attr];
           var fillText = populate ? field[attr] : 'TODO';
@@ -2459,7 +2459,7 @@ h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
       });
 
       // Write changes
-      writeJSONFile(fileNames.translation, translation, function (err) {
+      writeJSONFile(fileNames.translation, translation, function (err: any) {
         if (err) {
           status.failed = true;
           status.msg = err;
@@ -2478,8 +2478,8 @@ h5p.addOriginalTexts = function (languageCode, repos, next, populate) {
  * @param {string[]} repos
  * @param {function} next
  */
-h5p.copyTranslation = function (from, to, repos, next) {
-  processRepos(repos, function (repo, done) {
+h5p.copyTranslation = function (from: any, to: any, repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
     // Keep track of the status for the current repo
     var status: any = {
       name: repo
@@ -2489,7 +2489,7 @@ h5p.copyTranslation = function (from, to, repos, next) {
     var fileNames = {
       source: repo + '/language/' + from + '.json'
     };
-    h5p.readJSONFiles(fileNames, function (files) {
+    h5p.readJSONFiles(fileNames, function (files: any) {
       // Handle errors reading file
       if (files.source.error) {
         status.msg = files.source.error;
@@ -2498,7 +2498,7 @@ h5p.copyTranslation = function (from, to, repos, next) {
       }
 
       // Get last commit for source
-      spawnGit(repo, ['log', '-n 1', '--format=%h %at ', 'language/' + from + '.json'], function (error, output) {
+      spawnGit(repo, ['log', '-n 1', '--format=%h %at ', 'language/' + from + '.json'], function (error: any, output: any) {
         if (error) {
           status.msg = error;
           status.failed = true;
@@ -2514,7 +2514,7 @@ h5p.copyTranslation = function (from, to, repos, next) {
         }
 
         // Create target
-        target.semantics = updateTranslationFields(files.source.content.semantics, undefined, function (field, attr, source, target) {
+        target.semantics = updateTranslationFields(files.source.content.semantics, undefined, function (field: any, attr: any, source: any, target: any) {
           if (attr.substr(0, 7) === 'english') {
             // Keep original values
             target[attr] = field[attr];
@@ -2527,7 +2527,7 @@ h5p.copyTranslation = function (from, to, repos, next) {
         });
 
         // Write changes
-        writeJSONFile(repo + '/language/' + to + '.json', target, function (err) {
+        writeJSONFile(repo + '/language/' + to + '.json', target, function (err: any) {
           if (err) {
             status.failed = true;
             status.msg = err;
@@ -2548,10 +2548,10 @@ h5p.copyTranslation = function (from, to, repos, next) {
  * @param {string} file
  * @param {function} next
  */
-h5p.packTranslation = function (lang, repos, file, next) {
-  createPack(file, repos, next, function (archive, repo, done) {
+h5p.packTranslation = function (lang: any, repos: any, file: any, next: any) {
+  createPack(file, repos, next, function (archive: any, repo: any, done: any) {
     var file = repo + '/language/' + lang + '.json';
-    readFile(file, function (error, content) {
+    readFile(file, function (error: any, content: any) {
       var added = false;
       if (!error && content) {
         archive.append(content, {name: file});
@@ -2571,10 +2571,10 @@ h5p.packTranslation = function (lang, repos, file, next) {
  * @param {function} next
  * @param {function} process
  */
-var createPack = function (file, repos, next, process) {
+var createPack = function (file: any, repos: any, next: any, process: any) {
   var output = fs.createWriteStream(file);
   var archive = archiver('zip');
-  var error, results;
+  var error: any, results: any;
   output.on('close', function () {
     next(error, results);
   });
@@ -2582,9 +2582,9 @@ var createPack = function (file, repos, next, process) {
     next(err);
   });
   archive.pipe(output);
-  processRepos(repos, PROCESS_SKIP_CHECK, function (repo, done) {
+  processRepos(repos, PROCESS_SKIP_CHECK, function (repo: any, done: any) {
     process(archive, repo, done);
-  }, function (err, res) {
+  }, function (err: any, res: any) {
     error = err;
     results = res;
     archive.finalize();
@@ -2598,7 +2598,7 @@ var createPack = function (file, repos, next, process) {
  * @param {object} fileNames
  * @param {function} next
  */
-h5p.readJSONFiles = function (fileNames, next) {
+h5p.readJSONFiles = function (fileNames: any, next: any) {
   // Must use array, object not supported
   var filesToRead = [];
   for (var name in fileNames) {
@@ -2606,8 +2606,8 @@ h5p.readJSONFiles = function (fileNames, next) {
   }
 
   // Read files in parallel
-  parallel(filesToRead, function (index, file, fileRead) {
-    readFile(file, function (error, content) {
+  parallel(filesToRead, function (index: any, file: any, fileRead: any) {
+    readFile(file, function (error: any, content: any) {
       // File has been read, try to parse JSON
       if (!error) {
         try {
@@ -2624,14 +2624,15 @@ h5p.readJSONFiles = function (fileNames, next) {
         content: content
       });
     });
-  }, function (error, fileStatus) {
+  }, function (error: any, fileStatus: any) {
     // All files have been read. Make it easy to map up content.
     var fileResults: Record<string, any> = {};
     for (var i = 0; i < fileStatus.length; i++) {
       var file = fileStatus[i];
 
       // Find key
-      for (var fileKey in fileNames) {
+      var fileKey: any;
+      for (fileKey in fileNames) {
         if (fileNames[fileKey] === file.file) {
           break;
         }
@@ -2650,7 +2651,7 @@ h5p.readJSONFiles = function (fileNames, next) {
  * @param {*} content
  * @param {function} next
  */
-var writeJSONFile = function (file, content, next) {
+var writeJSONFile = function (file: any, content: any, next: any) {
   var json;
   try {
     json = JSON.stringify(content, null, 2) + '\n';
@@ -2672,7 +2673,7 @@ var writeJSONFile = function (file, content, next) {
  * @param {boolean} [cleanup] Trigger removal of state for all fields
  * @returns {Array}
  */
-var updateTranslationFields = function (semantics, translation?, handler?, cleanup?) {
+var updateTranslationFields = function (semantics: any, translation?: any, handler?: any, cleanup?: any) {
   var updated = false;
   if (translation === undefined) {
     translation = [];
@@ -2728,7 +2729,7 @@ var updateTranslationFields = function (semantics, translation?, handler?, clean
  * @param {boolean} [cleanup] Trigger removal of state for all fields
  * @returns {object}
  */
-var updateTranslationField = function (field, oldTranslation, handler, cleanup?) {
+var updateTranslationField = function (field: any, oldTranslation: any, handler: any, cleanup?: any) {
   var updatedTranslation: any = {};
   var updated = false;
   for (var attr in field) {
@@ -2765,15 +2766,15 @@ var updateTranslationField = function (field, oldTranslation, handler, cleanup?)
  * @param {string[]} repos
  * @param {function} next
  */
-h5p.updateTranslations = function (repos, next) {
-  processRepos(repos, function (repo, done) {
+h5p.updateTranslations = function (repos: any, next: any) {
+  processRepos(repos, function (repo: any, done: any) {
     // Keep track of the status for the current repo
     var status: any = {
       name: repo
     };
 
     // Define the files we need
-    var fileNames = {
+    var fileNames: Record<string, any> = {
       semantics: repo + '/semantics.json'
     };
 
@@ -2787,7 +2788,7 @@ h5p.updateTranslations = function (repos, next) {
       }
     }
 
-    h5p.readJSONFiles(fileNames, function (files) {
+    h5p.readJSONFiles(fileNames, function (files: any) {
       // Error handling, we need semantics to continue
       if (files.semantics.error || !files.semantics.content) {
         status.msg = files.semantics.error;
@@ -2809,7 +2810,7 @@ h5p.updateTranslations = function (repos, next) {
         }
         else {
           // Update translation
-          var updatedTranslation = updateTranslationFields(files.semantics.content, languageFile.content.semantics, function (field, attr, source, target) {
+          var updatedTranslation = updateTranslationFields(files.semantics.content, languageFile.content.semantics, function (field: any, attr: any, source: any, target: any) {
             if (attr === 'important' || attr === 'label' || attr === 'description' || attr === 'entity' || attr === 'placeholder' || (attr === 'default' && field.type === 'text')) {
               target[attr] = (source !== undefined && source[attr] !== undefined ? source[attr] : field[attr]);
               return true;
@@ -2817,14 +2818,14 @@ h5p.updateTranslations = function (repos, next) {
           }, numLanguagesProcessed === numLanguages);
 
           // Save translation
-          writeJSONFile(fileNames[file], {semantics: updatedTranslation}, function (err) {
+          writeJSONFile(fileNames[file], {semantics: updatedTranslation}, function (err: any) {
             if (err) {
               // TODO ?
             }
 
             if (numLanguagesProcessed === numLanguages) {
               // Save semantics
-              writeJSONFile(fileNames.semantics, files.semantics.content, function (err) {
+              writeJSONFile(fileNames.semantics, files.semantics.content, function (err: any) {
                 if (err) {
                   // TODO ?
                 }

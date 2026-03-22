@@ -423,7 +423,7 @@ const commands: any[] = [
       const libraries = Array.prototype.slice.call(arguments);
       let versions = 1;
       if (libraries[0] && libraries[0].match(/^-?\d+$/ig)) {
-        versions = Math.abs(libraries.splice(0, 1));
+        versions = Math.abs(parseInt(libraries.splice(0, 1)[0]));
       }
       h5p.changesSinceAll(versions, libraries, handleChanges);
     }
@@ -448,7 +448,7 @@ const commands: any[] = [
       const libraries = Array.prototype.slice.call(arguments);
       let versions = 1;
       if (libraries[0] && libraries[0].match(/^-?\d+$/ig)) {
-        versions = Math.abs(libraries.splice(0, 1));
+        versions = Math.abs(parseInt(libraries.splice(0, 1)[0]));
       }
       h5p.commitsSinceAll(versions, libraries, handleChanges);
     }

@@ -40,7 +40,7 @@ export default {
       const languages: Record<string, any> = {};
       for (let item of languageFiles) {
         const key = item.match(/language\/(.*?)\.js/)?.[1];
-        languages[key] = supportedLanguages[key];
+        if (key) languages[key] = supportedLanguages[key];
       }
       let input: Record<string, any> = {
         assets: config.folders.assets,
@@ -399,7 +399,7 @@ export default {
       for (let item of request.body.libraries) {
         const entry = libs[registry.reversed[item.split(' ')[0]].shortName];
         const folder = libraryDirs[entry.id];
-        const idx = `${entry.id} ${entry.version.major}.${entry.version.minor}`;
+        const idx = `${entry.id} ${entry.version!.major}.${entry.version!.minor}`;
         const languageFolder = `${config.folders.libraries}/${folder}/language`;
         const langFile = `${languageFolder}/${request.query.language}.json`;
         if (fs.existsSync(langFile)) {
@@ -457,10 +457,10 @@ export default {
         if (!libFolder) {
           continue;
         }
-        for (let jsItem of entry.preloadedJs) {
+        for (let jsItem of entry.preloadedJs ?? []) {
           preloadedJs.push(`"/${config.folders.libraries}/${libFolder}/${jsItem.path}"`);
         }
-        for (let cssItem of entry.preloadedCss) {
+        for (let cssItem of entry.preloadedCss ?? []) {
           preloadedCss.push(`"/${config.folders.libraries}/${libFolder}/${cssItem.path}"`);
         }
       }
@@ -491,7 +491,7 @@ export default {
         metadata: info
       }
       const labels = await getLangLabels();
-      const machineName = `${libs[library].id} ${libs[library].version.major}.${libs[library].version.minor}`;
+      const machineName = `${libs[library].id} ${libs[library].version!.major}.${libs[library].version!.minor}`;
       const libraryDirectories = JSON.stringify((await ajaxLibraries({ machineName: id })).directories);
       let input: Record<string, any> = {
         assets: config.folders.assets,
@@ -507,7 +507,7 @@ export default {
         preloadedJs: preloadedJs.join(',\n'),
         l10n: JSON.stringify(l10n),
         machineName,
-        version: `${libs[library].version.major}.${libs[library].version.minor}`,
+        version: `${libs[library].version!.major}.${libs[library].version!.minor}`,
         contentVersion: `${mainLibrary.majorVersion}.${mainLibrary.minorVersion}`,
         id,
         libraryDirectories,
@@ -558,10 +558,10 @@ export default {
         if (!libFolder) {
           continue;
         }
-        for (let jsItem of entry.preloadedJs) {
+        for (let jsItem of entry.preloadedJs ?? []) {
           preloadedJs.push(`/${config.folders.libraries}/${libFolder}/${jsItem.path}`);
         }
-        for (let cssItem of entry.preloadedCss) {
+        for (let cssItem of entry.preloadedCss ?? []) {
           preloadedCss.push(`/${config.folders.libraries}/${libFolder}/${cssItem.path}`);
         }
       }
@@ -582,7 +582,7 @@ export default {
           break;
         }
       }
-      const machineName = `${id} ${libs[library].version.major}.${libs[library].version.minor}`;
+      const machineName = `${id} ${libs[library].version!.major}.${libs[library].version!.minor}`;
       const labels = await getLangLabels();
       const libraryDirectories = JSON.stringify((await ajaxLibraries({ machineName: id })).directories);
       let input: Record<string, any> = {
@@ -595,7 +595,7 @@ export default {
         session: session.name,
         sessions: JSON.stringify(sessions),
         machineName,
-        version: `${libs[library].version.major}.${libs[library].version.minor}`,
+        version: `${libs[library].version!.major}.${libs[library].version!.minor}`,
         contentVersion: `${mainLibrary.majorVersion}.${mainLibrary.minorVersion}`,
         id,
         fullscreen: libs[library].fullscreen,
@@ -732,7 +732,7 @@ const computePreloaded = async (library: string, baseUrl: string) => {
     if (!folder) {
       continue;
     }
-    const label = `${entry.id}-${entry.version.major}.${entry.version.minor}.${entry.version.patch}`;
+    const label = `${entry.id}-${entry.version!.major}.${entry.version!.minor}.${entry.version!.patch}`;
     const languageFolder = `${config.folders.libraries}/${folder}/language`;
     const langFile = `${languageFolder}/${session.language}.json`;
     if (fs.existsSync(langFile)) {
@@ -745,9 +745,9 @@ const computePreloaded = async (library: string, baseUrl: string) => {
         languages.push(id);
       }
     }
-    if (item == library && entry.requiredBy.length == 1) {
+    if (item == library && (entry.requiredBy?.length ?? 0) == 1) {
       let required = false;
-      for (let obj of entry.editorDependencies) {
+      for (let obj of entry.editorDependencies ?? []) {
         if (obj.machineName == entry.id) {
           required = true;
         }
@@ -756,10 +756,10 @@ const computePreloaded = async (library: string, baseUrl: string) => {
         continue;
       }
     }
-    for (let jsItem of entry.preloadedJs) {
+    for (let jsItem of entry.preloadedJs ?? []) {
       preloadedJs.push(`${baseUrl}/${config.folders.libraries}/${folder}/${jsItem.path}`);
     }
-    for (let cssItem of entry.preloadedCss) {
+    for (let cssItem of entry.preloadedCss ?? []) {
       preloadedCss.push(`${baseUrl}/${config.folders.libraries}/${folder}/${cssItem.path}`);
     }
     directories[folder] = label;
@@ -818,10 +818,10 @@ const ajaxLibraries = async (options: { library?: string; libraries?: any[]; mac
       const library = item.library;
       const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
       output.push({
-        uberName: `${libs[library].id} ${libs[library].version.major}.${libs[library].version.minor}`,
+        uberName: `${libs[library].id} ${libs[library].version!.major}.${libs[library].version!.minor}`,
         name: libs[library].id,
-        majorVersion: libs[library].version.major,
-        minorVersion: libs[library].version.minor,
+        majorVersion: libs[library].version!.major,
+        minorVersion: libs[library].version!.minor,
         title: libs[library].title,
         runnable: libs[library].runnable,
         restricted: false,
