@@ -3,6 +3,7 @@ import path from 'path';
 import he from 'he';
 import imageSize from 'image-size';
 import logic from '../../logic';
+import { fromTemplate } from '../lib/h5p-utils';
 // import config from '../../configLoader';
 import config from '../config';
 import l10n from '../../assets/l10n.json';
@@ -51,7 +52,7 @@ export default {
       }
       input = {...input, ...labels};
       response.set('Content-Type', 'text/html');
-      response.end(logic.fromTemplate(html, input));
+      response.end(fromTemplate(html, input));
       session.status = '';
     }
     catch (error) {
@@ -296,7 +297,7 @@ export default {
       }
       input = {...input, ...labels};
       response.set('Content-Type', 'text/html');
-      response.end(logic.fromTemplate(splitView_html, input));
+      response.end(fromTemplate(splitView_html, input));
     }
     catch (error) {
      handleError(error, response);
@@ -467,7 +468,7 @@ export default {
       const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
       const mathDisplayLabel = libraryDirs[mathDisplay.id];
       preloadedJs.push(`"/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js"`);
-      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
+      const libraryConfig = JSON.parse(fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
         baseUrl,
         mathDisplayLabel
       }));
@@ -519,7 +520,7 @@ export default {
       }
       input = {...input, ...labels};
       response.set('Content-Type', 'text/html');
-      response.end(logic.fromTemplate(html, input));
+      response.end(fromTemplate(html, input));
     }
     catch (error) {
       handleError(error, response);
@@ -568,7 +569,7 @@ export default {
       const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
       const mathDisplayLabel = libraryDirs[mathDisplay.id];
       preloadedJs.push(`/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js`);
-      const libraryConfig = JSON.parse(logic.fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
+      const libraryConfig = JSON.parse(fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
         baseUrl,
         mathDisplayLabel
       }));
@@ -615,7 +616,7 @@ export default {
       }
       input = {...input, ...labels};
       response.set('Content-Type', 'text/html');
-      response.end(logic.fromTemplate(html, input));
+      response.end(fromTemplate(html, input));
     }
     catch (error) {
       handleError(error, response);

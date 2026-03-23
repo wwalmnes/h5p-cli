@@ -16,10 +16,15 @@ global.H5P = {
   }
 };
 global.ns = {};
-global.navigator = {
-  userAgent: {
-    match: () => {}
-  }
+try {
+  global.navigator = {
+    userAgent: {
+      match: () => {}
+    }
+  };
+} catch (_) {
+  // Node.js 21+ exposes navigator as a read-only getter; the real
+  // navigator.userAgent string already has .match(), so no mock needed
 }
 require(`${process.cwd()}/${config.folders.libraries}/h5p-editor-php-library/scripts/h5peditor.js`);
 module.exports = ns.supportedLanguages;
@@ -27,4 +32,4 @@ module.exports = ns.supportedLanguages;
 delete global.window;
 delete global.H5P;
 delete global.ns;
-delete global.navigator;
+try { delete global.navigator; } catch (_) {}

@@ -1,4 +1,5 @@
 import logic from '../../logic';
+import { machineToShort } from '../lib/h5p-utils';
 
 export interface ISetupAdapter {
   machineToShort(machineName: string): string;
@@ -8,7 +9,7 @@ export interface ISetupAdapter {
 
 export class SetupAdapter implements ISetupAdapter {
   machineToShort(machineName: string): string {
-    return logic.machineToShort(machineName);
+    return machineToShort(machineName);
   }
 
   computeDependencies(library: string, mode: 'view' | 'edit', version?: string): Promise<Record<string, any>> {

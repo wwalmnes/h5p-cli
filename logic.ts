@@ -445,7 +445,7 @@ const logic = {
           "title": info.title,
           "author": info.author,
           "runnable": info.runnable,
-          "shortName": logic.machineToShort(id),
+          "shortName": machineToShort(id),
           "org": "",
           "repoName": ""
         }
@@ -455,11 +455,10 @@ const logic = {
     }
     return output;
   },
-  machineToShort,
   registryEntryFromRepoUrl: function(gitUrl: string): Record<string, LibraryEntry> {
     const { host, org, repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
     const list = getRepoFile(gitUrl, 'library.json', 'master', true) as any;
-    const shortName = logic.machineToShort(list.machineName);
+    const shortName = machineToShort(list.machineName);
     const type = host.split('.')[0];
     const output: Record<string, LibraryEntry> = {};
     output[list.machineName] = {
@@ -477,8 +476,6 @@ const logic = {
     }
     return output;
   },
-  fromTemplate,
-  parseGitUrl,
   getFile,
   getFileList
 }
