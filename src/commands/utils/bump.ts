@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import bump from '../../../assets/utils/commands/bump';
+import bump from '../../utils/commands/bump';
 
 const bumpOptionsSchema = z.object({
   yes: z.boolean().optional(),

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import init from '../../../assets/utils/commands/init';
+import init from '../../utils/commands/init';
 
 const initArgsSchema = z.object({
   library: z.string(),

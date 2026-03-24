@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import pull from '../../../assets/utils/commands/pull';
+import pull from '../../utils/commands/pull';
 
 export function pullCommand(): Command {
   return new Command('pull')

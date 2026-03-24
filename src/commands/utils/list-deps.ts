@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import h5p from '../../../assets/utils/h5p';
+import h5p from '../../utils/h5p';
 
 export function listDepsCommand(): Command {
   return new Command('list-deps')

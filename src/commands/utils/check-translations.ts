@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import checkTranslations from '../../../assets/utils/commands/check-translations';
+import checkTranslations from '../../utils/commands/check-translations';
 
 export function checkTranslationsCommand(): Command {
   return new Command('check-translations')

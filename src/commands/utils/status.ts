@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import statusCmd from '../../../assets/utils/commands/status';
+import statusCmd from '../../utils/commands/status';
 
 export function statusCommand(): Command {
   return new Command('status')
