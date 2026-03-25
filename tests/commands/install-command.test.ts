@@ -14,27 +14,27 @@ describe('installCommand', () => {
   });
 
   it('has correct name', () => {
-    const mockSvc = { install: vi.fn().mockResolvedValue(undefined) } as any;
-    expect(installCommand(mockSvc).name()).toBe('install');
+    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
+    expect(installCommand(mockAdapter).name()).toBe('install');
   });
 
-  it('calls service.install with library and mode', async () => {
-    const mockSvc = { install: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = installCommand(mockSvc);
+  it('calls adapter.getWithDependencies with download action, library and mode', async () => {
+    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
+    const cmd = installCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', 'edit']);
-    expect(mockSvc.install).toHaveBeenCalledWith('h5p-blanks', 'edit');
+    expect(mockAdapter.getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', 'edit');
   });
 
-  it('calls service.install without mode', async () => {
-    const mockSvc = { install: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = installCommand(mockSvc);
+  it('calls adapter.getWithDependencies without mode', async () => {
+    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
+    const cmd = installCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockSvc.install).toHaveBeenCalledWith('h5p-blanks', undefined);
+    expect(mockAdapter.getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', undefined);
   });
 
   it('logs error on rejection', async () => {
-    const mockSvc = { install: vi.fn().mockRejectedValue(new Error('install failed')) } as any;
-    const cmd = installCommand(mockSvc);
+    const mockAdapter = { getWithDependencies: vi.fn().mockRejectedValue(new Error('install failed')) } as any;
+    const cmd = installCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(console.log).toHaveBeenCalledWith('> error');
   });

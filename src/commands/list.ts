@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { ListAdapter } from '../adapters/list-adapter';
-import { ListService } from '../services/list-service';
+import { ListAdapter, IListAdapter } from '../adapters/list-adapter';
 
 const listArgsSchema = z.object({
   // @todo: string currently and backwards compatible to accept 1. Should be a boolean.
@@ -9,8 +8,8 @@ const listArgsSchema = z.object({
   ignoreFile: z.string().optional(),
 });
 
-export function listCommand(service?: ListService): Command {
-  const svc = service ?? new ListService(new ListAdapter());
+export function listCommand(adapter?: IListAdapter): Command {
+  const a = adapter ?? new ListAdapter();
   return new Command('list')
     .description('Lists h5p libraries from the registry')
     .argument('[reversed]', 'Pass 1 to show reversed list')
@@ -18,7 +17,11 @@ export function listCommand(service?: ListService): Command {
     .action(async (reversed: string | undefined, ignoreFile: string | undefined) => {
       const args = listArgsSchema.parse({ reversed, ignoreFile });
       try {
-        await svc.list(args.reversed === '1', args.ignoreFile === '1');
+        console.log('> fetching h5p library registry');
+        const result = await a.getRegistry(args.ignoreFile === '1');
+        for (const item in result.regular) {
+          console.log(`${args.reversed === '1' ? result.regular[item].id : item} (${result.regular[item].org})`);
+        }
       } catch (error) {
         console.log('> error');
         console.log(error);

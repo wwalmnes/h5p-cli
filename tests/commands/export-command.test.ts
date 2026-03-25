@@ -14,27 +14,27 @@ describe('exportCommand', () => {
   });
 
   it('has correct name', () => {
-    const mockSvc = { export: vi.fn().mockResolvedValue(undefined) } as any;
-    expect(exportCommand(mockSvc).name()).toBe('export');
+    const mockAdapter = { export: vi.fn().mockResolvedValue('/out/h5p-blanks.h5p') } as any;
+    expect(exportCommand(mockAdapter).name()).toBe('export');
   });
 
-  it('calls service.export with library and folder', async () => {
-    const mockSvc = { export: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = exportCommand(mockSvc);
+  it('calls adapter.export with library and folder', async () => {
+    const mockAdapter = { export: vi.fn().mockResolvedValue('/out/h5p-blanks.h5p') } as any;
+    const cmd = exportCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '/out']);
-    expect(mockSvc.export).toHaveBeenCalledWith('h5p-blanks', '/out');
+    expect(mockAdapter.export).toHaveBeenCalledWith('h5p-blanks', '/out');
   });
 
-  it('calls service.export without folder', async () => {
-    const mockSvc = { export: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = exportCommand(mockSvc);
+  it('calls adapter.export without folder', async () => {
+    const mockAdapter = { export: vi.fn().mockResolvedValue('/out/h5p-blanks.h5p') } as any;
+    const cmd = exportCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockSvc.export).toHaveBeenCalledWith('h5p-blanks', undefined);
+    expect(mockAdapter.export).toHaveBeenCalledWith('h5p-blanks', undefined);
   });
 
   it('logs error on rejection', async () => {
-    const mockSvc = { export: vi.fn().mockRejectedValue(new Error('export failed')) } as any;
-    const cmd = exportCommand(mockSvc);
+    const mockAdapter = { export: vi.fn().mockRejectedValue(new Error('export failed')) } as any;
+    const cmd = exportCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(console.log).toHaveBeenCalledWith('> error');
   });

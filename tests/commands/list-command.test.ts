@@ -14,34 +14,27 @@ describe('listCommand', () => {
   });
 
   it('has correct name', () => {
-    const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
-    expect(listCommand(mockSvc).name()).toBe('list');
+    const mockAdapter = { getRegistry: vi.fn().mockResolvedValue({ regular: {} }) } as any;
+    expect(listCommand(mockAdapter).name()).toBe('list');
   });
 
-  it('calls service.list with reversed=0 and ignoreFile=0 by default', async () => {
-    const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = listCommand(mockSvc);
+  it('calls adapter.getRegistry with ignoreFile=false by default', async () => {
+    const mockAdapter = { getRegistry: vi.fn().mockResolvedValue({ regular: {} }) } as any;
+    const cmd = listCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p']);
-    expect(mockSvc.list).toHaveBeenCalledWith(false, false);
+    expect(mockAdapter.getRegistry).toHaveBeenCalledWith(false);
   });
 
-  it('calls service.list with reversed=1', async () => {
-    const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = listCommand(mockSvc);
-    await cmd.parseAsync(['node', 'h5p', '1']);
-    expect(mockSvc.list).toHaveBeenCalledWith(true, false);
-  });
-
-  it('calls service.list with ignoreFile=1', async () => {
-    const mockSvc = { list: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = listCommand(mockSvc);
+  it('calls adapter.getRegistry with ignoreFile=true', async () => {
+    const mockAdapter = { getRegistry: vi.fn().mockResolvedValue({ regular: {} }) } as any;
+    const cmd = listCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', '0', '1']);
-    expect(mockSvc.list).toHaveBeenCalledWith(false, true);
+    expect(mockAdapter.getRegistry).toHaveBeenCalledWith(true);
   });
 
   it('logs error on rejection', async () => {
-    const mockSvc = { list: vi.fn().mockRejectedValue(new Error('list failed')) } as any;
-    const cmd = listCommand(mockSvc);
+    const mockAdapter = { getRegistry: vi.fn().mockRejectedValue(new Error('list failed')) } as any;
+    const cmd = listCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p']);
     expect(console.log).toHaveBeenCalledWith('> error');
   });

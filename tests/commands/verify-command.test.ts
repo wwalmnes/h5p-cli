@@ -14,20 +14,20 @@ describe('verifyCommand', () => {
   });
 
   it('has correct name', () => {
-    const mockSvc = { verify: vi.fn().mockResolvedValue(undefined) } as any;
-    expect(verifyCommand(mockSvc).name()).toBe('verify');
+    const mockAdapter = { verifySetup: vi.fn().mockResolvedValue(undefined) } as any;
+    expect(verifyCommand(mockAdapter).name()).toBe('verify');
   });
 
-  it('calls service.verify with library', async () => {
-    const mockSvc = { verify: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = verifyCommand(mockSvc);
+  it('calls adapter.verifySetup with library', async () => {
+    const mockAdapter = { verifySetup: vi.fn().mockResolvedValue('ok') } as any;
+    const cmd = verifyCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockSvc.verify).toHaveBeenCalledWith('h5p-blanks');
+    expect(mockAdapter.verifySetup).toHaveBeenCalledWith('h5p-blanks');
   });
 
   it('logs error on rejection', async () => {
-    const mockSvc = { verify: vi.fn().mockRejectedValue(new Error('fail')) } as any;
-    const cmd = verifyCommand(mockSvc);
+    const mockAdapter = { verifySetup: vi.fn().mockRejectedValue(new Error('fail')) } as any;
+    const cmd = verifyCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(console.log).toHaveBeenCalledWith('> error');
   });

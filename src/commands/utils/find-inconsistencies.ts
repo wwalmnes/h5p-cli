@@ -1,10 +1,11 @@
 import { Command } from 'commander';
-import h5p from '../../utils/h5p';
+import { DependencyAnalysisService } from '../../services/dependency-analysis-service';
 
 export function findInconsistenciesCommand(): Command {
   return new Command('find-inconsistencies')
     .description('Find version inconsistencies across libraries')
-    .action(() => {
-      h5p.findDependencyInconsistencies();
+    .action(async () => {
+      const svc = new DependencyAnalysisService();
+      await svc.findInconsistencies();
     });
 }

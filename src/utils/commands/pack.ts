@@ -1,7 +1,37 @@
-import h5p from '../h5p';
+import fs from 'fs';
+import archiver from 'archiver';
 import { getLibraryData } from '../utility/repository';
 import * as output from '../utility/output';
 import Input from '../utility/input';
+import { findRepos } from '../../lib/process-repos';
+import { archiveDir } from '../../lib/archive-utils';
+
+function packLibraries(repos: string[], file: string): Promise<void> {
+  const dirs = fs.readdirSync('.');
+  const all = !repos.length || (repos.length === 1 && repos[0] === '*');
+  const toProcess = all ? dirs : repos.filter(r => dirs.includes(r));
+
+  const targets = toProcess.map(repo => {
+    try {
+      const lib = JSON.parse(fs.readFileSync(`${repo}/library.json`, 'utf-8'));
+      return { path: repo, target: `${lib.machineName}-${lib.majorVersion}.${lib.minorVersion}` };
+    } catch {
+      return { path: repo, target: repo };
+    }
+  });
+
+  return new Promise((resolve, reject) => {
+    const output_ = fs.createWriteStream(file);
+    const archive = archiver('zip');
+    archive.on('error', reject);
+    output_.on('close', resolve);
+    archive.pipe(output_);
+    for (const { path: p, target: t } of targets) {
+      archiveDir(archive, p, t);
+    }
+    archive.finalize();
+  });
+}
 
 const c = output.color;
 
@@ -25,7 +55,7 @@ function printLibsPacked(libs: string[]): void {
 }
 
 function recursivelyGetDependencies(libraries: string[]): Promise<string[]> {
-  return h5p.findDirectories()
+  return findRepos()
     .then(getLibraryDataForDirs)
     .then((dirData: DirectoryData[]) => getLibraryDependencies(dirData, libraries));
 }
@@ -99,11 +129,11 @@ function pack(...inputList: string[]): Promise<void> {
         return recursivelyGetDependencies(libraries)
           .then(libsToPack => {
             printDependencies(libsToPack.length - libraries.length);
-            return h5p.pack(libsToPack, file);
+            return packLibraries(libsToPack, file);
           });
       }
       else {
-        return h5p.pack(libraries, file);
+        return packLibraries(libraries, file);
       }
     });
 }

@@ -14,27 +14,27 @@ describe('cloneCommand', () => {
   });
 
   it('has correct name', () => {
-    const mockSvc = { clone: vi.fn().mockResolvedValue(undefined) } as any;
-    expect(cloneCommand(mockSvc).name()).toBe('clone');
+    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
+    expect(cloneCommand(mockAdapter).name()).toBe('clone');
   });
 
-  it('calls service.clone with library and mode', async () => {
-    const mockSvc = { clone: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = cloneCommand(mockSvc);
+  it('calls adapter.getWithDependencies with clone action, library and mode', async () => {
+    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
+    const cmd = cloneCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', 'view']);
-    expect(mockSvc.clone).toHaveBeenCalledWith('h5p-blanks', 'view');
+    expect(mockAdapter.getWithDependencies).toHaveBeenCalledWith('clone', 'h5p-blanks', 'view');
   });
 
-  it('calls service.clone without mode', async () => {
-    const mockSvc = { clone: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = cloneCommand(mockSvc);
+  it('calls adapter.getWithDependencies without mode', async () => {
+    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
+    const cmd = cloneCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockSvc.clone).toHaveBeenCalledWith('h5p-blanks', undefined);
+    expect(mockAdapter.getWithDependencies).toHaveBeenCalledWith('clone', 'h5p-blanks', undefined);
   });
 
   it('logs error on rejection', async () => {
-    const mockSvc = { clone: vi.fn().mockRejectedValue(new Error('clone failed')) } as any;
-    const cmd = cloneCommand(mockSvc);
+    const mockAdapter = { getWithDependencies: vi.fn().mockRejectedValue(new Error('clone failed')) } as any;
+    const cmd = cloneCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(console.log).toHaveBeenCalledWith('> error');
   });

@@ -1,7 +1,7 @@
 import { getLibraryData, getLanguageData } from './repository';
 import * as output from './output';
-import h5p from '../h5p';
 import path from 'path';
+import { createDefaultLanguage } from '../../lib/semantics-utils';
 import fs from 'fs';
 import sanitizeHtml from 'sanitize-html';
 
@@ -61,7 +61,7 @@ export function languageComparison(language: any, assertLanguage: any, errors?: 
 
 export function validateLanguage(library: string, language: string): any {
   const testLang = getLanguageData(library, language);
-  const defaultLangSemantics = h5p.createDefaultLanguage(library);
+  const defaultLangSemantics = createDefaultLanguage(library);
 
   if (typeof testLang === 'object' && testLang.semantics) {
     const validation = languageComparison(testLang.semantics, defaultLangSemantics);
@@ -94,7 +94,7 @@ function getLanguages(languages: string[], lib: string): Promise<any[]> {
 const getLanguageCode = (dir: string): string => dir.split('.')[0];
 
 function getAllLanguagesOfLib(lib: string): Promise<any[]> {
-  return h5p.findDirectories(true, path.resolve(lib, 'language'))
+  return Promise.resolve(fs.readdirSync(path.resolve(lib, 'language')) as string[])
     .then((dirs: string[]) => dirs.map(getLanguageCode).map(validateLanguage.bind(null, lib)))
     .catch(() => {
       output.printResults({

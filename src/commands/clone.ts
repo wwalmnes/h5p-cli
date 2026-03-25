@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { InstallAdapter } from '../adapters/install-adapter';
-import { CloneService } from '../services/clone-service';
+import { InstallAdapter, IInstallAdapter } from '../adapters/install-adapter';
 import config from '../../configLoader';
 
 const cloneArgsSchema = z.object({
@@ -11,15 +10,15 @@ const cloneArgsSchema = z.object({
   }).optional(),
 });
 
-export function cloneCommand(service?: CloneService): Command {
-  const svc = service ?? new CloneService(new InstallAdapter(), config.folders.libraries);
+export function cloneCommand(adapter?: IInstallAdapter): Command {
+  const a = adapter ?? new InstallAdapter();
   return new Command('clone')
     .description('Clones dependencies for h5p library')
     .argument('<library>', 'Library name')
     .argument('[mode]', 'Mode (view or edit)')
     .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
       const result = cloneArgsSchema.safeParse({ library, mode });
-      
+
       if (!result.success) {
         for (const issue of result.error.issues) {
           console.error(issue.message);
@@ -30,7 +29,9 @@ export function cloneCommand(service?: CloneService): Command {
       const args = result.data;
 
       try {
-        await svc.clone(args.library, args.mode);
+        console.log(`> cloning ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
+        await a.getWithDependencies('clone', args.library, args.mode);
+        console.log(`> done installing ${args.library}`);
       } catch (error) {
         console.log('> error');
         console.log(error);

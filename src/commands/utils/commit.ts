@@ -1,12 +1,14 @@
 import { Command } from 'commander';
-import h5p from '../../utils/h5p';
+import { GitAdapter, IGitAdapter } from '../../adapters/git-adapter';
+import { processRepos } from '../../lib/process-repos';
 
-export function commitCommand(): Command {
+export function commitCommand(adapter?: IGitAdapter): Command {
+  const git = adapter ?? new GitAdapter();
   return new Command('commit')
     .description('Commit to repos with given message')
     .argument('<message>', 'Commit message')
     .argument('[libraries...]', 'Library names')
-    .action((message: string, libraries: string[]) => {
+    .action(async (message: string, libraries: string[]) => {
       const lf = '\u000A';
       const color = { default: '\x1B[0m', emphasize: '\x1B[1m' };
 
@@ -19,24 +21,23 @@ export function commitCommand(): Command {
         return;
       }
 
-      function commitResults(error: any, results: any[]) {
-        if (error) return process.stdout.write(error + lf);
+      try {
+        const results = await processRepos(libraries, repo => git.commit(repo, message));
         let first = true;
-        for (let i = 0; i < results.length; i++) {
-          const result = results[i];
-          if (!result.error && !result.changes) continue;
+        for (const result of results) {
+          if (!('error' in result) && !('changes' in result)) continue;
           if (first) { process.stdout.write(lf); first = false; }
           process.stdout.write(color.emphasize + result.name + color.default);
-          if (result.branch && result.commit) {
+          if ('branch' in result && result.branch && result.commit) {
             process.stdout.write(' (' + result.branch + ' ' + result.commit + ')');
           }
           process.stdout.write(lf);
-          if (result.error) process.stdout.write(error + lf);
-          else process.stdout.write(result.changes.join(lf) + lf);
+          if ('error' in result && result.error) process.stdout.write(result.error + lf);
+          else if ('changes' in result && result.changes) process.stdout.write(result.changes.join(lf) + lf);
           process.stdout.write(lf);
         }
+      } catch (error: any) {
+        process.stdout.write(error.message + lf);
       }
-
-      h5p.commitRepos(message, libraries, commitResults);
     });
 }

@@ -1,4 +1,5 @@
-import h5p from '../h5p';
+import fs from 'fs';
+import { findRepos } from '../../lib/process-repos';
 
 const defaultFileName = process.env.H5P_DEFAULT_PACK || 'libraries.h5p';
 
@@ -26,7 +27,10 @@ class Input {
   }
 
   init(skipCheck = false): Promise<void> {
-    return h5p.findDirectories(skipCheck)
+    const dirs$ = skipCheck
+      ? Promise.resolve(fs.readdirSync('.') as string[])
+      : findRepos();
+    return dirs$
       .then((dirs: string[]) => {
         if (this.remainingInputs.indexOf('*') >= 0) {
           this.libraries = dirs;

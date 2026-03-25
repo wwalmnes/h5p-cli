@@ -1,12 +1,14 @@
 import { Command } from 'commander';
-import h5p from '../../utils/h5p';
+import { LibraryInstallService } from '../../services/library-install-service';
+import { LibraryInstallAdapter } from '../../adapters/library-install-adapter';
 
-export function getCommand(): Command {
+export function getCommand(service?: LibraryInstallService): Command {
+  const svc = service ?? new LibraryInstallService(new LibraryInstallAdapter());
   return new Command('get')
     .description('Clone library and all dependencies')
     .argument('[libraries...]', 'Library names')
     .option('--https', 'Use https:// urls for git repos instead of ssh urls')
-    .action((libraries: string[], options: { https?: boolean }) => {
+    .action(async (libraries: string[], options: { https?: boolean }) => {
       const color = {
         default: '\x1B[0m',
         emphasize: '\x1B[1m',
@@ -22,56 +24,45 @@ export function getCommand(): Command {
         return;
       }
 
-      // Clone helper
-      function doClone(fetchWithHttps: boolean) {
-        const noCr = process.platform === 'win32';
-        const name = h5p.clone(fetchWithHttps, function (error: any) {
-          let result: string;
-          if (error === -1) result = color.yellow + 'SKIPPED' + color.default + lf;
-          else if (error) result = color.red + 'FAILED' + color.default + lf + error;
-          else result = color.green + 'OK' + color.default + lf;
-          cloneSpinner.stop(result);
-          doClone(fetchWithHttps);
-        });
-        if (!name) return;
-        const msg = 'Cloning into \'' + color.emphasize + name + color.default + '\'...';
-        let cloneSpinner: any;
+      const noCr = process.platform === 'win32';
+
+      function makeSpinner(msg: string): { stop: (r: string) => void } {
         if (noCr) {
           process.stdout.write(msg);
           const interval = setInterval(() => process.stdout.write('.'), 500);
-          cloneSpinner = { stop: (r: string) => { clearInterval(interval); process.stdout.write(' ' + r); } };
-        } else {
-          const parts = ['/', '-', '\\', '|'];
-          let curPos = 0;
-          const interval = setInterval(() => {
-            process.stdout.write('\r' + msg + ' ' + color.emphasize + parts[curPos++] + color.default);
-            if (curPos === parts.length) curPos = 0;
-          }, 100);
-          cloneSpinner = { stop: (r: string) => { clearInterval(interval); process.stdout.write('\r' + msg + ' ' + r); } };
+          return { stop: (r: string) => { clearInterval(interval); process.stdout.write(' ' + r); } };
         }
-      }
-
-      const prefix = 'Looking up dependencies...';
-      const noCr = process.platform === 'win32';
-      let spinner: any;
-      if (noCr) {
-        process.stdout.write(prefix);
-        const interval = setInterval(() => process.stdout.write('.'), 500);
-        spinner = { stop: (r: string) => { clearInterval(interval); process.stdout.write(' ' + r); } };
-      } else {
         const parts = ['/', '-', '\\', '|'];
         let curPos = 0;
         const interval = setInterval(() => {
-          process.stdout.write('\r' + prefix + ' ' + color.emphasize + parts[curPos++] + color.default);
+          process.stdout.write('\r' + msg + ' ' + color.emphasize + parts[curPos++] + color.default);
           if (curPos === parts.length) curPos = 0;
         }, 100);
-        spinner = { stop: (r: string) => { clearInterval(interval); process.stdout.write('\r' + prefix + ' ' + r); } };
+        return { stop: (r: string) => { clearInterval(interval); process.stdout.write('\r' + msg + ' ' + r); } };
       }
 
-      h5p.get(libraries, function (error: any) {
-        const result = error ? color.red + 'ERROR: ' + color.default + error : color.green + 'DONE' + color.default;
-        spinner.stop(result + lf);
-        doClone(fetchWithHttps);
-      });
+      const lookupSpinner = makeSpinner('Looking up dependencies...');
+
+      let collection: Map<string, { repository: string }>;
+      try {
+        collection = await svc.resolveCollection(libraries);
+        lookupSpinner.stop(color.green + 'DONE' + color.default + lf);
+      } catch (error: any) {
+        lookupSpinner.stop(color.red + 'ERROR: ' + color.default + error.message + lf);
+        return;
+      }
+
+      for (const [name, entry] of collection) {
+        const msg = 'Cloning into \'' + color.emphasize + name + color.default + '\'...';
+        const cloneSpinner = makeSpinner(msg);
+        const { status, error } = await svc.cloneLibrary(name, entry.repository, fetchWithHttps);
+        if (status === 'skipped') {
+          cloneSpinner.stop(color.yellow + 'SKIPPED' + color.default + lf);
+        } else if (status === 'failed') {
+          cloneSpinner.stop(color.red + 'FAILED' + color.default + lf + (error ?? ''));
+        } else {
+          cloneSpinner.stop(color.green + 'OK' + color.default + lf);
+        }
+      }
     });
 }
