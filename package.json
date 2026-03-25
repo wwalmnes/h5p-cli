@@ -17,6 +17,7 @@
     "test:logic": "vitest run tests/logic",
     "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
+    "test:smoke": "npm run build && playwright test",
     "typetest": "tsc -p tsconfig.json --noEmit"
   },
   "bin": {
@@ -40,6 +41,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/archiver": "^7.0.0",
     "@types/express": "^5.0.6",
     "@types/gitignore-parser": "^0.0.3",

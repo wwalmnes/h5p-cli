@@ -6,3 +6,5 @@ package-lock.json
 /temp/*
 /uploads/*
 /content/*
+playwright-report/
+test-results/
