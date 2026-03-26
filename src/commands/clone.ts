@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
 import { InstallAdapter, IInstallAdapter } from '../adapters/install-adapter';
+import { adapterRegistry } from '../lib/adapter-registry';
 import config from '../../configLoader';
 
 const cloneArgsSchema = z.object({
@@ -11,12 +12,12 @@ const cloneArgsSchema = z.object({
 });
 
 export function cloneCommand(adapter?: IInstallAdapter): Command {
-  const a = adapter ?? new InstallAdapter();
   return new Command('clone')
     .description('Clones dependencies for h5p library')
     .argument('<library>', 'Library name')
     .argument('[mode]', 'Mode (view or edit)')
     .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
+      const a = adapter ?? adapterRegistry.resolve<IInstallAdapter>('install') ?? new InstallAdapter();
       const result = cloneArgsSchema.safeParse({ library, mode });
 
       if (!result.success) {

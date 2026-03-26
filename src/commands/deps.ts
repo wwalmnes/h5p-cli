@@ -1,7 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { DepsAdapter } from '../adapters/deps-adapter';
+import { DepsAdapter, IDepsAdapter } from '../adapters/deps-adapter';
 import { DepsService } from '../services/deps-service';
+import { adapterRegistry } from '../lib/adapter-registry';
 
 const depsArgsSchema = z.object({
   library: z.string(),
@@ -13,7 +14,6 @@ const depsArgsSchema = z.object({
 });
 
 export function depsCommand(service?: DepsService): Command {
-  const svc = service ?? new DepsService(new DepsAdapter());
   return new Command('deps')
     .description('Computes dependencies for h5p library')
     .argument('<library>', 'Library name')
@@ -21,6 +21,7 @@ export function depsCommand(service?: DepsService): Command {
     .argument('[version]', 'Version')
     .argument('[folder]', 'Folder')
     .action(async (library: string, mode: 'view' | 'edit' | undefined, version: string | undefined, folder: string | undefined) => {
+      const svc = service ?? new DepsService(adapterRegistry.resolve<IDepsAdapter>('deps') ?? new DepsAdapter());
       const result = depsArgsSchema.safeParse({ library, mode, version, folder });
 
       if (!result.success) {

@@ -8,3 +8,5 @@ package-lock.json
 /content/*
 playwright-report/
 test-results/
+plugins/
+h5p.plugins.json

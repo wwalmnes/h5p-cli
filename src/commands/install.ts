@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
 import { InstallAdapter, IInstallAdapter } from '../adapters/install-adapter';
+import { adapterRegistry } from '../lib/adapter-registry';
 import config from '../../configLoader';
 
 const installArgsSchema = z.object({
@@ -11,12 +12,12 @@ const installArgsSchema = z.object({
 });
 
 export function installCommand(adapter?: IInstallAdapter): Command {
-  const a = adapter ?? new InstallAdapter();
   return new Command('install')
     .description('Installs dependencies for h5p library')
     .argument('<library>', 'Library name')
     .argument('[mode]', 'Mode (view or edit)')
     .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
+      const a = adapter ?? adapterRegistry.resolve<IInstallAdapter>('install') ?? new InstallAdapter();
       const result = installArgsSchema.safeParse({ library, mode });
       if (!result.success) {
         for (const issue of result.error.issues) {

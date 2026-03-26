@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
 import { ListAdapter, IListAdapter } from '../adapters/list-adapter';
+import { adapterRegistry } from '../lib/adapter-registry';
 
 const listArgsSchema = z.object({
   // @todo: string currently and backwards compatible to accept 1. Should be a boolean.
@@ -9,12 +10,12 @@ const listArgsSchema = z.object({
 });
 
 export function listCommand(adapter?: IListAdapter): Command {
-  const a = adapter ?? new ListAdapter();
   return new Command('list')
     .description('Lists h5p libraries from the registry')
     .argument('[reversed]', 'Pass 1 to show reversed list')
     .argument('[ignoreFile]', 'Pass 1 to ignore local registry file')
     .action(async (reversed: string | undefined, ignoreFile: string | undefined) => {
+      const a = adapter ?? adapterRegistry.resolve<IListAdapter>('list') ?? new ListAdapter();
       const args = listArgsSchema.parse({ reversed, ignoreFile });
       try {
         console.log('> fetching h5p library registry');

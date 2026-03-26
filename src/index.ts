@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { setupFolders } from './lib/setup-folders';
+import { loadPlugins } from './lib/plugin-loader';
 import { exportCommand } from './commands/export';
 import { importCommand } from './commands/import';
 import { listCommand } from './commands/list';
@@ -15,6 +16,7 @@ import { registerCommand } from './commands/register';
 import { verifyCommand } from './commands/verify';
 import { serverCommand } from './commands/server';
 import { createCommand } from './commands/create';
+import { pluginCommand } from './commands/plugin';
 import { utilsCommand } from './commands/utils/index';
 
 const pkg = require('../package.json');
@@ -41,11 +43,14 @@ program.addCommand(registerCommand());
 program.addCommand(verifyCommand());
 program.addCommand(serverCommand());
 program.addCommand(createCommand());
+program.addCommand(pluginCommand());
 program.addCommand(utilsCommand());
 
-// Replicate the original guard: skip setupFolders for 'utils', 'help', no-arg
+loadPlugins(program);
+
+// Replicate the original guard: skip setupFolders for 'utils', 'help', 'plugin', no-arg
 const subcommandName = process.argv[2];
-if (subcommandName && !['utils', 'help', '--help', '-h', '--version', '-V'].includes(subcommandName)) {
+if (subcommandName && !['utils', 'help', '--help', '-h', '--version', '-V', 'plugin'].includes(subcommandName)) {
   setupFolders();
 }
 
