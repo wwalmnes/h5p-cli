@@ -16,8 +16,9 @@ export function cloneCommand(adapter?: IInstallAdapter): Command {
     .description('Clones dependencies for h5p library')
     .argument('<library>', 'Library name')
     .argument('[mode]', 'Mode (view or edit)')
-    .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
-      const a = adapter ?? adapterRegistry.resolve<IInstallAdapter>('install') ?? new InstallAdapter();
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action(async (library: string, mode: 'view' | 'edit' | undefined, options) => {
+      const a = adapter ?? adapterRegistry.resolve<IInstallAdapter>(options.adapter ?? 'install') ?? new InstallAdapter();
       const result = cloneArgsSchema.safeParse({ library, mode });
 
       if (!result.success) {

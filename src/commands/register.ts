@@ -21,9 +21,10 @@ export function registerCommand(service?: RegisterService): Command {
   return new Command('register')
     .description('Updates local library registry entry')
     .argument('<input>', 'URL or path to registry file')
-    .action(async (input: string) => {
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action(async (input: string, options) => {
       const svc = service ?? new RegisterService(
-        adapterRegistry.resolve<IRegisterAdapter>('register') ?? new RegisterAdapter(),
+        adapterRegistry.resolve<IRegisterAdapter>(options.adapter ?? 'register') ?? new RegisterAdapter(),
         config.registry
       );
       const args = registerArgsSchema.parse({ input });

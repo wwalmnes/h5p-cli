@@ -14,8 +14,9 @@ export function listCommand(adapter?: IListAdapter): Command {
     .description('Lists h5p libraries from the registry')
     .argument('[reversed]', 'Pass 1 to show reversed list')
     .argument('[ignoreFile]', 'Pass 1 to ignore local registry file')
-    .action(async (reversed: string | undefined, ignoreFile: string | undefined) => {
-      const a = adapter ?? adapterRegistry.resolve<IListAdapter>('list') ?? new ListAdapter();
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action(async (reversed: string | undefined, ignoreFile: string | undefined, options) => {
+      const a = adapter ?? adapterRegistry.resolve<IListAdapter>(options.adapter ?? 'list') ?? new ListAdapter();
       const args = listArgsSchema.parse({ reversed, ignoreFile });
       try {
         console.log('> fetching h5p library registry');

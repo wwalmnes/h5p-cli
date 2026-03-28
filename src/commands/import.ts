@@ -13,8 +13,9 @@ export function importCommand(adapter?: IImportAdapter): Command {
     .description('Imports content type from .h5p zipped file')
     .argument('<folder>', 'Target folder')
     .argument('[archive]', 'Archive path')
-    .action((folder: string, archive: string | undefined) => {
-      const a = adapter ?? adapterRegistry.resolve<IImportAdapter>('import') ?? new ImportAdapter();
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action((folder: string, archive: string | undefined, options) => {
+      const a = adapter ?? adapterRegistry.resolve<IImportAdapter>(options.adapter ?? 'import') ?? new ImportAdapter();
       const args = importArgsSchema.parse({ folder, archive });
       try {
         const output = a.import(args.folder, args.archive);

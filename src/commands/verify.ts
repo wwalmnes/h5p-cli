@@ -11,8 +11,9 @@ export function verifyCommand(adapter?: IVerifyAdapter): Command {
   return new Command('verify')
     .description('Generates report that verifies if an h5p library and its dependencies have been correctly computed & installed')
     .argument('<library>', 'Library name')
-    .action(async (library: string) => {
-      const a = adapter ?? adapterRegistry.resolve<IVerifyAdapter>('verify') ?? new VerifyAdapter();
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action(async (library: string, options) => {
+      const a = adapter ?? adapterRegistry.resolve<IVerifyAdapter>(options.adapter ?? 'verify') ?? new VerifyAdapter();
       const args = verifyArgsSchema.parse({ library });
       try {
         const result = await a.verifySetup(args.library);

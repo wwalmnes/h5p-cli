@@ -13,8 +13,9 @@ export function exportCommand(adapter?: IExportAdapter): Command {
     .description('Exports content type as .h5p zipped file')
     .argument('<library>', 'Library name')
     .argument('[folder]', 'Output folder')
-    .action(async (library: string, folder: string | undefined) => {
-      const a = adapter ?? adapterRegistry.resolve<IExportAdapter>('export') ?? new ExportAdapter();
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action(async (library: string, folder: string | undefined, options) => {
+      const a = adapter ?? adapterRegistry.resolve<IExportAdapter>(options.adapter ?? 'export') ?? new ExportAdapter();
       const args = exportArgsSchema.parse({ library, folder });
       try {
         const file = await a.export(args.library, args.folder);

@@ -15,8 +15,9 @@ export function tagsCommand(adapter?: ITagsAdapter): Command {
     .argument('<org>', 'GitHub organization')
     .argument('<library>', 'Library name')
     .argument('<mainBranch>', 'Main branch name')
-    .action((org: string, library: string, mainBranch: string) => {
-      const a = adapter ?? adapterRegistry.resolve<ITagsAdapter>('tags') ?? new TagsAdapter();
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action((org: string, library: string, mainBranch: string, options) => {
+      const a = adapter ?? adapterRegistry.resolve<ITagsAdapter>(options.adapter ?? 'tags') ?? new TagsAdapter();
       const args = tagsArgsSchema.parse({ org, library, mainBranch });
       try {
         console.log('> fetching h5p library tags');

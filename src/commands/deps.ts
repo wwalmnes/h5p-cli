@@ -20,8 +20,9 @@ export function depsCommand(service?: DepsService): Command {
     .argument('[mode]', 'Mode (view or edit)')
     .argument('[version]', 'Version')
     .argument('[folder]', 'Folder')
-    .action(async (library: string, mode: 'view' | 'edit' | undefined, version: string | undefined, folder: string | undefined) => {
-      const svc = service ?? new DepsService(adapterRegistry.resolve<IDepsAdapter>('deps') ?? new DepsAdapter());
+    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
+    .action(async (library: string, mode: 'view' | 'edit' | undefined, version: string | undefined, folder: string | undefined, options) => {
+      const svc = service ?? new DepsService(adapterRegistry.resolve<IDepsAdapter>(options.adapter ?? 'deps') ?? new DepsAdapter());
       const result = depsArgsSchema.safeParse({ library, mode, version, folder });
 
       if (!result.success) {
