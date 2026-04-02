@@ -25,6 +25,16 @@ export function loadPlugins(program: Command): void {
   }
 }
 
+export function applyPluginCommands(program: Command, commands: Command[]): void {
+  for (const cmd of commands) {
+    const idx = program.commands.findIndex(c => c.name() === cmd.name());
+    if (idx !== -1 && Array.isArray(program.commands)) {
+      program.commands.splice(idx, 1);
+    }
+    program.addCommand(cmd);
+  }
+}
+
 function loadPlugin(ref: string, program: Command): void {
   let plugin: H5PPlugin;
   try {
@@ -51,9 +61,7 @@ function loadPlugin(ref: string, program: Command): void {
 
   if (typeof plugin.commands === 'function') {
     try {
-      for (const cmd of plugin.commands()) {
-        program.addCommand(cmd);
-      }
+      applyPluginCommands(program, plugin.commands());
     } catch (e) {
       console.error(`[h5p] Plugin "${plugin.name}" commands() threw:`, e);
     }

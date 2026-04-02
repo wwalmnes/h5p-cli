@@ -101,6 +101,7 @@ function getAllLanguagesOfLib(lib: string): Promise<any[]> {
         name: lib,
         skipped: true
       });
+      return [];
     });
 }
 

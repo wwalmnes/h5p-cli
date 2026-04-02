@@ -51,10 +51,11 @@ export class DependencyAnalysisService {
         const semantics = JSON.parse(fs.readFileSync(`${repo}/semantics.json`).toString());
         const semLibs = parseSemanticLibraries(semantics);
         for (const dep of Object.values(semLibs)) {
+          const [majorVersion, minorVersion] = dep.version.split('.');
           addDependency(library, {
             machineName: dep.name,
-            majorVersion: dep.majorVersion,
-            minorVersion: dep.minorVersion,
+            majorVersion: majorVersion,
+            minorVersion: minorVersion,
           });
         }
       } catch { /* no semantics — skip */ }
