@@ -15,6 +15,7 @@
     * No validation on input
 4. I want commands to scaffold out new projects
 5. I want to be able to replicate an environment (e.g. zeppelin)
+6. I want commands I can use for h5pcom, but is not open for everyone
 
 
 
@@ -22,7 +23,7 @@
 
 Used [shadcn](https://github.com/shadcn-ui/ui), [netlify](https://github.com/netlify/cli) and [vercel cli](https://github.com/vercel/vercel).
 
-Also read a bit on how claude cli/code works, but didn't use anything there (yet).
+Also read a bit on how claude cli/code works, but didn't use anything there (yet). Read that they use Ink (react).. want to try it out :o.
 
 
 
