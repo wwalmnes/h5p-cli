@@ -10,7 +10,7 @@
     * What are the types?
 2. Structure
 3. Documentation
-    * Some commands are documented, others are not
+    * Are all commands documented?
     * Not necessarily easiest to read (my opinion)
     * No validation on input
 4. I want commands to scaffold out new projects
@@ -54,3 +54,11 @@ Service - Flow control
 Adapter - (no tests, reviewing if this is necessary. Going to split up logic and then see if I should add tests)
 
 Logic - Currently too many responsibilities: mix of pure computational functions, I/O (fs/git/http) and orchestration.
+
+### @todo
+- [WIP] Currently splitting up logic
+- Rework adapter (simplify)
+- Can server be removed and be a plugin instead?
+  - Rewrite assets/ (server) to typescript
+- How to handle secrets?
+- plugin/visual helpers for displaying information (like a table)

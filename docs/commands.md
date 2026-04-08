@@ -9,7 +9,7 @@ You can also do `h5p <command> --help` for the same information.
 
 Install the core H5P libraries required to view and edit content types.
 
-```
+```bash
 h5p core
 ```
 
@@ -21,7 +21,7 @@ No arguments.
 
 Full one-command setup: registers the library and installs it along with all dependencies.
 
-```
+```bash
 h5p setup <library|repoUrl> [version] [download]
 ```
 
@@ -55,7 +55,7 @@ h5p setup H5P.Accordion master 1   # download instead of clone
 
 Start the development server.
 
-```
+```bash
 h5p server [port]
 ```
 
@@ -73,7 +73,7 @@ Once running, open the URL in a browser to view, edit, create, import, export, a
 
 List H5P libraries from the local registry.
 
-```
+```bash
 h5p list [machineName] [pullRegistry]
 ```
 
@@ -90,7 +90,7 @@ Output format: `<library> (<org>)`
 
 List available version tags for a library.
 
-```
+```bash
 h5p tags <org> <library> <mainBranch>
 ```
 
@@ -106,7 +106,7 @@ h5p tags <org> <library> <mainBranch>
 
 Add or update an entry in the local library registry.
 
-```
+```bash
 h5p register <gitUrl|entry.json>
 ```
 
@@ -158,7 +158,7 @@ https://github.com/h5p/h5p-accordion
 
 Compute the dependency tree for a library.
 
-```
+```bash
 h5p deps <library> [mode] [version] [folder]
 ```
 
@@ -175,7 +175,7 @@ h5p deps <library> [mode] [version] [folder]
 
 Find dependencies that are not yet in the local registry.
 
-```
+```bash
 h5p missing <library>
 ```
 
@@ -189,7 +189,7 @@ h5p missing <library>
 
 Clone a library and its dependencies as git repositories into the `libraries/` folder.
 
-```
+```bash
 h5p clone <library> <mode>
 ```
 
@@ -204,7 +204,7 @@ h5p clone <library> <mode>
 
 Download (non-git) a library and its dependencies into the `libraries/` folder.
 
-```
+```bash
 h5p install <library> <mode>
 ```
 
@@ -219,7 +219,7 @@ h5p install <library> <mode>
 
 Check whether a library is correctly set up (registry entry present, dependencies installed).
 
-```
+```bash
 h5p verify <h5p-repo-name>
 ```
 
@@ -229,7 +229,7 @@ h5p verify <h5p-repo-name>
 
 **Example output**
 
-```js
+```json
 {
   registry: true,        // library found in registry
   libraries: {           // dependency presence (optional deps ignored but should be present)
@@ -247,7 +247,7 @@ h5p verify <h5p-repo-name>
 
 Create `@<branch>` folders from other git branches of the current library. Must be run inside a git repository folder.
 
-```
+```bash
 h5p branches <branch...>
 h5p @branches <branch...>
 ```
@@ -265,7 +265,7 @@ h5p @branches <branch...>
 
 Export a content type from the `content/` folder as a `.h5p` archive.
 
-```
+```bash
 h5p export <library> <folder>
 ```
 
@@ -288,7 +288,7 @@ h5p export h5p-agamotto agamotto-test
 
 Import a `.h5p` archive into the `content/` folder.
 
-```
+```bash
 h5p import <folder> <h5p_archive_file_path>
 ```
 
@@ -311,7 +311,7 @@ h5p import agamotto-test ~/Downloads/agamotto_test.h5p
 
 Print the help page or a help entry for a specific command.
 
-```
+```bash
 h5p help [command]
 ```
 
@@ -332,7 +332,7 @@ h5p utils help <cmd>     # detailed help for a specific utils subcommand
 
 Utility commands for multi-repo git workflows, versioning, translations, packaging, and validation.
 
-```
+```bash
 h5p utils <subcommand> [args]
 ```
 
