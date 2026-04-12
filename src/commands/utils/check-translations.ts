@@ -6,7 +6,7 @@ export function checkTranslationsCommand(): Command {
     .description('Check that translations match nb language')
     .argument('[language]', 'Language code')
     .argument('[library]', 'Library name')
-    .option('-diff', 'Show differences between translations')
+    .option('-d, --diff', 'Show differences between translations')
     .action(async (language: string | undefined, library: string | undefined, options: { diff?: boolean }) => {
       const inputList: string[] = [];
       if (options.diff) inputList.push('-diff');

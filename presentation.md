@@ -57,7 +57,9 @@ Logic - Currently too many responsibilities: mix of pure computational functions
 
 ### @todo
 - [WIP] Currently splitting up logic
-- Rework adapter (simplify)
+- Rework adapter? (simplify)
+    - Need to consider if we want adapters to be simple. I.e. adapter does not match 1-1 with services, it is instead GitAdapter (already have this), FileAdapter, S3Adapter etc.
+    - Or, continue being roughly 1-1 with services so that we can do adapter replacements. This might be useful if an adapter does both e.g. uses network and file system, but you want to change one, or all, of these function calls.
 - Can server be removed and be a plugin instead?
   - Rewrite assets/ (server) to typescript
 - How to handle secrets?

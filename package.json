@@ -9,8 +9,8 @@
     "type": "git"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/server/server.ts src/server/api.ts src/config.ts --format cjs --outDir dist --no-splitting",
-    "dev": "tsup src/index.ts src/server/server.ts src/server/api.ts src/config.ts --format cjs --outDir dist --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "test": "vitest run",
     "test:unit": "vitest run tests/commands tests/services",
     "test:integration": "vitest run tests/integration",
@@ -20,13 +20,41 @@
     "test:smoke": "npm run build && playwright test",
     "typetest": "tsc -p tsconfig.json --noEmit"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./logic": {
+      "require": "./dist/logic.js",
+      "types": "./dist/logic.d.ts"
+    },
+    "./config": {
+      "require": "./dist/configLoader.js",
+      "types": "./dist/configLoader.d.ts"
+    },
+    "./utils": {
+      "require": "./dist/utils.js",
+      "types": "./dist/utils.d.ts"
+    },
+    "./compute-dependencies": {
+      "require": "./dist/compute-dependencies.js",
+      "types": "./dist/compute-dependencies.d.ts"
+    },
+    "./plugin-types": {
+      "require": "./dist/plugin-types.js",
+      "types": "./dist/plugin-types.d.ts"
+    }
+  },
   "bin": {
     "h5p": "./h5p.js"
   },
   "dependencies": {
     "adm-zip": "0.5.16",
     "archiver": "^5.3.1",
-    "commander": "^12.1.0",
+    "commander": "^14.0.0",
     "express": "^4.19.2",
     "gitignore-parser": "^0.0.2",
     "he": "^1.2.0",
