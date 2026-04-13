@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { InstallAdapter, IInstallAdapter } from '../adapters/install-adapter';
-import { adapterRegistry } from '../lib/adapter-registry';
-import config from '../../configLoader';
+import { InstallAdapter, type IInstallAdapter } from '../adapters/install-adapter.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
+import config from '../../configLoader.ts';
 
 const installArgsSchema = z.object({
   library: z.string(),

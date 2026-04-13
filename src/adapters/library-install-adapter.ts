@@ -1,8 +1,8 @@
 import { spawn } from 'child_process';
 import path from 'path';
-import { RepoDiscoveryAdapter } from './repo-discovery-adapter';
+import { RepoDiscoveryAdapter } from './repo-discovery-adapter.ts';
 
-const GIT_SSH = path.resolve(__dirname, '..', 'utils', 'bin', 'h5p-ssh');
+const GIT_SSH = path.resolve(import.meta.dirname, '..', 'utils', 'bin', 'h5p-ssh');
 
 export interface ILibraryInstallAdapter {
   fetchRegistry(): Promise<Record<string, any>>;

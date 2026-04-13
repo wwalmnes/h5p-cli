@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createCommand } from '../../src/commands/create';
+import { createCommand } from '../../src/commands/create.ts';
 
 vi.mock('../../configLoader', () => ({
   default: { folders: { libraries: 'libraries' } },

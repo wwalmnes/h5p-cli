@@ -1,9 +1,9 @@
 import fs from 'fs';
-import { getLibraryData, isEditorLibrary } from '../utility/repository';
-import { compareEditorLanguageFile, getEditorLanguageDefaults, languageComparison } from '../utility/translation';
-import Input from '../utility/input';
-import parallel from '../utility/parallel';
-import { createDefaultLanguage } from '../../lib/semantics-utils';
+import { getLibraryData, isEditorLibrary } from '../utility/repository.ts';
+import { compareEditorLanguageFile, getEditorLanguageDefaults, languageComparison } from '../utility/translation.ts';
+import Input from '../utility/input.ts';
+import parallel from '../utility/parallel.ts';
+import { createDefaultLanguage } from '../../lib/semantics-utils.ts';
 import path from 'path';
 
 async function readJSONFiles(fileNames: Record<string, string>): Promise<Record<string, { file: string; error: any; content: any }>> {

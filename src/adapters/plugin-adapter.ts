@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'url';
 
 export interface PluginEntry {
   name: string;
@@ -19,11 +20,15 @@ export interface IPluginAdapter {
   mkdirRecursive(dir: string): void;
   rmRecursive(absPath: string): void;
   ensureGitignored(): void;
-  loadPluginName(absPath: string): string | undefined;
+  loadPluginName(absPath: string): Promise<string | undefined>;
 }
 
 export class PluginAdapter implements IPluginAdapter {
-  constructor(private root: string) {}
+  private root: string;
+
+  constructor(root: string) {
+    this.root = root;
+  }
 
   readConfig(): PluginsConfig {
     const filePath = path.join(this.root, 'h5p.plugins.json');
@@ -69,9 +74,9 @@ export class PluginAdapter implements IPluginAdapter {
     if (changed) fs.writeFileSync(gitignorePath, content);
   }
 
-  loadPluginName(absPath: string): string | undefined {
+  async loadPluginName(absPath: string): Promise<string | undefined> {
     try {
-      const mod = require(absPath);
+      const mod = await import(pathToFileURL(absPath).href);
       return (mod.default ?? mod)?.name;
     } catch {
       return undefined;

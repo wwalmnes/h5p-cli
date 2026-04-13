@@ -1,15 +1,29 @@
-import { ICoreAdapter } from '../adapters/core-adapter';
-import { SetupService } from './setup-service';
+import type { ICoreAdapter } from '../adapters/core-adapter.ts';
+import { SetupService } from './setup-service.ts';
 
 export class CoreService {
+  private adapter: ICoreAdapter;
+  private setupService: SetupService;
+  private coreToClone: string[];
+  private coreToSetup: string[];
+  private librariesFolder: string;
+  private logger: { log: (...args: any[]) => void };
+
   constructor(
-    private adapter: ICoreAdapter,
-    private setupService: SetupService,
-    private coreToClone: string[],
-    private coreToSetup: string[],
-    private librariesFolder: string,
-    private logger: { log: (...args: any[]) => void } = console
-  ) {}
+    adapter: ICoreAdapter,
+    setupService: SetupService,
+    coreToClone: string[],
+    coreToSetup: string[],
+    librariesFolder: string,
+    logger: { log: (...args: any[]) => void } = console
+  ) {
+    this.adapter = adapter;
+    this.setupService = setupService;
+    this.coreToClone = coreToClone;
+    this.coreToSetup = coreToSetup;
+    this.librariesFolder = librariesFolder;
+    this.logger = logger;
+  }
 
   async core(): Promise<void> {
     for (const item of this.coreToClone) {

@@ -1,4 +1,4 @@
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface IInstallAdapter {
   getWithDependencies(action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip?: string[]): Promise<string[]>;

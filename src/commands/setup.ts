@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { SetupAdapter } from '../adapters/setup-adapter';
-import { RegisterAdapter } from '../adapters/register-adapter';
-import { RegisterService } from '../services/register-service';
-import { SetupService } from '../services/setup-service';
-import config from '../../configLoader';
+import { SetupAdapter } from '../adapters/setup-adapter.ts';
+import { RegisterAdapter } from '../adapters/register-adapter.ts';
+import { RegisterService } from '../services/register-service.ts';
+import { SetupService } from '../services/setup-service.ts';
+import config from '../../configLoader.ts';
 
 const setupArgsSchema = z.object({
   library: z.string(),

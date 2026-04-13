@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { VersioningService } from '../../services/versioning-service';
-import { VersioningAdapter } from '../../adapters/versioning-adapter';
-import { printVersionResults } from './versioning-output';
+import { VersioningService } from '../../services/versioning-service.ts';
+import { VersioningAdapter } from '../../adapters/versioning-adapter.ts';
+import { printVersionResults } from './versioning-output.ts';
 
 export function changesSinceCommand(service?: VersioningService): Command {
   const svc = service ?? new VersioningService(new VersioningAdapter());

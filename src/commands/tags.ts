@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { TagsAdapter, ITagsAdapter } from '../adapters/tags-adapter';
-import { adapterRegistry } from '../lib/adapter-registry';
+import { TagsAdapter, type ITagsAdapter } from '../adapters/tags-adapter.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
 
 const tagsArgsSchema = z.object({
   org: z.string(),

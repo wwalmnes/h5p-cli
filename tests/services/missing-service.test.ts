@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MissingService } from '../../src/services/missing-service';
-import type { IMissingAdapter } from '../../src/adapters/missing-adapter';
+import { MissingService } from '../../src/services/missing-service.ts';
+import type { IMissingAdapter } from '../../src/adapters/missing-adapter.ts';
 
 function makeAdapter(overrides: Partial<IMissingAdapter> = {}): IMissingAdapter {
   return {

@@ -1,4 +1,4 @@
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface IVerifyAdapter {
   verifySetup(library: string): Promise<any>;

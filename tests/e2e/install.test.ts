@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -29,7 +29,7 @@ describe('install — end-to-end', () => {
     fs.mkdirSync(path.join(fixture.dir, 'libraries'), { recursive: true });
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const logic = await import('../../logic');
+    const logic = await import('../../logic.ts');
     vi.mocked(logic.default.getWithDependencies).mockImplementation(
       async (_action: string, library: string) => {
         fs.mkdirSync(path.join(fixture.dir, 'libraries', library), { recursive: true });
@@ -45,8 +45,8 @@ describe('install — end-to-end', () => {
   });
 
   it('calls getWithDependencies with action "download" for the given library', async () => {
-    const logic = await import('../../logic');
-    const { installCommand } = await import('../../src/commands/install');
+    const logic = await import('../../logic.ts');
+    const { installCommand } = await import('../../src/commands/install.ts');
 
     await installCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -56,8 +56,8 @@ describe('install — end-to-end', () => {
   });
 
   it('passes mode to getWithDependencies', async () => {
-    const logic = await import('../../logic');
-    const { installCommand } = await import('../../src/commands/install');
+    const logic = await import('../../logic.ts');
+    const { installCommand } = await import('../../src/commands/install.ts');
 
     await installCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'edit']);
 
@@ -67,7 +67,7 @@ describe('install — end-to-end', () => {
   });
 
   it('creates the library folder as a side effect of downloading', async () => {
-    const { installCommand } = await import('../../src/commands/install');
+    const { installCommand } = await import('../../src/commands/install.ts');
 
     await installCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -75,8 +75,8 @@ describe('install — end-to-end', () => {
   });
 
   it('rejects invalid mode and does not call getWithDependencies', async () => {
-    const logic = await import('../../logic');
-    const { installCommand } = await import('../../src/commands/install');
+    const logic = await import('../../logic.ts');
+    const { installCommand } = await import('../../src/commands/install.ts');
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await installCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'invalid']);

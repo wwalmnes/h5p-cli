@@ -1,5 +1,5 @@
-import { processRepos, findRepos, RepoResult } from '../lib/process-repos';
-import { VersioningAdapter, IVersioningAdapter } from '../adapters/versioning-adapter';
+import { processRepos, findRepos, type RepoResult } from '../lib/process-repos.ts';
+import { VersioningAdapter, type IVersioningAdapter } from '../adapters/versioning-adapter.ts';
 
 export interface VersioningResult {
   name: string;
@@ -9,7 +9,11 @@ export interface VersioningResult {
 }
 
 export class VersioningService {
-  constructor(private adapter: IVersioningAdapter = new VersioningAdapter()) {}
+  private adapter: IVersioningAdapter;
+
+  constructor(adapter: IVersioningAdapter = new VersioningAdapter()) {
+    this.adapter = adapter;
+  }
 
   async increasePatchVersion(repos: string[], force: boolean): Promise<RepoResult<VersioningResult>[]> {
     return processRepos(repos, async (repo) => {

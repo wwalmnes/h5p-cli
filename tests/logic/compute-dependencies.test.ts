@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
-import logic from '../../logic';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
+import logic from '../../logic.ts';
 
 // Registry file: keyed by machineName (arbitrary key); what matters are id and shortName fields.
 const REGISTRY_DATA = {

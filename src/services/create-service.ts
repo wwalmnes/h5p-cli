@@ -1,12 +1,16 @@
 import path from 'path';
-import { ICreateAdapter } from '../adapters/create-adapter';
+import type { ICreateAdapter } from '../adapters/create-adapter.ts';
 
 export class CreateService {
-  constructor(
-    private adapter: ICreateAdapter,
-    private librariesFolder: string,
-    private logger: { log: (...args: any[]) => void } = console
-  ) {}
+  private adapter: ICreateAdapter;
+  private librariesFolder: string;
+  private logger: { log: (...args: any[]) => void };
+
+  constructor(adapter: ICreateAdapter, librariesFolder: string, logger: { log: (...args: any[]) => void } = console) {
+    this.adapter = adapter;
+    this.librariesFolder = librariesFolder;
+    this.logger = logger;
+  }
 
   create(name: string): void {
     const machineName = `H5P.${name}`;

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { setupFolders } from '../../src/lib/setup-folders';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { setupFolders } from '../../src/lib/setup-folders.ts';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 const INITIAL_DIRECTORIES = ['content', 'libraries', 'temp', 'uploads'];
 

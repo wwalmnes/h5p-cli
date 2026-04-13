@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { DependencyAnalysisService } from '../../services/dependency-analysis-service';
+import { DependencyAnalysisService } from '../../services/dependency-analysis-service.ts';
 
 export function findInconsistenciesCommand(): Command {
   return new Command('find-inconsistencies')

@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { Command } from 'commander';
-import { adapterRegistry } from './adapter-registry';
-import { H5PPlugin } from './plugin-types';
+import { adapterRegistry } from './adapter-registry.ts';
+import type { H5PPlugin } from './plugin-types.ts';
 
-const H5P_CLI_ROOT = path.resolve(__dirname, '..');
+const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-export function loadPlugins(program: Command): void {
+export async function loadPlugins(program: Command): Promise<void> {
   const filePath = path.join(H5P_CLI_ROOT, 'h5p.plugins.json');
   if (!fs.existsSync(filePath)) return;
 
@@ -21,7 +22,12 @@ export function loadPlugins(program: Command): void {
   if (!Array.isArray(config.plugins)) return;
 
   for (const entry of config.plugins) {
-    loadPlugin(entry.path, program);
+    try {
+      const pluginPackage = JSON.parse(fs.readFileSync(path.resolve(entry.path, 'package.json'), 'utf-8'));
+      await loadPlugin(path.resolve(entry.path, pluginPackage.main), program);
+    } catch (e) {
+      console.error(`[h5p] Failed to read package.json from plugin: `, e);
+    }
   }
 }
 
@@ -35,11 +41,11 @@ export function applyPluginCommands(program: Command, commands: Command[]): void
   }
 }
 
-function loadPlugin(ref: string, program: Command): void {
+async function loadPlugin(ref: string, program: Command): Promise<void> {
   let plugin: H5PPlugin;
   try {
     // all stored refs are absolute paths
-    const mod = require(ref);
+    const mod = await import(pathToFileURL(ref).href);
     plugin = mod.default ?? mod;
   } catch (e) {
     console.error(`[h5p] Failed to load plugin "${ref}":`, e);

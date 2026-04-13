@@ -1,5 +1,5 @@
 import path from 'path';
-import { IPluginAdapter, PluginEntry } from '../adapters/plugin-adapter';
+import type { IPluginAdapter, PluginEntry } from '../adapters/plugin-adapter.ts';
 
 function isGitUrl(input: string): boolean {
   return input.startsWith('https://') || input.startsWith('git@');
@@ -12,11 +12,15 @@ function repoNameFromUrl(url: string): string {
 }
 
 export class PluginService {
-  constructor(
-    private adapter: IPluginAdapter,
-    private pluginsDir: string,
-    private logger: { log: (...args: any[]) => void } = console
-  ) {}
+  private adapter: IPluginAdapter;
+  private pluginsDir: string;
+  private logger: { log: (...args: any[]) => void };
+
+  constructor(adapter: IPluginAdapter, pluginsDir: string, logger: { log: (...args: any[]) => void } = console) {
+    this.adapter = adapter;
+    this.pluginsDir = pluginsDir;
+    this.logger = logger;
+  }
 
   async install(source: string): Promise<void> {
     let absPath: string;
@@ -40,7 +44,7 @@ export class PluginService {
       }
     }
 
-    const pluginName = this.adapter.loadPluginName(absPath);
+    const pluginName = await this.adapter.loadPluginName(absPath);
     if (!pluginName) {
       this.logger.log(`> plugin at "${absPath}" does not export a name`);
       return;

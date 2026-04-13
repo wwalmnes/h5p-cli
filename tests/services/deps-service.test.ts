@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DepsService } from '../../src/services/deps-service';
-import type { IDepsAdapter } from '../../src/adapters/deps-adapter';
+import { DepsService } from '../../src/services/deps-service.ts';
+import type { IDepsAdapter } from '../../src/adapters/deps-adapter.ts';
 
 describe('DepsService', () => {
   let logger: { log: ReturnType<typeof vi.fn> };

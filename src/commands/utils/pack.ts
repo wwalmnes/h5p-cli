@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import pack from '../../utils/commands/pack';
-import validate from '../../utils/commands/validate';
-import Input from '../../utils/utility/input';
+import pack from '../../utils/commands/pack.ts';
+import validate from '../../utils/commands/validate.ts';
+import Input from '../../utils/utility/input.ts';
 
 export function packCommand(): Command {
   return new Command('pack')

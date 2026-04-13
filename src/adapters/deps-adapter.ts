@@ -1,4 +1,4 @@
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface IDepsAdapter {
   computeDependencies(library: string, mode?: 'view' | 'edit', version?: string, folder?: string): Promise<Record<string, any>>;

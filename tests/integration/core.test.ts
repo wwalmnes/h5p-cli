@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { CoreService } from '../../src/services/core-service';
-import type { ICoreAdapter } from '../../src/adapters/core-adapter';
-import { setupFolders } from '../../src/lib/setup-folders';
-import { createEmptyProject, createSeededProject, type Fixture } from '../helpers/fixture';
+import { CoreService } from '../../src/services/core-service.ts';
+import type { ICoreAdapter } from '../../src/adapters/core-adapter.ts';
+import { setupFolders } from '../../src/lib/setup-folders.ts';
+import { createEmptyProject, createSeededProject, type Fixture } from '../helpers/fixture.ts';
 
 const CORE_TO_CLONE = ['h5p-editor-php-library', 'h5p-php-library'];
 const CORE_TO_SETUP = ['h5p-math-display'];

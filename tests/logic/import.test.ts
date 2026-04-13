@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import admZip from 'adm-zip';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
-import logic from '../../logic';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
+import logic from '../../logic.ts';
 
 describe('logic.import', () => {
   let fixture: Fixture;

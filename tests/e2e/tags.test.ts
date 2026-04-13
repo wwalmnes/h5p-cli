@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -34,8 +34,8 @@ describe('tags — end-to-end', () => {
   });
 
   it('calls logic.tags with org, library, and mainBranch', async () => {
-    const logic = await import('../../logic');
-    const { tagsCommand } = await import('../../src/commands/tags');
+    const logic = await import('../../logic.ts');
+    const { tagsCommand } = await import('../../src/commands/tags.ts');
 
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
 
@@ -43,7 +43,7 @@ describe('tags — end-to-end', () => {
   });
 
   it('logs the tag list returned by logic.tags', async () => {
-    const { tagsCommand } = await import('../../src/commands/tags');
+    const { tagsCommand } = await import('../../src/commands/tags.ts');
 
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
-import logic from '../../logic';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
+import logic from '../../logic.ts';
 
 describe('logic.getRegistry', () => {
   let fixture: Fixture;

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { ListAdapter, IListAdapter } from '../adapters/list-adapter';
-import { adapterRegistry } from '../lib/adapter-registry';
+import { ListAdapter, type IListAdapter } from '../adapters/list-adapter.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
 
 const listArgsSchema = z.object({
   // @todo: string currently and backwards compatible to accept 1. Should be a boolean.

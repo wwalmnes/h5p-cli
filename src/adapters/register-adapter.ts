@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface IRegisterAdapter {
   getRegistry(): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }>;

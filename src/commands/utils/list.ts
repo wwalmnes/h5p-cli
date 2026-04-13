@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { RepoDiscoveryAdapter, IRepoDiscoveryAdapter } from '../../adapters/repo-discovery-adapter';
+import { RepoDiscoveryAdapter, type IRepoDiscoveryAdapter } from '../../adapters/repo-discovery-adapter.ts';
 
 const color = {
   default: '\x1B[0m',

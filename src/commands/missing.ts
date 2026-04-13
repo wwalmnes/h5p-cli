@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { MissingAdapter, IMissingAdapter } from '../adapters/missing-adapter';
-import { MissingService } from '../services/missing-service';
-import { adapterRegistry } from '../lib/adapter-registry';
+import { MissingAdapter, type IMissingAdapter } from '../adapters/missing-adapter.ts';
+import { MissingService } from '../services/missing-service.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
 
 const missingArgsSchema = z.object({
   library: z.string(),

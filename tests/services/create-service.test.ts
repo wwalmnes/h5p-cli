@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CreateService } from '../../src/services/create-service';
-import type { ICreateAdapter } from '../../src/adapters/create-adapter';
+import { CreateService } from '../../src/services/create-service.ts';
+import type { ICreateAdapter } from '../../src/adapters/create-adapter.ts';
 import path from 'path';
 
 function makeAdapter(overrides: Partial<ICreateAdapter> = {}): ICreateAdapter {

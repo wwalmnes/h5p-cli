@@ -1,11 +1,15 @@
-import { ILibraryInstallAdapter } from '../adapters/library-install-adapter';
+import type { ILibraryInstallAdapter } from '../adapters/library-install-adapter.ts';
 
 function sshToHttps(url: string): string {
   return url.replace('git@github.com:', 'https://github.com/');
 }
 
 export class LibraryInstallService {
-  constructor(private adapter: ILibraryInstallAdapter) {}
+  private adapter: ILibraryInstallAdapter;
+
+  constructor(adapter: ILibraryInstallAdapter) {
+    this.adapter = adapter;
+  }
 
   async resolveCollection(libraries: string[]): Promise<Map<string, { repository: string }>> {
     const registry = await this.adapter.fetchRegistry();

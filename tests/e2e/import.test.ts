@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -34,8 +34,8 @@ describe('import — end-to-end', () => {
   });
 
   it('calls logic.import with folder and no archive by default', async () => {
-    const logic = await import('../../logic');
-    const { importCommand } = await import('../../src/commands/import');
+    const logic = await import('../../logic.ts');
+    const { importCommand } = await import('../../src/commands/import.ts');
 
     await importCommand().parseAsync(['node', 'h5p', 'content-folder']);
 
@@ -43,8 +43,8 @@ describe('import — end-to-end', () => {
   });
 
   it('passes the optional archive path to logic.import', async () => {
-    const logic = await import('../../logic');
-    const { importCommand } = await import('../../src/commands/import');
+    const logic = await import('../../logic.ts');
+    const { importCommand } = await import('../../src/commands/import.ts');
 
     await importCommand().parseAsync(['node', 'h5p', 'content-folder', 'archive.h5p']);
 

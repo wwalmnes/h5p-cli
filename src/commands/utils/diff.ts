@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { GitAdapter, IGitAdapter } from '../../adapters/git-adapter';
-import { findRepos } from '../../lib/process-repos';
+import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import { findRepos } from '../../lib/process-repos.ts';
 
 export function diffCommand(adapter?: IGitAdapter): Command {
   const git = adapter ?? new GitAdapter();

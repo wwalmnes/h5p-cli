@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-const GIT_SSH = path.resolve(__dirname, '..', 'utils', 'bin', 'h5p-ssh');
+const GIT_SSH = path.resolve(import.meta.dirname, '..', 'utils', 'bin', 'h5p-ssh');
 
 export interface GitOpResult {
   name: string;

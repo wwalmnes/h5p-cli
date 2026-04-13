@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { setupCommand } from '../../src/commands/setup';
-import { SetupService } from '../../src/services/setup-service';
-import type { ISetupAdapter } from '../../src/adapters/setup-adapter';
-import type { IRegisterAdapter } from '../../src/adapters/register-adapter';
-import { RegisterService } from '../../src/services/register-service';
+import { setupCommand } from '../../src/commands/setup.ts';
+import { SetupService } from '../../src/services/setup-service.ts';
+import type { ISetupAdapter } from '../../src/adapters/setup-adapter.ts';
+import type { IRegisterAdapter } from '../../src/adapters/register-adapter.ts';
+import { RegisterService } from '../../src/services/register-service.ts';
 
 vi.mock('../../configLoader', () => ({
   default: {

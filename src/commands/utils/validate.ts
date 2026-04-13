@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import validate from '../../utils/commands/validate';
+import validate from '../../utils/commands/validate.ts';
 
 export function validateCommand(): Command {
   return new Command('validate')

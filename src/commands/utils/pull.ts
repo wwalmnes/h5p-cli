@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { GitAdapter, IGitAdapter } from '../../adapters/git-adapter';
-import { processRepos } from '../../lib/process-repos';
-import * as output from '../../utils/utility/output';
+import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import { processRepos } from '../../lib/process-repos.ts';
+import * as output from '../../utils/utility/output.ts';
 
 export function pullCommand(adapter?: IGitAdapter): Command {
   const git = adapter ?? new GitAdapter();

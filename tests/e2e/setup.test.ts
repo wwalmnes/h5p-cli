@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -29,7 +29,7 @@ describe('setup — end-to-end', () => {
     fs.mkdirSync(path.join(fixture.dir, 'libraries'), { recursive: true });
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const logic = await import('../../logic');
+    const logic = await import('../../logic.ts');
     vi.mocked(logic.default.getWithDependencies).mockImplementation(
       async (_action: string, library: string) => {
         fs.mkdirSync(path.join(fixture.dir, 'libraries', library), { recursive: true });
@@ -45,8 +45,8 @@ describe('setup — end-to-end', () => {
   });
 
   it('calls computeDependencies for both view and edit modes', async () => {
-    const logic = await import('../../logic');
-    const { setupCommand } = await import('../../src/commands/setup');
+    const logic = await import('../../logic.ts');
+    const { setupCommand } = await import('../../src/commands/setup.ts');
 
     await setupCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -55,8 +55,8 @@ describe('setup — end-to-end', () => {
   });
 
   it('calls getWithDependencies with action "clone" by default', async () => {
-    const logic = await import('../../logic');
-    const { setupCommand } = await import('../../src/commands/setup');
+    const logic = await import('../../logic.ts');
+    const { setupCommand } = await import('../../src/commands/setup.ts');
 
     await setupCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -65,8 +65,8 @@ describe('setup — end-to-end', () => {
   });
 
   it('calls getWithDependencies with action "download" when third arg is "1"', async () => {
-    const logic = await import('../../logic');
-    const { setupCommand } = await import('../../src/commands/setup');
+    const logic = await import('../../logic.ts');
+    const { setupCommand } = await import('../../src/commands/setup.ts');
 
     await setupCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', '1.0', '1']);
 
@@ -75,7 +75,7 @@ describe('setup — end-to-end', () => {
   });
 
   it('creates library folders as a side effect of cloning dependencies', async () => {
-    const { setupCommand } = await import('../../src/commands/setup');
+    const { setupCommand } = await import('../../src/commands/setup.ts');
 
     await setupCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 

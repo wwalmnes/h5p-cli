@@ -1,13 +1,23 @@
-import { ISetupAdapter } from '../adapters/setup-adapter';
-import { RegisterService } from './register-service';
+import type { ISetupAdapter } from '../adapters/setup-adapter.ts';
+import { RegisterService } from './register-service.ts';
 
 export class SetupService {
+  private setupAdapter: ISetupAdapter;
+  private registerService: RegisterService;
+  private librariesFolder: string;
+  private logger: { log: (...args: any[]) => void };
+
   constructor(
-    private setupAdapter: ISetupAdapter,
-    private registerService: RegisterService,
-    private librariesFolder: string,
-    private logger: { log: (...args: any[]) => void } = console
-  ) {}
+    setupAdapter: ISetupAdapter,
+    registerService: RegisterService,
+    librariesFolder: string,
+    logger: { log: (...args: any[]) => void } = console
+  ) {
+    this.setupAdapter = setupAdapter;
+    this.registerService = registerService;
+    this.librariesFolder = librariesFolder;
+    this.logger = logger;
+  }
 
   async setup(library: string, version?: string, download?: string): Promise<void> {
     const isUrl = ['http', 'git@'].includes(library.slice(0, 4));

@@ -1,5 +1,5 @@
 import https from 'https';
-import { findRepos } from '../lib/process-repos';
+import { findRepos } from '../lib/process-repos.ts';
 
 const REGISTRY_URL = 'https://h5p.org/registry.json';
 const API_VERSION = 1;

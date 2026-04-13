@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import path from 'path';
-import { PluginAdapter } from '../adapters/plugin-adapter';
-import { PluginService } from '../services/plugin-service';
+import { PluginAdapter } from '../adapters/plugin-adapter.ts';
+import { PluginService } from '../services/plugin-service.ts';
 
-const H5P_CLI_ROOT = path.resolve(__dirname, '..');
+const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..');
 
 export function pluginCommand(service?: PluginService): Command {
   const plugin = new Command('plugin').description('Manage h5p-cli plugins');

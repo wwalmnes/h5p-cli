@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { installCommand } from '../../src/commands/install';
+import { installCommand } from '../../src/commands/install.ts';
 
 vi.mock('../../configLoader', () => ({
   default: { registry: 'libraryRegistry.json', folders: { libraries: 'libraries', temp: 'temp' } },

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { LibraryInstallService } from '../../services/library-install-service';
-import { LibraryInstallAdapter } from '../../adapters/library-install-adapter';
+import { LibraryInstallService } from '../../services/library-install-service.ts';
+import { LibraryInstallAdapter } from '../../adapters/library-install-adapter.ts';
 
 export function getCommand(service?: LibraryInstallService): Command {
   const svc = service ?? new LibraryInstallService(new LibraryInstallAdapter());

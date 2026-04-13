@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -34,8 +34,8 @@ describe('export — end-to-end', () => {
   });
 
   it('calls logic.export with library name and no folder by default', async () => {
-    const logic = await import('../../logic');
-    const { exportCommand } = await import('../../src/commands/export');
+    const logic = await import('../../logic.ts');
+    const { exportCommand } = await import('../../src/commands/export.ts');
 
     await exportCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -43,8 +43,8 @@ describe('export — end-to-end', () => {
   });
 
   it('passes the optional output folder to logic.export', async () => {
-    const logic = await import('../../logic');
-    const { exportCommand } = await import('../../src/commands/export');
+    const logic = await import('../../logic.ts');
+    const { exportCommand } = await import('../../src/commands/export.ts');
 
     await exportCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'dist']);
 

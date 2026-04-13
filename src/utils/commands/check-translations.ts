@@ -1,6 +1,6 @@
-import * as output from '../utility/output';
-import Input from '../utility/input';
-import * as translation from '../utility/translation';
+import * as output from '../utility/output.ts';
+import Input from '../utility/input.ts';
+import * as translation from '../utility/translation.ts';
 
 const checkTranslations = function (...inputList: string[]): Promise<void> {
   return new Promise((resolve, reject) => {

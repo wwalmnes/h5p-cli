@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { CreateAdapter, ICreateAdapter } from '../adapters/create-adapter';
-import { CreateService } from '../services/create-service';
-import { adapterRegistry } from '../lib/adapter-registry';
-import config from '../../configLoader';
+import { CreateAdapter, type ICreateAdapter } from '../adapters/create-adapter.ts';
+import { CreateService } from '../services/create-service.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
+import config from '../../configLoader.ts';
 
 const createArgsSchema = z.object({
   name: z.string().min(1),

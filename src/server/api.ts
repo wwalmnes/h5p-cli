@@ -2,20 +2,21 @@ import fs from 'fs';
 import path from 'path';
 import he from 'he';
 import imageSize from 'image-size';
-import logic from '../../logic';
-import { fromTemplate } from '../lib/h5p-utils';
-// import config from '../../configLoader';
-import config from '../config';
-import l10n from '../../assets/l10n.json';
+import logic from '../../logic.ts';
+import { fromTemplate } from '../lib/h5p-utils.ts';
+// import config from '../../configLoader.ts';
+import config from '../config.ts';
+import l10n from '../../assets/l10n.json' with { type: 'json' };
 // const supportedLanguages = require(`${require.main!.path}/${config.folders.assets}/languageCatcher.js`);
-import supportedLanguages from '../../assets/languageCatcher';
+import supportedLanguages from '../../assets/languageCatcher.cjs';
 let session = {
   name: 'main-session',
   language: 'en',
   status: ''
 }
 
-const rootFolder = path.resolve(__dirname, '../');
+const rootFolder = path.resolve(import.meta.dirname, '..', '..');
+
 export default {
   // load favicon.ico file
   favicon: (request: any, response: any, next: any) => {

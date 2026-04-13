@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { GitAdapter, GitOpResult, IGitAdapter } from '../../adapters/git-adapter';
-import { resolveRepos } from '../../lib/process-repos';
+import { GitAdapter, type GitOpResult, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import { resolveRepos } from '../../lib/process-repos.ts';
 
 export function newBranchCommand(adapter?: IGitAdapter): Command {
   const git = adapter ?? new GitAdapter();

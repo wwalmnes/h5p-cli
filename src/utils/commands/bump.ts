@@ -1,6 +1,6 @@
-import * as output from '../utility/output';
-import Input from '../utility/input';
-import { getLibraryData } from '../utility/repository';
+import * as output from '../utility/output.ts';
+import Input from '../utility/input.ts';
+import { getLibraryData } from '../utility/repository.ts';
 import { execSync } from 'child_process';
 import path from 'path';
 import readline from 'readline';

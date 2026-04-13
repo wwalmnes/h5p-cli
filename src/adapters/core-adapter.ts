@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface ICoreAdapter {
   clone(org: string, library: string, branch: string, target: string): void;

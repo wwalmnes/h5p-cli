@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { coreCommand } from '../../src/commands/core';
+import { coreCommand } from '../../src/commands/core.ts';
 
 vi.mock('../../configLoader', () => ({
   default: {
@@ -12,10 +12,11 @@ vi.mock('../../logic', () => ({
   default: { clone: vi.fn(), computeDependencies: vi.fn(), getWithDependencies: vi.fn(), getRegistry: vi.fn(), registryEntryFromRepoUrl: vi.fn(), machineToShort: vi.fn() },
 }));
 vi.mock('fs', () => ({
-  default: { existsSync: vi.fn(), readFileSync: vi.fn(), writeFileSync: vi.fn() },
+  default: { existsSync: vi.fn(), readFileSync: vi.fn(), writeFileSync: vi.fn(), mkdirSync: vi.fn() },
   existsSync: vi.fn(),
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
 }));
 
 describe('coreCommand', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RegisterService } from '../../src/services/register-service';
-import type { IRegisterAdapter } from '../../src/adapters/register-adapter';
+import { RegisterService } from '../../src/services/register-service.ts';
+import type { IRegisterAdapter } from '../../src/adapters/register-adapter.ts';
 
 function makeAdapter(overrides: Partial<IRegisterAdapter> = {}): IRegisterAdapter {
   return {

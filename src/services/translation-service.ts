@@ -1,6 +1,6 @@
-import { processRepos, RepoResult } from '../lib/process-repos';
-import { TranslationAdapter, ITranslationAdapter } from '../adapters/translation-adapter';
-import { removeUntranslatables, itemUntranslatable } from '../lib/semantics-utils';
+import { processRepos, type RepoResult } from '../lib/process-repos.ts';
+import { TranslationAdapter, type ITranslationAdapter } from '../adapters/translation-adapter.ts';
+import { removeUntranslatables, itemUntranslatable } from '../lib/semantics-utils.ts';
 
 export interface TranslationResult {
   name: string;
@@ -10,7 +10,11 @@ export interface TranslationResult {
 }
 
 export class TranslationService {
-  constructor(private adapter: ITranslationAdapter = new TranslationAdapter()) {}
+  private adapter: ITranslationAdapter;
+
+  constructor(adapter: ITranslationAdapter = new TranslationAdapter()) {
+    this.adapter = adapter;
+  }
 
   async createLanguageFile(repo: string, langCode: string): Promise<TranslationResult> {
     let semantics: any;

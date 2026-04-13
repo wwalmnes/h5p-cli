@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SetupService } from '../../src/services/setup-service';
-import { RegisterService } from '../../src/services/register-service';
-import type { ISetupAdapter } from '../../src/adapters/setup-adapter';
-import type { IRegisterAdapter } from '../../src/adapters/register-adapter';
+import { SetupService } from '../../src/services/setup-service.ts';
+import { RegisterService } from '../../src/services/register-service.ts';
+import type { ISetupAdapter } from '../../src/adapters/setup-adapter.ts';
+import type { IRegisterAdapter } from '../../src/adapters/register-adapter.ts';
 
 function makeSetupAdapter(overrides: Partial<ISetupAdapter> = {}): ISetupAdapter {
   return {

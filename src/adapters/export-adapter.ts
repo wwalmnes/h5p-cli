@@ -1,4 +1,4 @@
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface IExportAdapter {
   export(library: string, folder?: string): Promise<string>;

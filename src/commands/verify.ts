@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { VerifyAdapter, IVerifyAdapter } from '../adapters/verify-adapter';
-import { adapterRegistry } from '../lib/adapter-registry';
+import { VerifyAdapter, type IVerifyAdapter } from '../adapters/verify-adapter.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
 
 const verifyArgsSchema = z.object({
   library: z.string(),

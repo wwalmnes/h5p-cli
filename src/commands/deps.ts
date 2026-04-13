@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { DepsAdapter, IDepsAdapter } from '../adapters/deps-adapter';
-import { DepsService } from '../services/deps-service';
-import { adapterRegistry } from '../lib/adapter-registry';
+import { DepsAdapter, type IDepsAdapter } from '../adapters/deps-adapter.ts';
+import { DepsService } from '../services/deps-service.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
 
 const depsArgsSchema = z.object({
   library: z.string(),

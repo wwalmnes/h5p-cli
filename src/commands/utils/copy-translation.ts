@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { TranslationService } from '../../services/translation-service';
-import { TranslationAdapter } from '../../adapters/translation-adapter';
+import { TranslationService } from '../../services/translation-service.ts';
+import { TranslationAdapter } from '../../adapters/translation-adapter.ts';
 
 export function copyTranslationCommand(service?: TranslationService): Command {
   const svc = service ?? new TranslationService(new TranslationAdapter());

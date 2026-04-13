@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { computeDependencies } from '../../src/lib/compute-dependencies';
-import type { IComputeDependenciesPort, Registry } from '../../src/lib/compute-dependencies';
+import { computeDependencies } from '../../src/lib/compute-dependencies.ts';
+import type { IComputeDependenciesPort, Registry } from '../../src/lib/compute-dependencies.ts';
 
 const JOUBEL_ENTRY = {
   id: 'H5P.JoubelUI',

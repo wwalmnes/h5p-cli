@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -40,8 +40,8 @@ describe('list — end-to-end', () => {
   });
 
   it('fetches the registry without ignoreFile by default', async () => {
-    const logic = await import('../../logic');
-    const { listCommand } = await import('../../src/commands/list');
+    const logic = await import('../../logic.ts');
+    const { listCommand } = await import('../../src/commands/list.ts');
 
     await listCommand().parseAsync(['node', 'h5p']);
 
@@ -49,8 +49,8 @@ describe('list — end-to-end', () => {
   });
 
   it('passes ignoreFile=true when second argument is "1"', async () => {
-    const logic = await import('../../logic');
-    const { listCommand } = await import('../../src/commands/list');
+    const logic = await import('../../logic.ts');
+    const { listCommand } = await import('../../src/commands/list.ts');
 
     await listCommand().parseAsync(['node', 'h5p', '0', '1']);
 
@@ -58,7 +58,7 @@ describe('list — end-to-end', () => {
   });
 
   it('logs each library name from the registry', async () => {
-    const { listCommand } = await import('../../src/commands/list');
+    const { listCommand } = await import('../../src/commands/list.ts');
 
     await listCommand().parseAsync(['node', 'h5p']);
 

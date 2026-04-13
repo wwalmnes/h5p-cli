@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
-import logic from '../../logic';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
+import logic from '../../logic.ts';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),

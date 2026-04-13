@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { RegisterAdapter, IRegisterAdapter } from '../adapters/register-adapter';
-import { RegisterService } from '../services/register-service';
-import { adapterRegistry } from '../lib/adapter-registry';
-import config from '../../configLoader';
+import { RegisterAdapter, type IRegisterAdapter } from '../adapters/register-adapter.ts';
+import { RegisterService } from '../services/register-service.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
+import config from '../../configLoader.ts';
 
 const registerArgsSchema = z.object({
   input: z.string(),

@@ -1,10 +1,10 @@
 import express from 'express';
-import config from '../config';
+import config from '../config.ts';
 import multerLib from 'multer';
-import api from './api';
+import api from './api.ts';
 import path from 'path';
 
-const rootFolder = path.resolve(__dirname, '../');
+const rootFolder = path.resolve(import.meta.dirname, '../');
 const multer = multerLib({ dest: `./${config.folders.temp}` });
 let app = express();
 app.use(express.json());
@@ -40,7 +40,8 @@ app.listen(port, () => {
 });
 
 if (config.files.watch) {
-  const eye = require('livereload').createServer({
+  const livereload = await import('livereload');
+  const eye = livereload.default.createServer({
     exclusions: config?.files?.watchExclusions ?? []
   });
   eye.watch(config.folders.libraries);

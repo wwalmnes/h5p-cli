@@ -1,10 +1,13 @@
-import { IRegisterAdapter } from '../adapters/register-adapter';
+import type { IRegisterAdapter } from '../adapters/register-adapter.ts';
 
 export class RegisterService {
-  constructor(
-    private adapter: IRegisterAdapter,
-    private registryPath: string
-  ) {}
+  private adapter: IRegisterAdapter;
+  private registryPath: string;
+
+  constructor(adapter: IRegisterAdapter, registryPath: string) {
+    this.adapter = adapter;
+    this.registryPath = registryPath;
+  }
 
   async register(input: string): Promise<Record<string, any>> {
     const isUrl = ['http', 'git@'].includes(input.slice(0, 4));

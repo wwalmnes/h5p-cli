@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { ImportAdapter, IImportAdapter } from '../adapters/import-adapter';
-import { adapterRegistry } from '../lib/adapter-registry';
+import { ImportAdapter, type IImportAdapter } from '../adapters/import-adapter.ts';
+import { adapterRegistry } from '../lib/adapter-registry.ts';
 
 const importArgsSchema = z.object({
   folder: z.string(),

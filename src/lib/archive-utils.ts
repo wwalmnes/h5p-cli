@@ -1,6 +1,6 @@
 import fs from 'fs';
 import type { Archiver } from 'archiver';
-import h5pIgnoreParser from '../utils/utility/h5p-ignore-parser';
+import h5pIgnoreParser from '../utils/utility/h5p-ignore-parser.ts';
 
 const allowedFilePattern = process.env.H5P_ALLOWED_FILE_PATTERN !== undefined
   ? new RegExp(process.env.H5P_ALLOWED_FILE_PATTERN, process.env.H5P_ALLOWED_FILE_MODIFIERS)

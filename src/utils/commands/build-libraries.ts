@@ -1,5 +1,5 @@
-import Input from '../utility/input';
-import * as output from '../utility/output';
+import Input from '../utility/input.ts';
+import * as output from '../utility/output.ts';
 import path from 'path';
 import fs from 'fs';
 import child from 'child_process';

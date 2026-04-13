@@ -1,4 +1,4 @@
-import { AdapterOverrides } from './plugin-types';
+import type { AdapterOverrides } from './plugin-types.ts';
 
 const overrides: Record<string, new () => unknown> = {};
 

@@ -8,44 +8,42 @@
     "url": "https://github.com/h5p/h5p-cli",
     "type": "git"
   },
+  "type": "module",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
     "test": "vitest run",
     "test:unit": "vitest run tests/commands tests/services",
     "test:integration": "vitest run tests/integration",
     "test:logic": "vitest run tests/logic",
     "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
-    "test:smoke": "npm run build && playwright test",
-    "typetest": "tsc -p tsconfig.json --noEmit"
+    "test:smoke": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     },
     "./logic": {
-      "require": "./dist/logic.js",
-      "types": "./dist/logic.d.ts"
+      "import": "./logic.ts",
+      "types": "./logic.ts"
     },
     "./config": {
-      "require": "./dist/configLoader.js",
-      "types": "./dist/configLoader.d.ts"
+      "import": "./configLoader.ts",
+      "types": "./configLoader.ts"
     },
     "./utils": {
-      "require": "./dist/utils.js",
-      "types": "./dist/utils.d.ts"
+      "import": "./src/lib/h5p-utils.ts",
+      "types": "./src/lib/h5p-utils.ts"
     },
     "./compute-dependencies": {
-      "require": "./dist/compute-dependencies.js",
-      "types": "./dist/compute-dependencies.d.ts"
+      "import": "./src/lib/compute-dependencies.ts",
+      "types": "./src/lib/compute-dependencies.ts"
     },
     "./plugin-types": {
-      "require": "./dist/plugin-types.js",
-      "types": "./dist/plugin-types.d.ts"
+      "import": "./src/lib/plugin-types.ts",
+      "types": "./src/lib/plugin-types.ts"
     }
   },
   "bin": {
@@ -79,7 +77,6 @@
     "@types/sanitize-html": "^2.16.1",
     "@types/tmp": "^0.2.6",
     "tmp": "^0.2.4",
-    "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^2.0.0"
   }

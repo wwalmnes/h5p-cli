@@ -1,10 +1,10 @@
 import fs from 'fs';
 import archiver from 'archiver';
-import { getLibraryData } from '../utility/repository';
-import * as output from '../utility/output';
-import Input from '../utility/input';
-import { findRepos } from '../../lib/process-repos';
-import { archiveDir } from '../../lib/archive-utils';
+import { getLibraryData } from '../utility/repository.ts';
+import * as output from '../utility/output.ts';
+import Input from '../utility/input.ts';
+import { findRepos } from '../../lib/process-repos.ts';
+import { archiveDir } from '../../lib/archive-utils.ts';
 
 function packLibraries(repos: string[], file: string): Promise<void> {
   const dirs = fs.readdirSync('.');

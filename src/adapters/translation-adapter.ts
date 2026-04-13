@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import archiver from 'archiver';
 
-const GIT_SSH = path.resolve(__dirname, '..', 'utils', 'bin', 'h5p-ssh');
+const GIT_SSH = path.resolve(import.meta.dirname, '..', 'utils', 'bin', 'h5p-ssh');
 
 export interface ITranslationAdapter {
   readSemanticsJson(repo: string): Promise<any>;

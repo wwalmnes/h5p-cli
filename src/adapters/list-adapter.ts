@@ -1,4 +1,4 @@
-import logic from '../../logic';
+import logic from '../../logic.ts';
 
 export interface IListAdapter {
   getRegistry(ignoreFile?: boolean): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }>;

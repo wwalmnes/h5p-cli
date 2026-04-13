@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -38,8 +38,8 @@ describe('deps — end-to-end', () => {
   });
 
   it('calls computeDependencies with library name and no defaults', async () => {
-    const logic = await import('../../logic');
-    const { depsCommand } = await import('../../src/commands/deps');
+    const logic = await import('../../logic.ts');
+    const { depsCommand } = await import('../../src/commands/deps.ts');
 
     await depsCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -49,8 +49,8 @@ describe('deps — end-to-end', () => {
   });
 
   it('passes mode, version, and folder arguments through', async () => {
-    const logic = await import('../../logic');
-    const { depsCommand } = await import('../../src/commands/deps');
+    const logic = await import('../../logic.ts');
+    const { depsCommand } = await import('../../src/commands/deps.ts');
 
     await depsCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'view', '1.0', 'some-folder']);
 
@@ -60,8 +60,8 @@ describe('deps — end-to-end', () => {
   });
 
   it('rejects an invalid mode and does not call computeDependencies', async () => {
-    const logic = await import('../../logic');
-    const { depsCommand } = await import('../../src/commands/deps');
+    const logic = await import('../../logic.ts');
+    const { depsCommand } = await import('../../src/commands/deps.ts');
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await depsCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'invalid']);
@@ -88,8 +88,8 @@ describe('missing — end-to-end', () => {
   });
 
   it('calls getRegistry, parseLibraryFolders, and computeDependencies for the library', async () => {
-    const logic = await import('../../logic');
-    const { missingCommand } = await import('../../src/commands/missing');
+    const logic = await import('../../logic.ts');
+    const { missingCommand } = await import('../../src/commands/missing.ts');
 
     await missingCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -101,7 +101,7 @@ describe('missing — end-to-end', () => {
   });
 
   it('reports no unregistered dependencies when all deps are in registry', async () => {
-    const { missingCommand } = await import('../../src/commands/missing');
+    const { missingCommand } = await import('../../src/commands/missing.ts');
 
     await missingCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 

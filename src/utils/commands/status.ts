@@ -1,7 +1,7 @@
-import Input from '../utility/input';
-import * as output from '../utility/output';
-import { findRepos } from '../../lib/process-repos';
-import { statusRepository } from '../utility/repository';
+import Input from '../utility/input.ts';
+import * as output from '../utility/output.ts';
+import { findRepos } from '../../lib/process-repos.ts';
+import { statusRepository } from '../utility/repository.ts';
 
 const getRepositoriesStatus = function (repositories: string[], libraries: string[]): Promise<any[]> {
   return Promise.all(

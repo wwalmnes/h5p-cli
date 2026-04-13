@@ -1,5 +1,5 @@
-import { RepoResult } from '../../lib/process-repos';
-import { VersioningResult } from '../../services/versioning-service';
+import type { RepoResult } from '../../lib/process-repos.ts';
+import type { VersioningResult } from '../../services/versioning-service.ts';
 
 const lf = '\u000A';
 const color = {

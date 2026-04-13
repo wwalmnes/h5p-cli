@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
   default: {
@@ -42,7 +42,7 @@ describe('register — end-to-end', () => {
     const inputPath = path.join(fixture.dir, 'input-registry.json');
     fs.writeFileSync(inputPath, JSON.stringify(entry));
 
-    const { registerCommand } = await import('../../src/commands/register');
+    const { registerCommand } = await import('../../src/commands/register.ts');
     await registerCommand().parseAsync(['node', 'h5p', inputPath]);
 
     const outputPath = path.join(fixture.dir, 'libraryRegistry.json');
@@ -53,8 +53,8 @@ describe('register — end-to-end', () => {
   });
 
   it('calls registryEntryFromRepoUrl when given an http URL', async () => {
-    const logic = await import('../../logic');
-    const { registerCommand } = await import('../../src/commands/register');
+    const logic = await import('../../logic.ts');
+    const { registerCommand } = await import('../../src/commands/register.ts');
 
     await registerCommand().parseAsync(['node', 'h5p', 'https://github.com/h5p/h5p-image-hotspots']);
 
@@ -64,7 +64,7 @@ describe('register — end-to-end', () => {
   });
 
   it('writes the URL-derived entry to libraryRegistry.json', async () => {
-    const { registerCommand } = await import('../../src/commands/register');
+    const { registerCommand } = await import('../../src/commands/register.ts');
 
     await registerCommand().parseAsync(['node', 'h5p', 'https://github.com/h5p/h5p-image-hotspots']);
 

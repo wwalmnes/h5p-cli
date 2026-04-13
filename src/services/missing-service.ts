@@ -1,10 +1,13 @@
-import { IMissingAdapter } from '../adapters/missing-adapter';
+import type { IMissingAdapter } from '../adapters/missing-adapter.ts';
 
 export class MissingService {
-  constructor(
-    private adapter: IMissingAdapter,
-    private logger: { log: (...args: any[]) => void } = console
-  ) {}
+  private adapter: IMissingAdapter;
+  private logger: { log: (...args: any[]) => void };
+
+  constructor(adapter: IMissingAdapter, logger: { log: (...args: any[]) => void } = console) {
+    this.adapter = adapter;
+    this.logger = logger;
+  }
 
   async missing(library: string): Promise<void> {
     const libraryDirs = await this.adapter.parseLibraryFolders();

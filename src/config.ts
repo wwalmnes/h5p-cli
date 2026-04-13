@@ -47,4 +47,4 @@ config.files.patterns.ignored = process.env.h5p_cli_ignored_files
   ? new RegExp(process.env.h5p_cli_ignored_files, process.env.h5p_cli_ignored_modifiers)
   : config.files.patterns.ignored;
 
-export = config;
+export default config;

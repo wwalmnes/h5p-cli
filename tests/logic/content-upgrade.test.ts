@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { upgradeContent } from '../../logic-content-upgrade';
+import { upgradeContent } from '../../logic-content-upgrade.cjs';
 
 // --- helpers ---
 

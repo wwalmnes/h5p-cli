@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import buildLibraries from '../../utils/commands/build-libraries';
+import buildLibraries from '../../utils/commands/build-libraries.ts';
 
 export function buildCommand(): Command {
   return new Command('build')

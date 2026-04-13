@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CoreService } from '../../src/services/core-service';
-import type { ICoreAdapter } from '../../src/adapters/core-adapter';
+import { CoreService } from '../../src/services/core-service.ts';
+import type { ICoreAdapter } from '../../src/adapters/core-adapter.ts';
 
 function makeSetupService() {
   return { setup: vi.fn().mockResolvedValue(undefined) } as any;

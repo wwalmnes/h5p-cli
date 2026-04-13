@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import { RegisterService } from '../../src/services/register-service';
-import type { IRegisterAdapter } from '../../src/adapters/register-adapter';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { RegisterService } from '../../src/services/register-service.ts';
+import type { IRegisterAdapter } from '../../src/adapters/register-adapter.ts';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 function makeRealFsAdapter(
   baseDir: string,

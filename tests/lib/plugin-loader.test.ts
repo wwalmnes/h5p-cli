@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Command } from 'commander';
-import { applyPluginCommands } from '../../src/lib/plugin-loader';
+import { applyPluginCommands } from '../../src/lib/plugin-loader.ts';
 
 function makeProgram(): Command {
   const program = new Command('h5p');

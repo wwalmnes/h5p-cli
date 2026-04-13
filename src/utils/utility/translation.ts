@@ -1,7 +1,7 @@
-import { getLibraryData, getLanguageData } from './repository';
-import * as output from './output';
+import { getLibraryData, getLanguageData } from './repository.ts';
+import * as output from './output.ts';
 import path from 'path';
-import { createDefaultLanguage } from '../../lib/semantics-utils';
+import { createDefaultLanguage } from '../../lib/semantics-utils.ts';
 import fs from 'fs';
 import sanitizeHtml from 'sanitize-html';
 

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { findRepos } from '../../lib/process-repos';
+import { findRepos } from '../../lib/process-repos.ts';
 
 const defaultFileName = process.env.H5P_DEFAULT_PACK || 'libraries.h5p';
 

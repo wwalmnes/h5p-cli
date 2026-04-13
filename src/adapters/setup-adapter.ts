@@ -1,5 +1,5 @@
-import logic from '../../logic';
-import { machineToShort } from '../lib/h5p-utils';
+import logic from '../../logic.ts';
+import { machineToShort } from '../lib/h5p-utils.ts';
 
 export interface ISetupAdapter {
   machineToShort(machineName: string): string;

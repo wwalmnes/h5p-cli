@@ -1,5 +1,5 @@
-import { fromTemplate, parseGitUrl, pathHasDuplicates, parseSemanticLibraries } from './h5p-utils';
-import type { ParsedGitUrl } from './h5p-utils';
+import { fromTemplate, parseGitUrl, pathHasDuplicates, parseSemanticLibraries } from './h5p-utils.ts';
+import type { ParsedGitUrl } from './h5p-utils.ts';
 
 export interface LibraryVersion {
   major: number;

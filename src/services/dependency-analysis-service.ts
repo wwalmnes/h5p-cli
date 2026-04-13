@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { findRepos } from '../lib/process-repos';
-import { parseSemanticLibraries } from '../lib/h5p-utils';
+import { findRepos } from '../lib/process-repos.ts';
+import { parseSemanticLibraries } from '../lib/h5p-utils.ts';
 
 interface LibraryNode {
   library: { name: string; version: string };

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createEmptyProject, type Fixture } from '../helpers/fixture';
+import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 const VERIFY_RESULT = {
   ok: true,
@@ -39,8 +39,8 @@ describe('verify — end-to-end', () => {
   });
 
   it('calls logic.verifySetup with the given library name', async () => {
-    const logic = await import('../../logic');
-    const { verifyCommand } = await import('../../src/commands/verify');
+    const logic = await import('../../logic.ts');
+    const { verifyCommand } = await import('../../src/commands/verify.ts');
 
     await verifyCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
@@ -48,7 +48,7 @@ describe('verify — end-to-end', () => {
   });
 
   it('logs the verification result', async () => {
-    const { verifyCommand } = await import('../../src/commands/verify');
+    const { verifyCommand } = await import('../../src/commands/verify.ts');
 
     await verifyCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
