@@ -26,6 +26,10 @@ interface H5PPlugin {
 
 ## Minimal example
 
+Plugins can be written in **TypeScript** or **plain JavaScript** (ESM). Both use the same imports.
+
+### TypeScript
+
 ```typescript
 import { Command } from 'commander';
 import type { H5PPlugin } from 'h5p-cli/plugin-types';
@@ -47,6 +51,29 @@ const plugin: H5PPlugin = {
 
 export default plugin;
 ```
+
+### JavaScript
+
+```javascript
+import { Command } from 'commander';
+
+export default {
+  name: 'my-plugin',
+
+  commands() {
+    return [
+      new Command('greet')
+        .description('Say hello')
+        .argument('[name]', 'Name to greet')
+        .action((name) => {
+          console.log(`Hello, ${name ?? 'world'}!`);
+        }),
+    ];
+  },
+};
+```
+
+Set `"main"` in your `package.json` to `index.ts` for TypeScript or `index.js` for JavaScript.
 
 After installing, `h5p greet Alice` prints `Hello, Alice!`.
 

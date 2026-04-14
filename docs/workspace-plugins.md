@@ -58,13 +58,15 @@ Key fields:
 
 | Field | Why |
 |-------|-----|
-| `"main"` | Points to your entry file. Can be `.ts` -- Node v24+ strips types natively |
+| `"main"` | Points to your entry file. Use `index.ts` for TypeScript or `index.js` for JavaScript |
 | `"type": "module"` | Required. h5p-cli is ESM throughout |
 | `peerDependencies` | Resolved from the workspace root. Keeps your plugin from bundling its own copy |
 
 ### 2. Create the entry point
 
-Create `index.ts`:
+You can write plugins in TypeScript or plain JavaScript.
+
+**TypeScript** (`index.ts`):
 
 ```typescript
 import { Command } from 'commander';
@@ -87,6 +89,29 @@ const plugin: H5PPlugin = {
 
 export default plugin;
 ```
+
+**JavaScript** (`index.js`):
+
+```javascript
+import { Command } from 'commander';
+
+export default {
+  name: 'my-plugin',
+
+  commands() {
+    return [
+      new Command('greet')
+        .description('Say hello')
+        .argument('[name]', 'Name to greet')
+        .action((name) => {
+          console.log(`Hello, ${name ?? 'world'}!`);
+        }),
+    ];
+  },
+};
+```
+
+Remember to set `"main"` in `package.json` to match your entry file.
 
 ### 3. Install dependencies
 
@@ -156,6 +181,7 @@ If your plugin has its own dependencies (not peer deps), add them to your plugin
 
 ## Tips
 
-- **TypeScript works out of the box.** Use `.ts` for your entry point and imports. No compilation step required.
+- **TypeScript works out of the box.** Use `.ts` for your entry point and imports. No compilation step required (Node v24+ strips types natively).
+- **JavaScript works too.** Use `.js` with ESM `import` syntax. All `h5p-cli/*` imports work the same way.
 - **Workspace commands from root.** You can e.g. run `npm run test --workspace=h5p-cli`. See [npm workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces) for more info.
 
