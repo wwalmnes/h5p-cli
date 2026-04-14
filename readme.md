@@ -3,6 +3,15 @@ An h5p toolkit for running, editing and developing h5p content types.
 Make sure you have [git](https://git-scm.com/downloads), [NodeJS](https://nodejs.org/en/download/current) and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (usually included in NodeJS) installed.  
 Some of the commands listed here are Linux & MacOS specific. On Windows it’s recommended that you run them inside [git bash](https://git-scm.com/download/win).  
 
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Commands](docs/commands.md) | Reference for all `h5p` commands |
+| [Utility commands](docs/commands-utils.md) | Reference for `h5p utils` subcommands |
+| [Creating plugins](docs/plugins.md) | Plugin API -- commands, adapters, interfaces |
+| [Workspace plugin development](docs/workspace-plugins.md) | Developing plugins with npm workspaces |
+
 # INSTALLATION
 
 Uninstall any previous h5p-cli toolkit instance.

@@ -1,5 +1,7 @@
 # Creating Plugins for h5p-cli
 
+> **Developing in the workspace?** See [workspace-plugins.md](workspace-plugins.md) for how to create and link plugins using the npm workspaces setup.
+
 Plugins extend h5p-cli by adding new commands or replacing built-in adapters (the layer that performs I/O operations like file access, git calls, and API requests).
 
 ## Plugin structure
@@ -24,23 +26,26 @@ interface H5PPlugin {
 
 ## Minimal example
 
-```javascript
-// my-plugin/index.js
-const { Command } = require('commander');
+```typescript
+import { Command } from 'commander';
+import type { H5PPlugin } from 'h5p-cli/plugin-types';
 
-module.exports = {
+const plugin: H5PPlugin = {
   name: 'my-plugin',
 
   commands() {
-    const cmd = new Command('greet')
-      .description('Say hello')
-      .argument('[name]', 'Name to greet')
-      .action((name) => {
-        console.log(`Hello, ${name ?? 'world'}!`);
-      });
-    return [cmd];
+    return [
+      new Command('greet')
+        .description('Say hello')
+        .argument('[name]', 'Name to greet')
+        .action((name) => {
+          console.log(`Hello, ${name ?? 'world'}!`);
+        }),
+    ];
   },
 };
+
+export default plugin;
 ```
 
 After installing, `h5p greet Alice` prints `Hello, Alice!`.
@@ -51,7 +56,7 @@ The `commands()` method returns an array of Commander.js `Command` instances. Ea
 
 If a plugin command has the same name as a built-in command, **the plugin command replaces it**. This lets you override default behavior entirely.
 
-```javascript
+```typescript
 commands() {
   const cmd = new Command('list') // <-- overwriting list command
     .description('Custom list implementation')
@@ -87,8 +92,8 @@ Adapters are the I/O boundary in h5p-cli. Each built-in command resolves its ada
 
 When a plugin registers an adapter under a built-in key (e.g. `export`), that adapter becomes the default for the command — no flags needed:
 
-```javascript
-module.exports = {
+```typescript
+export default {
   name: 'my-s3-plugin',
 
   adapters() {
@@ -103,7 +108,7 @@ module.exports = {
 
 You can also register adapters under custom keys. Users select them with the `--adapter` flag:
 
-```javascript
+```typescript
 adapters() {
   return {
     's3-export': S3ExportAdapter,
@@ -166,7 +171,7 @@ Uninstalling removes the entry from `h5p.plugins.json`. If the plugin was cloned
 
 Plugins are loaded at startup from `h5p.plugins.json`. Each entry has a `name` and an absolute `path` to the module. The loader:
 
-1. `require()`s the module at the stored path
+1. `import()`s the module at the stored path
 2. Calls `adapters()` if present, registering overrides in the adapter registry
 3. Calls `commands()` if present, adding/replacing commands on the program
 
@@ -174,10 +179,11 @@ Plugins are loaded **after** all built-in commands are registered, so plugin com
 
 ## Full example: custom storage plugin
 
-```javascript
-// h5p-cli-s3/index.js
-const { Command } = require('commander');
-const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+```typescript
+// h5p-cli-s3/index.ts
+import { Command } from 'commander';
+import type { H5PPlugin } from 'h5p-cli/plugin-types';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 class S3ExportAdapter {
   async export(library, folder) {
@@ -187,7 +193,7 @@ class S3ExportAdapter {
   }
 }
 
-module.exports = {
+const plugin: H5PPlugin = {
   name: 'h5p-cli-s3',
 
   commands() {
@@ -206,6 +212,8 @@ module.exports = {
     };
   },
 };
+
+export default plugin;
 ```
 
 ```bash
