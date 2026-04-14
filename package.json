@@ -17,33 +17,34 @@
     "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
     "test:smoke": "playwright test",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.build.json"
   },
   "main": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
     },
     "./logic": {
-      "import": "./logic.ts",
-      "types": "./logic.ts"
+      "types": "./logic.ts",
+      "import": "./dist/logic.js"
     },
     "./config": {
-      "import": "./configLoader.ts",
-      "types": "./configLoader.ts"
+      "types": "./configLoader.ts",
+      "import": "./dist/configLoader.js"
     },
     "./utils": {
-      "import": "./src/lib/h5p-utils.ts",
-      "types": "./src/lib/h5p-utils.ts"
+      "types": "./src/lib/h5p-utils.ts",
+      "import": "./dist/src/lib/h5p-utils.js"
     },
     "./compute-dependencies": {
-      "import": "./src/lib/compute-dependencies.ts",
-      "types": "./src/lib/compute-dependencies.ts"
+      "types": "./src/lib/compute-dependencies.ts",
+      "import": "./dist/src/lib/compute-dependencies.js"
     },
     "./plugin-types": {
-      "import": "./src/lib/plugin-types.ts",
-      "types": "./src/lib/plugin-types.ts"
+      "types": "./src/lib/plugin-types.ts",
+      "import": "./dist/src/lib/plugin-types.js"
     }
   },
   "bin": {

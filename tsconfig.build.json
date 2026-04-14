@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "outDir": "./dist",
+    "allowImportingTsExtensions": false,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": [
+    "src/lib/h5p-utils.ts",
+    "src/lib/plugin-types.ts",
+    "src/lib/compute-dependencies.ts",
+    "logic.ts",
+    "configLoader.ts",
+    "src/config.ts"
+  ]
+}
