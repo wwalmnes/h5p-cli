@@ -73,6 +73,7 @@
     "@types/express": "^5.0.6",
     "@types/gitignore-parser": "^0.0.3",
     "@types/he": "^1.2.3",
+    "@types/livereload": "^0.9.5",
     "@types/multer": "^2.1.0",
     "@types/node": "^20.19.37",
     "@types/sanitize-html": "^2.16.1",

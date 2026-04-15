@@ -331,6 +331,9 @@ export default {
         path: filePath
       }
       if (form.type == 'image') {
+        // Complains about imageSize, but seems like this is the intended usage:
+        // https://www.npmjs.com/package/image-size
+        // @ts-expect-error
         const info = imageSize(targetFile);
         if (info.width && info.height) {
           output.width = info.width;
