@@ -1,6 +1,6 @@
 # Developing Plugins with NPM Workspace
 
-This guide covers how to develop h5p-cli plugins using the npm workspaces setup. For the full plugin API reference (commands, adapters, interfaces), see [plugins.md](plugins.md).
+This guide covers how to develop h5p-cli plugins using the [npm workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces) setup. For the full plugin API reference (commands, adapters, interfaces), see [plugins.md](plugins.md).
 
 Note: This is _not_ a requirement on how to work with h5p-cli and plugins, but a suggestion that can make your life easier :).
 

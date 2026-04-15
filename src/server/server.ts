@@ -4,7 +4,7 @@ import multerLib from 'multer';
 import api from './api.ts';
 import path from 'path';
 
-const rootFolder = path.resolve(import.meta.dirname, '../');
+const rootFolder = path.resolve(import.meta.dirname, '../', '..');
 const multer = multerLib({ dest: `./${config.folders.temp}` });
 let app = express();
 app.use(express.json());
