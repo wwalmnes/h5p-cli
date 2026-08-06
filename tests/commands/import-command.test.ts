@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { importCommand } from '../../src/commands/import.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -9,8 +9,19 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('importCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -36,6 +47,6 @@ describe('importCommand', () => {
     const mockAdapter = { import: vi.fn().mockImplementation(() => { throw new Error('import failed'); }) } as any;
     const cmd = importCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'myfolder']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: import failed');
   });
 });

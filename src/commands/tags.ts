@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import { TagsAdapter, type ITagsAdapter } from '../adapters/tags-adapter.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const tagsArgsSchema = z.object({
   org: z.string(),
@@ -24,8 +25,7 @@ export function tagsCommand(adapter?: ITagsAdapter): Command {
         const result = a.tags(args.org, args.library, args.mainBranch);
         console.log(result);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

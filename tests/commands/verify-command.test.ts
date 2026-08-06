@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { verifyCommand } from '../../src/commands/verify.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -9,8 +9,19 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('verifyCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -29,6 +40,6 @@ describe('verifyCommand', () => {
     const mockAdapter = { verifySetup: vi.fn().mockRejectedValue(new Error('fail')) } as any;
     const cmd = verifyCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: fail');
   });
 });

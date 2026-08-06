@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupCommand } from '../../src/commands/setup.ts';
 import { SetupService } from '../../src/services/setup-service.ts';
 import type { ISetupAdapter } from '../../src/adapters/setup-adapter.ts';
@@ -51,8 +51,19 @@ function makeMockService(overrides: Partial<SetupService> = {}): SetupService {
 }
 
 describe('setupCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -81,7 +92,7 @@ describe('setupCommand', () => {
     });
     const cmd = setupCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: setup failed');
   });
 
   it('has a description set', () => {

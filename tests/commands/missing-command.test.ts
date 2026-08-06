@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { missingCommand } from '../../src/commands/missing.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -13,8 +13,19 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('missingCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -33,6 +44,6 @@ describe('missingCommand', () => {
     const mockSvc = { missing: vi.fn().mockRejectedValue(new Error('fail')) } as any;
     const cmd = missingCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: fail');
   });
 });

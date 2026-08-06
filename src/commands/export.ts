@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import { ExportAdapter, type IExportAdapter } from '../adapters/export-adapter.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const exportArgsSchema = z.object({
   library: z.string(),
@@ -21,8 +22,7 @@ export function exportCommand(adapter?: IExportAdapter): Command {
         const file = await a.export(args.library, args.folder);
         console.log(file);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

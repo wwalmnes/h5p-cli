@@ -25,12 +25,18 @@ vi.mock('../../logic', () => ({
 describe('list — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
+  let stdout: string;
 
   beforeEach(() => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stdout = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += chunk;
+      return true;
+    });
   });
 
   afterEach(() => {
@@ -62,8 +68,8 @@ describe('list — end-to-end', () => {
 
     await listCommand().parseAsync(['node', 'h5p']);
 
-    const logged = (console.log as ReturnType<typeof vi.fn>).mock.calls.flat() as string[];
-    expect(logged.some(l => l.includes('H5P.Blanks'))).toBe(true);
-    expect(logged.some(l => l.includes('H5P.MultiChoice'))).toBe(true);
+    // the registry listing is a table on the stdout data channel now
+    expect(stdout).toContain('H5P.Blanks');
+    expect(stdout).toContain('H5P.MultiChoice');
   });
 });

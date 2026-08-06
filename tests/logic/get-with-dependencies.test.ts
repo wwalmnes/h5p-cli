@@ -1,12 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { EventEmitter } from 'events';
+import { execSync, spawnSync, spawn } from 'child_process';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../logic.ts';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
+  spawnSync: vi.fn(),
+  spawn: vi.fn(),
 }));
+
+const fakeChild = (status = 0) => {
+  const child: any = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  (child.stdout as any).setEncoding = () => {};
+  (child.stderr as any).setEncoding = () => {};
+  process.nextTick(() => child.emit('close', status));
+  return child;
+};
 
 // A fixed dep map returned by the computeDependencies spy.
 // Simulates two registered libraries: h5p-joubel-ui (dep) and h5p-blanks (parent).
@@ -40,6 +53,7 @@ const DEP_MAP = {
 describe('logic.getWithDependencies', () => {
   let fixture: Fixture;
   let originalCwd: string;
+  let stderr: string;
 
   beforeEach(() => {
     fixture = createEmptyProject();
@@ -47,7 +61,15 @@ describe('logic.getWithDependencies', () => {
     process.chdir(fixture.dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
     vi.mocked(execSync).mockReturnValue(Buffer.from(''));
+    vi.mocked(spawnSync).mockReturnValue({ status: 0, stdout: '', stderr: '' } as any);
+    // the install loop's git/npm calls go through the async logic._exec -> spawn
+    vi.mocked(spawn).mockImplementation(() => fakeChild() as any);
     vi.spyOn(logic, 'computeDependencies').mockResolvedValue(DEP_MAP);
     fs.mkdirSync('libraries', { recursive: true });
   });
@@ -69,17 +91,17 @@ describe('logic.getWithDependencies', () => {
     expect(result).toContain('h5p-joubel-ui');
     expect(result).toContain('h5p-blanks');
     // No git clone should have been called
-    const cloneCalls = vi.mocked(execSync).mock.calls.filter(
+    const cloneCalls = vi.mocked(spawn).mock.calls.filter(
       (args) => typeof args[0] === 'string' && (args[0] as string).startsWith('git clone'),
     );
     expect(cloneCalls).toHaveLength(0);
   });
 
-  it('calls execSync git clone for a not-yet-installed library', async () => {
+  it('calls git clone for a not-yet-installed library', async () => {
     // Do not pre-create library folders
     await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
 
-    const cloneCalls = vi.mocked(execSync).mock.calls.filter(
+    const cloneCalls = vi.mocked(spawn).mock.calls.filter(
       (args) => typeof args[0] === 'string' && (args[0] as string).startsWith('git clone'),
     );
     expect(cloneCalls.length).toBeGreaterThan(0);
@@ -94,9 +116,7 @@ describe('logic.getWithDependencies', () => {
       logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
     ).resolves.toBeDefined();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('skipping optional unregistered'),
-    );
+    expect(stderr).toContain('skipping optional unregistered');
   });
 
   it('throws for a required unregistered dep', async () => {
@@ -112,12 +132,12 @@ describe('logic.getWithDependencies', () => {
   it('toSkip accumulates — passing result of first call skips all already-processed libs', async () => {
     const first = await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
 
-    vi.mocked(execSync).mockClear();
+    vi.mocked(spawn).mockClear();
 
     // Second call with toSkip = result of first; no clones should happen
     await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false, first);
 
-    const cloneCalls = vi.mocked(execSync).mock.calls.filter(
+    const cloneCalls = vi.mocked(spawn).mock.calls.filter(
       (args) => typeof args[0] === 'string' && (args[0] as string).startsWith('git clone'),
     );
     expect(cloneCalls).toHaveLength(0);

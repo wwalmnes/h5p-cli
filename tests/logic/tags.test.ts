@@ -1,12 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../logic.ts';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
+  spawnSync: vi.fn(),
 }));
+
+// logic._exec routes through spawnSync so git's stderr cannot bypass ui
+const spawnResult = (stdout: string) => ({ status: 0, stdout, stderr: '', error: undefined });
 
 describe('logic.tags', () => {
   let fixture: Fixture;
@@ -18,10 +22,10 @@ describe('logic.tags', () => {
     process.chdir(fixture.dir);
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    vi.mocked(execSync).mockImplementation((cmd: string) => {
-      if (cmd === 'git tag') return Buffer.from('1.14.1\n1.14.0\n1.15.0\n1.13.5\n');
-      return Buffer.from('');
-    });
+    vi.mocked(execSync).mockReturnValue(Buffer.from(''));
+    vi.mocked(spawnSync).mockImplementation((cmd: any) =>
+      spawnResult(cmd === 'git tag' ? '1.14.1\n1.14.0\n1.15.0\n1.13.5\n' : '') as any
+    );
 
     // Pre-create temp dir so getRepoFile skips git clone
     fs.mkdirSync('temp/h5p-blanks_master', { recursive: true });
@@ -44,10 +48,9 @@ describe('logic.tags', () => {
   });
 
   it('filters out empty strings from git tag output', () => {
-    vi.mocked(execSync).mockImplementation((cmd: string) => {
-      if (cmd === 'git tag') return Buffer.from('\n1.0.0\n\n2.0.0\n');
-      return Buffer.from('');
-    });
+    vi.mocked(spawnSync).mockImplementation((cmd: any) =>
+      spawnResult(cmd === 'git tag' ? '\n1.0.0\n\n2.0.0\n' : '') as any
+    );
     const tags = logic.tags('h5p', 'h5p-blanks');
     expect(tags).not.toContain('');
     expect(tags).toEqual(['2.0.0', '1.0.0']);

@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import { VerifyAdapter, type IVerifyAdapter } from '../adapters/verify-adapter.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const verifyArgsSchema = z.object({
   library: z.string(),
@@ -19,8 +20,7 @@ export function verifyCommand(adapter?: IVerifyAdapter): Command {
         const result = await a.verifySetup(args.library);
         console.log(result);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

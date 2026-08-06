@@ -45,6 +45,10 @@
       "types": "./src/lib/plugin-types.ts",
       "import": "./src/lib/plugin-types.ts"
     },
+    "./ui": {
+      "types": "./src/lib/ui.ts",
+      "import": "./src/lib/ui.ts"
+    },
     "./content-upgrade": {
       "types": "./logic-content-upgrade.d.cts",
       "import": "./logic-content-upgrade.cjs"

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { tagsCommand } from '../../src/commands/tags.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -9,8 +9,19 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('tagsCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -29,6 +40,6 @@ describe('tagsCommand', () => {
     const mockAdapter = { tags: vi.fn().mockImplementation(() => { throw new Error('tags failed'); }) } as any;
     const cmd = tagsCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: tags failed');
   });
 });

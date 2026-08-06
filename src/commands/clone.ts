@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { InstallAdapter, type IInstallAdapter } from '../adapters/install-adapter.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
 import config from '../../configLoader.ts';
+import { ui } from '../lib/ui.ts';
 
 const cloneArgsSchema = z.object({
   library: z.string(),
@@ -23,7 +24,7 @@ export function cloneCommand(adapter?: IInstallAdapter): Command {
 
       if (!result.success) {
         for (const issue of result.error.issues) {
-          console.error(issue.message);
+          ui.error(issue.message);
         }
         return;
       }
@@ -31,12 +32,11 @@ export function cloneCommand(adapter?: IInstallAdapter): Command {
       const args = result.data;
 
       try {
-        console.log(`> cloning ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
+        ui.info(`cloning ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
         await a.getWithDependencies('clone', args.library, args.mode);
-        console.log(`> done installing ${args.library}`);
+        ui.success(`done installing ${args.library}`);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

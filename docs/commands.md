@@ -82,7 +82,25 @@ h5p list [machineName] [pullRegistry]
 | `machineName` | No | Pass `1` to display machine names instead of repo names. |
 | `pullRegistry` | No | Pass `1` to recreate the local registry before listing. |
 
-Output format: `<library> (<org>)`
+Output is a two-column table on stdout. On a terminal it is boxed with a header;
+piped, it degrades to bare aligned rows so scripts need not strip anything:
+
+```
+$ h5p list                          $ h5p list | head -2
+┌───────────────┬────────┐          h5p-accordion  h5p
+│ NAME          │ ORG    │          h5p-agamotto   otacke
+├───────────────┼────────┤
+│ h5p-accordion │ h5p    │
+│ h5p-agamotto  │ otacke │
+└───────────────┴────────┘
+```
+
+The boxed view is squeezed to the terminal width, clipping long cells with `…`.
+Piped output is never truncated.
+
+With `machineName` set to `1` the first column holds machine names and the
+header reads `MACHINE NAME`. Progress messages go to stderr, so
+`h5p list > libraries.txt` captures only the rows.
 
 ---
 

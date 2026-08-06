@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ui } from '../lib/ui.ts';
 
 const gitRefExists = (ref: string): boolean => {
   try {
@@ -87,8 +88,7 @@ export function branchesCommand(): Command {
         }
         fs.writeFileSync('library.json', JSON.stringify(libraryJson, null, 2));
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { coreCommand } from '../../src/commands/core.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -20,8 +20,19 @@ vi.mock('fs', () => ({
 }));
 
 describe('coreCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -40,6 +51,6 @@ describe('coreCommand', () => {
     const mockSvc = { core: vi.fn().mockRejectedValue(new Error('core failed')) } as any;
     const cmd = coreCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: core failed');
   });
 });

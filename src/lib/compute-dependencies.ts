@@ -1,3 +1,4 @@
+import { ui } from './ui.ts';
 import { fromTemplate, parseGitUrl, pathHasDuplicates, parseSemanticLibraries } from './h5p-utils.ts';
 import type { ParsedGitUrl } from './h5p-utils.ts';
 
@@ -62,13 +63,6 @@ export interface IComputeDependenciesPort {
   getTags(org: string, repo: string): string[];
 }
 
-const _log = (message: string) => {
-  if (process.argv[2] !== 'server') console.log(message);
-};
-const _write = (message: string) => {
-  if (process.argv[2] !== 'server') process.stdout.write(message);
-};
-
 export async function computeDependencies(
   library: string,
   mode: 'view' | 'edit',
@@ -76,7 +70,10 @@ export async function computeDependencies(
   folder: string | undefined,
   io: IComputeDependenciesPort
 ): Promise<DependencyMap> {
-  _log(`> ${library} deps ${mode}`);
+  ui.info(`calculating dependencies for ${library} (${mode})`);
+  /* per-dependency detail matters while it happens, not afterwards: it shares
+  one self-overwriting line and collapses into a single summary at the end */
+  const statusId = `deps:${library}:${mode}`;
   version = version || 'master';
   let level = -1;
   let registry: Registry = { regular: {}, reversed: {} };
@@ -126,7 +123,7 @@ export async function computeDependencies(
         done[level][machineName] = { optional, parent } as any as LibraryEntry;
       }
       const parentVersion = `${done[level][parent].version!.major}.${done[level][parent].version!.minor}.${done[level][parent].version!.patch}`;
-      process.stdout.write(`\n!!! ${optional ? 'optional' : 'required'} library ${machineName} ${ver} not found in registry; required by ${parent} (${parentVersion}) `);
+      ui.warn(`${optional ? 'optional' : 'required'} library ${machineName} ${ver} not found in registry; required by ${parent} (${parentVersion})`);
       return;
     }
     const version = ver == 'master' ? ver : latestPatch(lib.org, entry, ver);
@@ -185,7 +182,7 @@ export async function computeDependencies(
     done[level][dep].fullscreen = list.fullscreen;
     done[level][dep].optional = registry.regular[dep].optional === false ? false : isOptional(cache[toDo[dep].parent], list.machineName);
     cache[dep].optional = done[level][dep].optional;
-    _write(`>> ${dep} required by ${toDo[dep].parent} (${done[level][dep].optional ? 'optional' : 'required'}) ... `);
+    const summary = `${dep} required by ${toDo[dep].parent} (${done[level][dep].optional ? 'optional' : 'required'})`;
     done[level][dep].preloadedJs = list.preloadedJs || [];
     done[level][dep].preloadedCss = list.preloadedCss || [];
     done[level][dep].preloadedDependencies = list.preloadedDependencies || [];
@@ -218,35 +215,42 @@ export async function computeDependencies(
       }
     }
     delete toDo[dep];
-    _log('done');
+    ui.status(statusId, summary);
   }
   registry = await io.getRegistry();
   if (!folder && !registry.regular[library]) {
     throw new Error(`unregistered ${library} library`);
   }
-  while (Object.keys(toDo).length) {
-    level++;
-    _log(`>> on level ${level}`);
-    done[level] = {};
-    for (let item in toDo) {
-      await compute(registry.regular[item].org, item, toDo[item].version);
-    }
-  }
   let output: DependencyMap = {};
-  for (let i = level; i >= 0; i--) {
-    const keys = Object.keys(done[i]);
-    keys.sort((a, b) => {
-      return weights[b] - weights[a];
-    });
-    for (let key of keys) {
-      if (!output[key] || output[key]?.optional) {
-        output[key] = done[i][key];
+  try {
+    while (Object.keys(toDo).length) {
+      level++;
+      ui.status(statusId, `on level ${level}`);
+      done[level] = {};
+      for (let item in toDo) {
+        await compute(registry.regular[item].org, item, toDo[item].version);
       }
-      if (!done[i][key].id) {
-        continue;
+    }
+    for (let i = level; i >= 0; i--) {
+      const keys = Object.keys(done[i]);
+      keys.sort((a, b) => {
+        return weights[b] - weights[a];
+      });
+      for (let key of keys) {
+        if (!output[key] || output[key]?.optional) {
+          output[key] = done[i][key];
+        }
+        if (!done[i][key].id) {
+          continue;
+        }
       }
     }
   }
-  _write('\n');
+  finally {
+    // compute() can throw mid-resolve; never leave the line on screen
+    ui.statusDone(statusId);
+  }
+  const resolved = Object.keys(output).length;
+  ui.info(`resolved ${resolved} ${resolved === 1 ? 'dependency' : 'dependencies'} for ${library}`);
   return output;
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { listCommand } from '../../src/commands/list.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -9,8 +9,19 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('listCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -36,6 +47,6 @@ describe('listCommand', () => {
     const mockAdapter = { getRegistry: vi.fn().mockRejectedValue(new Error('list failed')) } as any;
     const cmd = listCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: list failed');
   });
 });

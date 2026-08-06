@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createCommand } from '../../src/commands/create.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -6,8 +6,19 @@ vi.mock('../../configLoader', () => ({
 }));
 
 describe('createCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -26,6 +37,6 @@ describe('createCommand', () => {
     const mockSvc = { create: vi.fn().mockImplementation(() => { throw new Error('boom'); }) } as any;
     const cmd = createCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', 'MyContentType']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: boom');
   });
 });

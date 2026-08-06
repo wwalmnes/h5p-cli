@@ -2,6 +2,7 @@ import fs from 'fs';
 import { Command } from 'commander';
 import { setupFolders } from './lib/setup-folders.ts';
 import { loadPlugins } from './lib/plugin-loader.ts';
+import { ui } from './lib/ui.ts';
 import { exportCommand } from './commands/export.ts';
 import { importCommand } from './commands/import.ts';
 import { listCommand } from './commands/list.ts';
@@ -26,7 +27,17 @@ const program = new Command();
 program
   .name('h5p')
   .description('A tool for developing & testing H5P content types')
-  .version(pkg.version);
+  .version(pkg.version)
+  .option('--verbose', 'Show subprocess output and error stacks')
+  .option('--quiet', 'Only show warnings and errors');
+
+// Global flags must precede the subcommand (`h5p --verbose install …`);
+// H5P_VERBOSE / H5P_QUIET work anywhere and are read by ui as the fallback.
+program.hook('preAction', (thisCommand) => {
+  const options = thisCommand.opts();
+  if (options.verbose) ui.setLevel('verbose');
+  else if (options.quiet) ui.setLevel('quiet');
+});
 
 program.addCommand(exportCommand());
 program.addCommand(importCommand());

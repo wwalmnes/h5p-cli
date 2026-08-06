@@ -5,6 +5,7 @@ import { RegisterAdapter } from '../adapters/register-adapter.ts';
 import { RegisterService } from '../services/register-service.ts';
 import { SetupService } from '../services/setup-service.ts';
 import config from '../../configLoader.ts';
+import { ui } from '../lib/ui.ts';
 
 const setupArgsSchema = z.object({
   library: z.string(),
@@ -37,8 +38,7 @@ export function setupCommand(service?: SetupService): Command {
       try {
         await svc.setup(args.library, args.version, args.download);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

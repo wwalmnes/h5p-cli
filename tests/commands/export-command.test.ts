@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { exportCommand } from '../../src/commands/export.ts';
 
 vi.mock('../../configLoader', () => ({
@@ -9,8 +9,19 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('exportCommand', () => {
+  let stderr: string;
+
   beforeEach(() => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('has correct name', () => {
@@ -36,6 +47,6 @@ describe('exportCommand', () => {
     const mockAdapter = { export: vi.fn().mockRejectedValue(new Error('export failed')) } as any;
     const cmd = exportCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(console.log).toHaveBeenCalledWith('> error');
+    expect(stderr).toContain('> error: export failed');
   });
 });

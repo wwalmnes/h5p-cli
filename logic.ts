@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, spawn, spawnSync } from 'child_process';
 import fs from 'fs';
 // @ts-ignore - no type declarations for superagent v8 in this project
 import superAgent from 'superagent';
@@ -9,6 +9,7 @@ import { upgradeContent } from './logic-content-upgrade.cjs';
 import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './src/lib/h5p-utils.ts';
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies.ts';
 import type { IComputeDependenciesPort, LibraryEntry, LibraryVersion, LibraryDependencyRef, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
+import { ui } from './src/lib/ui.ts';
 import type { ParsedGitUrl } from './src/lib/h5p-utils.ts';
 
 interface VerifySetupResult {
@@ -40,7 +41,7 @@ const getFile = async (source: string, parseJson?: boolean): Promise<string | ob
     output = JSON.parse(output);
   }
   return output;
-}
+};
 // clone repo and retrieve file
 const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean): string | object => {
   const { repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
@@ -57,7 +58,7 @@ const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?
   }
   const data = fs.readFileSync(filePath, 'utf-8');
   return parseJson ? JSON.parse(data) : data;
-}
+};
 // generates list of files and their relative paths in a folder tree
 const getFileList = (folder: string): string[] => {
   const output: string[] = [];
@@ -76,14 +77,14 @@ const getFileList = (folder: string): string[] => {
         }
       }
     }
-  }
+  };
   while (toDo.length) {
     list = toDo;
     toDo = [];
     compute();
   }
   return output;
-}
+};
 class DefaultComputeDependenciesPort implements IComputeDependenciesPort {
   getRegistry() { return logic.getRegistry(); }
   parseLibraryFolders() { return logic.parseLibraryFolders(); }
@@ -98,20 +99,81 @@ class DefaultComputeDependenciesPort implements IComputeDependenciesPort {
   getTags(org: string, repo: string) { return logic.tags(org, repo); }
 }
 
+/* execSync output is noise unless something went wrong; ui.debug keeps it
+behind --verbose. Trimmed because emit() terminates every line itself. */
+const _debug = (output: string): void => {
+  const trimmed = output.trim();
+  if (trimmed) ui.debug(trimmed);
+};
+
+const _failed = (command: string, stderr: string): Error => {
+  const detail = stderr.trim();
+  return new Error(`Command failed: ${command}${detail ? `\n${detail}` : ''}`);
+};
+
+/* execSync inherits stderr, so git/npm write straight past ui — which both
+leaks output under --quiet and shreds the live progress frame. spawnSync
+captures both streams so everything reaches the terminal through emit().
+
+Only for callers that cannot be async: logic.tags and logic.clone are reached
+synchronously from computeDependencies via IComputeDependenciesPort.getTags,
+and logic.clone is part of the public h5p-cli/logic surface. */
+const _execSync = (command: string, cwd?: string): string => {
+  const result = spawnSync(command, { shell: true, cwd, encoding: 'utf-8' });
+  if (result.error) {
+    throw result.error;
+  }
+  _debug(result.stdout ?? '');
+  _debug(result.stderr ?? '');
+  if (result.status !== 0) {
+    throw _failed(command, result.stderr ?? '');
+  }
+  return result.stdout ?? '';
+};
+
+/* Same contract, but yields to the event loop so the live progress area keeps
+animating through git and npm. Awaited in a for-loop, so execution order is
+still strictly sequential — nothing overlaps. */
+const _exec = (command: string, cwd?: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, { shell: true, cwd });
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.setEncoding('utf-8');
+    child.stderr?.setEncoding('utf-8');
+    child.stdout?.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (status) => {
+      _debug(stdout);
+      _debug(stderr);
+      if (status !== 0) {
+        reject(_failed(command, stderr));
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+};
+
+const _cloneCommand = (
+  org: string,
+  repo: string,
+  branch: string,
+  target: string,
+): string =>
+  `git clone ${fromTemplate(config.urls.library.clone, { org, repo })} ${target} --branch ${branch}`;
+
 const logic = {
-  // debug console log
   log: function (message: string): void {
-    if (process.argv[2] === 'server') {
-      return;
-    }
-    console.log(message);
+    ui.info(message);
   },
-  // debug process.stdout.write
   write: function (message: string): void {
-    if (process.argv[2] === 'server') {
-      return;
-    }
-    process.stdout.write(message);
+    ui.info(message);
   },
   // imports content type from zip archive file in the .h5p format
   import: (folder: string, archive?: string): string => {
@@ -189,9 +251,9 @@ const logic = {
     if (!fs.existsSync(folder)) {
       logic.clone(org, repo, mainBranch, label);
     }
-    execSync(`git checkout ${mainBranch}`, { cwd: folder, stdio : 'pipe' });
-    execSync(`git pull origin ${mainBranch}`, { cwd: folder, stdio : 'pipe' });
-    const tags = execSync('git tag', { cwd: folder }).toString().split('\n');
+    execSync(`git checkout ${mainBranch}`, { cwd: folder, stdio: 'pipe' });
+    execSync(`git pull origin ${mainBranch}`, { cwd: folder, stdio: 'pipe' });
+    const tags = _execSync('git tag', folder).split('\n');
     const output: string[] = [];
     for (let item of tags) {
       if (!item) {
@@ -202,7 +264,11 @@ const logic = {
     output.sort((a, b) => {
       const aParts = a.split('.');
       const bParts = b.split('.');
-      return Number(bParts[0]) - Number(aParts[0]) || Number(bParts[1]) - Number(aParts[1]) || Number(bParts[2]) - Number(aParts[2]);
+      return (
+        Number(bParts[0]) - Number(aParts[0]) ||
+        Number(bParts[1]) - Number(aParts[1]) ||
+        Number(bParts[2]) - Number(aParts[2])
+      );
     });
     return output;
   },
@@ -232,7 +298,7 @@ const logic = {
       toSkip.push(item);
       if (!list[item].id) {
         if (list[item].optional) {
-          console.log(`> skipping optional unregistered ${item} library`);
+          ui.info(`skipping optional unregistered ${item} library`);
           continue;
         }
         else {
@@ -245,35 +311,51 @@ const logic = {
       const folder = `${config.folders.libraries}/${label}`;
       if (fs.existsSync(folder)) {
         if (latest && !process.env.H5P_NO_UPDATES) {
-          console.log(`>> ~ updating to ${list[item].repoName} ${listVersion}`);
-          execSync(`git checkout master`, { cwd: folder, stdio : 'pipe' });
-          console.log(execSync('git pull origin', { cwd: folder }).toString());
+          ui.step(`~ updating to ${list[item].repoName} ${listVersion}`);
+          await _exec('git checkout master', folder);
+          await _exec('git pull origin', folder);
         }
         else {
-          console.log(`>> ~ skipping updates for ${list[item].repoName} ${listVersion}`);
+          ui.step(
+            `~ skipping updates for ${list[item].repoName} ${listVersion}`,
+          );
         }
         continue;
       }
-      console.log(`>> + installing ${list[item].repoName} ${listVersion}`);
-      if (action == 'download') {
-        await logic.download(list[item].org, list[item].repoName, version, folder);
+      ui.step(`+ installing ${list[item].repoName} ${listVersion}`);
+      /* the percentages are milestones, not measurements: the zip archives
+      carry no content-length, so there is nothing real to divide by */
+      ui.progress(label, 0, { label: `${list[item].repoName} ${listVersion}` });
+      try {
+        if (action == 'download') {
+          await logic.download(list[item].org, list[item].repoName, version, folder);
+        }
+        else {
+          await _exec(
+            _cloneCommand(list[item].org, list[item].repoName, 'master', label),
+            config.folders.libraries,
+          );
+        }
+        ui.progress(label, 60);
+        const packageFile = `${folder}/package.json`;
+        if (!fs.existsSync(packageFile)) {
+          continue;
+        }
+        const info = JSON.parse(fs.readFileSync(packageFile, 'utf-8'));
+        if (!info?.scripts?.build) {
+          continue;
+        }
+        ui.debug('npm install --ignore-scripts');
+        await _exec('npm install --ignore-scripts', folder);
+        ui.progress(label, 85);
+        ui.debug('npm run build');
+        await _exec('npm run build', folder);
+        ui.progress(label, 100);
+        fs.rmSync(`${folder}/node_modules`, { recursive: true, force: true });
+      } finally {
+        // runs on the `continue`s above too, so no row is ever stranded
+        ui.progressDone(label);
       }
-      else {
-        console.log(logic.clone(list[item].org, list[item].repoName, version, label));
-      }
-      const packageFile = `${folder}/package.json`;
-      if (!fs.existsSync(packageFile)) {
-        continue;
-      }
-      const info = JSON.parse(fs.readFileSync(packageFile, 'utf-8'));
-      if (!info?.scripts?.build) {
-        continue;
-      }
-      console.log('>>> npm install --ignore-scripts');
-      console.log(execSync('npm install --ignore-scripts', {cwd: folder}).toString());
-      console.log('>>> npm run build');
-      console.log(execSync('npm run build', {cwd: folder}).toString());
-      fs.rmSync(`${folder}/node_modules`, { recursive: true, force: true });
     }
     return toSkip;
   },
@@ -286,19 +368,19 @@ const logic = {
     const output: VerifySetupResult = {
       registry: registry.regular[library] ? true : false,
       libraries: {},
-      ok: true
-    }
+      ok: true,
+    };
     if (!output.registry) {
       output.ok = false;
     }
     let list = await logic.computeDependencies(library, 'view', null, libFolder);
-    list = {...list, ...await logic.computeDependencies(library, 'edit', null, libFolder)};
+    list = {...list, ...(await logic.computeDependencies(library, 'edit', null, libFolder))};
     for (let item in list) {
       if (!list[item]?.id) {
         output.libraries[item] = {
           optional: list[item].optional ?? false,
-          present: false
-        }
+          present: false,
+        };
         if (!list[item].optional) {
           output.ok = false;
         }
@@ -307,8 +389,8 @@ const logic = {
       const label = `${list[item].id}-${list[item].version!.major}.${list[item].version!.minor}`;
       output.libraries[label] = {
         optional: list[item].optional ?? false,
-        present: fs.existsSync(`${config.folders.libraries}/${libraryDirs[list[item].id]}`)
-      }
+        present: fs.existsSync(`${config.folders.libraries}/${libraryDirs[list[item].id]}`),
+      };
       if (!list[item].optional && !output.libraries[label].present) {
         output.ok = false;
       }
@@ -364,14 +446,26 @@ const logic = {
      * so we only need these.
      */
     const metadataAttributesInH5PJSON = [
-      'title', 'authors', 'changes', 'source', 'license', 'licenseVersion', 'licenseExtras', 'authorComments',
-      'yearsFrom', 'yearsTo'
+      'title',
+      'authors',
+      'changes',
+      'source',
+      'license',
+      'licenseVersion',
+      'licenseExtras',
+      'authorComments',
+      'yearsFrom',
+      'yearsTo',
     ];
     const metadata: Record<string, unknown> = {};
     for (let item of metadataAttributesInH5PJSON) {
       metadata[item] = info[item];
     }
-    let mainLib: LibraryDependencyRef & { machineName: string } = { machineName: '', majorVersion: 0, minorVersion: 0 };
+    let mainLib: LibraryDependencyRef & { machineName: string } = {
+      machineName: '',
+      majorVersion: 0,
+      minorVersion: 0,
+    };
     for (let item of info.preloadedDependencies) {
       if (item.machineName == lib.id) {
         mainLib = item;
@@ -382,7 +476,10 @@ const logic = {
     mainLib.minorVersion = Number(mainLib.minorVersion);
     lib.version!.major = Number(lib.version!.major);
     lib.version!.minor = Number(lib.version!.minor);
-    if (lib.version!.major <= mainLib.majorVersion && lib.version!.minor <= mainLib.minorVersion) {
+    if (
+      lib.version!.major <= mainLib.majorVersion &&
+      lib.version!.minor <= mainLib.minorVersion
+    ) {
       return;
     }
     const getUpgradesScript = (machineName: string) => {
@@ -400,9 +497,9 @@ const logic = {
       const version = JSON.parse(fs.readFileSync(libraryJson, 'utf-8'));
       return {
         major: parseInt(version.majorVersion),
-        minor: parseInt(version.minorVersion)
+        minor: parseInt(version.minorVersion),
       };
-    }
+    };
     const contentFile = `content/${folder}/content.json`;
     let content: string | object = fs.readFileSync(contentFile, 'utf-8');
     const backupContent = content;
@@ -414,15 +511,24 @@ const logic = {
       library: `${info.mainLibrary} ${mainLib.majorVersion}.${mainLib.minorVersion}`,
     };
     const { params: upgradedParams, metadata: upgradedMetadata } =
-      upgradeContent(input, getUpgradesScript, getLatestLibraryVersion) as { params: unknown; metadata: Record<string, unknown> };
+      upgradeContent(input, getUpgradesScript, getLatestLibraryVersion) as {
+        params: unknown;
+        metadata: Record<string, unknown>;
+      };
     for (let attribute in metadata) {
-      if (upgradedMetadata[attribute] !== undefined && upgradedMetadata[attribute] !== null) {
+      if (
+        upgradedMetadata[attribute] !== undefined &&
+        upgradedMetadata[attribute] !== null
+      ) {
         info[attribute] = upgradedMetadata[attribute];
       }
     }
     const label = `${mainLib.majorVersion}.${mainLib.minorVersion}`;
     fs.writeFileSync(`content/${folder}/${label}_content.json`, backupContent);
-    fs.writeFileSync(`content/${folder}/${label}_h5p.json`, JSON.stringify(info));
+    fs.writeFileSync(
+      `content/${folder}/${label}_h5p.json`,
+      JSON.stringify(info),
+    );
     fs.writeFileSync(contentFile, JSON.stringify(upgradedParams));
     logic.generateInfo(folder, library);
   },
@@ -435,27 +541,28 @@ const logic = {
       if (!fs.existsSync(libraryFile)) {
         continue;
       }
-      const info = await getFile(libraryFile, true) as any;
+      const info = (await getFile(libraryFile, true)) as any;
       const id = info.machineName;
       output[id] = folder;
       if (!registry.reversed[id]) {
-        registry.reversed[id] =
-        {
-          "id": id,
-          "title": info.title,
-          "author": info.author,
-          "runnable": info.runnable,
-          "shortName": machineToShort(id),
-          "org": "",
-          "repoName": ""
-        }
+        registry.reversed[id] = {
+          id: id,
+          title: info.title,
+          author: info.author,
+          runnable: info.runnable,
+          shortName: machineToShort(id),
+          org: '',
+          repoName: '',
+        };
         fs.writeFileSync(config.registry, JSON.stringify(registry.reversed));
-        console.log(`> registered local library ${id}`);
+        ui.info(`registered local library ${id}`);
       }
     }
     return output;
   },
-  registryEntryFromRepoUrl: function(gitUrl: string): Record<string, LibraryEntry> {
+  registryEntryFromRepoUrl: function (
+    gitUrl: string,
+  ): Record<string, LibraryEntry> {
     const { host, org, repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
     const list = getRepoFile(gitUrl, 'library.json', 'master', true) as any;
     const shortName = machineToShort(list.machineName);
@@ -466,17 +573,17 @@ const logic = {
       title: list.title,
       repo: {
         type: type,
-        url: `https://${host}/${org}/${repoName}`
+        url: `https://${host}/${org}/${repoName}`,
       },
       author: list.author,
       runnable: list.runnable,
       shortName,
       repoName,
-      org
-    }
+      org,
+    };
     return output;
   },
   getFile,
-  getFileList
-}
+  getFileList,
+};
 export default logic;

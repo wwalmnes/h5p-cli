@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { DepsAdapter, type IDepsAdapter } from '../adapters/deps-adapter.ts';
 import { DepsService } from '../services/deps-service.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const depsArgsSchema = z.object({
   library: z.string(),
@@ -37,8 +38,7 @@ export function depsCommand(service?: DepsService): Command {
       try {
         await svc.deps(args.library, args.mode, args.version, args.folder);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

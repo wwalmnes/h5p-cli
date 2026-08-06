@@ -4,6 +4,7 @@ import { RegisterAdapter, type IRegisterAdapter } from '../adapters/register-ada
 import { RegisterService } from '../services/register-service.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
 import config from '../../configLoader.ts';
+import { ui } from '../lib/ui.ts';
 
 const registerArgsSchema = z.object({
   input: z.string(),
@@ -31,8 +32,7 @@ export function registerCommand(service?: RegisterService): Command {
       try {
         await svc.register(args.input);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

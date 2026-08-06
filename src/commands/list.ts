@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import { ListAdapter, type IListAdapter } from '../adapters/list-adapter.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const listArgsSchema = z.object({
   // @todo: string currently and backwards compatible to accept 1. Should be a boolean.
@@ -19,14 +20,16 @@ export function listCommand(adapter?: IListAdapter): Command {
       const a = adapter ?? adapterRegistry.resolve<IListAdapter>(options.adapter ?? 'list') ?? new ListAdapter();
       const args = listArgsSchema.parse({ reversed, ignoreFile });
       try {
-        console.log('> fetching h5p library registry');
+        ui.info('fetching h5p library registry');
         const result = await a.getRegistry(args.ignoreFile === '1');
-        for (const item in result.regular) {
-          console.log(`${args.reversed === '1' ? result.regular[item].id : item} (${result.regular[item].org})`);
-        }
+        const machineNames = args.reversed === '1';
+        const rows = Object.keys(result.regular).map((item) => [
+          machineNames ? result.regular[item].id : item,
+          result.regular[item].org ?? '',
+        ]);
+        ui.table(rows, { head: [machineNames ? 'MACHINE NAME' : 'NAME', 'ORG'] });
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

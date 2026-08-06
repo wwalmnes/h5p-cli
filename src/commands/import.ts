@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import { ImportAdapter, type IImportAdapter } from '../adapters/import-adapter.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const importArgsSchema = z.object({
   folder: z.string(),
@@ -21,8 +22,7 @@ export function importCommand(adapter?: IImportAdapter): Command {
         const output = a.import(args.folder, args.archive);
         console.log(`content/${output}`);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

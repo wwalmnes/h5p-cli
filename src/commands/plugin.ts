@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import path from 'path';
 import { PluginAdapter } from '../adapters/plugin-adapter.ts';
 import { PluginService } from '../services/plugin-service.ts';
+import { ui } from '../lib/ui.ts';
 
 const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
@@ -19,8 +20,7 @@ export function pluginCommand(service?: PluginService): Command {
       try {
         await svc.install(source);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 
@@ -33,12 +33,13 @@ export function pluginCommand(service?: PluginService): Command {
         path.join(H5P_CLI_ROOT, 'plugins')
       );
       const plugins = svc.list();
-      if (plugins.length === 0) {
-        console.log('> no plugins installed');
-      } else {
-        console.log('> installed plugins:');
-        for (const p of plugins) console.log(`  - ${p.name} (${p.path})`);
-      }
+
+      ui.table(plugins.reduce<string[][]>((acc, p) => {
+        acc.push([p.name, p.path]);
+        return acc;
+      }, []), {
+        head: ['Name', 'Path']
+      });
     });
 
   plugin
@@ -52,8 +53,7 @@ export function pluginCommand(service?: PluginService): Command {
       try {
         svc.uninstall(name);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 

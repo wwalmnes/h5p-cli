@@ -10,6 +10,7 @@
   "include": [
     "src/lib/h5p-utils.ts",
     "src/lib/plugin-types.ts",
+    "src/lib/ui.ts",
     "src/lib/compute-dependencies.ts",
     "logic.ts",
     "configLoader.ts",

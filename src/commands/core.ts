@@ -8,6 +8,7 @@ import { SetupService } from '../services/setup-service.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
 import config from '../../configLoader.ts';
 import { setupFolders } from '../lib/setup-folders.ts';
+import { ui } from '../lib/ui.ts';
 
 export function coreCommand(service?: CoreService): Command {
   return new Command('core')
@@ -31,8 +32,7 @@ export function coreCommand(service?: CoreService): Command {
       try {
         await svc.core();
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

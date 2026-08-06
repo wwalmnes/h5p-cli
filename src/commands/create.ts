@@ -4,6 +4,7 @@ import { CreateAdapter, type ICreateAdapter } from '../adapters/create-adapter.t
 import { CreateService } from '../services/create-service.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
 import config from '../../configLoader.ts';
+import { ui } from '../lib/ui.ts';
 
 const createArgsSchema = z.object({
   name: z.string().min(1),
@@ -23,8 +24,7 @@ export function createCommand(service?: CreateService): Command {
       try {
         svc.create(args.name);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }

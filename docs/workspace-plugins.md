@@ -71,6 +71,7 @@ You can write plugins in TypeScript or plain JavaScript.
 ```typescript
 import { Command } from 'commander';
 import type { H5PPlugin } from 'h5p-cli/plugin-types';
+import { ui } from 'h5p-cli/ui';
 
 const plugin: H5PPlugin = {
   name: 'my-plugin',
@@ -81,7 +82,7 @@ const plugin: H5PPlugin = {
         .description('Say hello')
         .argument('[name]', 'Name to greet')
         .action((name) => {
-          console.log(`Hello, ${name ?? 'world'}!`);
+          ui.data(`Hello, ${name ?? 'world'}!`);
         }),
     ];
   },
@@ -94,6 +95,7 @@ export default plugin;
 
 ```javascript
 import { Command } from 'commander';
+import { ui } from 'h5p-cli/ui';
 
 export default {
   name: 'my-plugin',
@@ -104,7 +106,7 @@ export default {
         .description('Say hello')
         .argument('[name]', 'Name to greet')
         .action((name) => {
-          console.log(`Hello, ${name ?? 'world'}!`);
+          ui.data(`Hello, ${name ?? 'world'}!`);
         }),
     ];
   },
@@ -112,6 +114,8 @@ export default {
 ```
 
 Remember to set `"main"` in `package.json` to match your entry file.
+
+Output goes through `ui` rather than `console.log` so it lands on the right stream and respects `--quiet` / `--verbose`. See [Output and progress](plugins.md#output-and-progress).
 
 ### 3. Install dependencies
 
@@ -155,6 +159,7 @@ The CLI exposes several entry points that plugins can use:
 | `h5p-cli/logic` | Core logic layer (library parsing, registry, content operations) |
 | `h5p-cli/config` | Configuration loader (paths, settings) |
 | `h5p-cli/compute-dependencies` | Dependency resolution helpers |
+| `h5p-cli/ui` | Consistent output: messages, errors, verbosity, progress |
 
 Example:
 
@@ -162,6 +167,7 @@ Example:
 import { fromTemplate, parseGitUrl } from 'h5p-cli/utils';
 import logic from 'h5p-cli/logic';
 import config from 'h5p-cli/config';
+import { ui } from 'h5p-cli/ui';
 ```
 
 ## Running and testing

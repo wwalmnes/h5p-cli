@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { MissingAdapter, type IMissingAdapter } from '../adapters/missing-adapter.ts';
 import { MissingService } from '../services/missing-service.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { ui } from '../lib/ui.ts';
 
 const missingArgsSchema = z.object({
   library: z.string(),
@@ -19,8 +20,7 @@ export function missingCommand(service?: MissingService): Command {
       try {
         await svc.missing(args.library);
       } catch (error) {
-        console.log('> error');
-        console.log(error);
+        ui.error(error);
       }
     });
 }
