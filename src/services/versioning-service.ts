@@ -1,4 +1,4 @@
-import { processRepos, findRepos, type RepoResult } from '../lib/process-repos.ts';
+import { processRepos, type RepoResult } from '../lib/process-repos.ts';
 import { VersioningAdapter, type IVersioningAdapter } from '../adapters/versioning-adapter.ts';
 
 export interface VersioningResult {
@@ -54,108 +54,6 @@ export class VersioningService {
         msg: `${library.majorVersion}.${library.minorVersion}.${library.patchVersion}`,
       };
     }, { skipCheck: true });
-  }
-
-  /** Bumps minor version of repos and all dependents recursively. Emits progress to stdout. */
-  async recursiveMinorBump(repos: string[], skipWriting: boolean): Promise<void> {
-    const visited = new Set<string>();
-    await this._minorBump(repos, skipWriting, visited);
-  }
-
-  private async _minorBump(repos: string[], skipWriting: boolean, visited: Set<string>): Promise<void> {
-    const allRepos = repos.length ? repos : await findRepos();
-    for (const repo of allRepos) {
-      let library: any;
-      try {
-        library = await this.adapter.readLibraryJson(repo);
-      } catch {
-        continue;
-      }
-
-      library.minorVersion++;
-      library.patchVersion = 0;
-      if (!skipWriting) {
-        await this.adapter.writeLibraryJson(repo, library);
-      }
-      const version = `${library.majorVersion}.${library.minorVersion}.${library.patchVersion}`;
-      process.stdout.write(
-        `\x1B[1m${repo}\x1B[0m \x1B[32mOK\x1B[0m ${version}\u000A`
-      );
-
-      await this._bumpDependents(library.machineName, library.minorVersion, skipWriting, visited);
-    }
-  }
-
-  private async _bumpDependents(
-    target: string,
-    minorVersion: number,
-    skipWriting: boolean,
-    visited: Set<string>
-  ): Promise<void> {
-    const allRepos = await findRepos();
-
-    await Promise.all(allRepos.map(async (repo) => {
-      let library: any;
-      try {
-        library = await this.adapter.readLibraryJson(repo);
-      } catch {
-        return;
-      }
-
-      let libModified = false;
-
-      for (const dep of (library.preloadedDependencies ?? [])) {
-        if (dep.machineName === target) {
-          dep.minorVersion = minorVersion;
-          libModified = true;
-          process.stdout.write(
-            `Preloaded dependency \x1B[1m${target}\x1B[0m ` +
-            `${skipWriting ? 'found' : 'updated'} in \x1B[1m${repo}\x1B[0m` +
-            ` \x1B[32mOK\x1B[0m ${dep.majorVersion}.${minorVersion}\u000A`
-          );
-        }
-      }
-
-      for (const dep of (library.editorDependencies ?? [])) {
-        if (dep.machineName === target) {
-          dep.minorVersion = minorVersion;
-          libModified = true;
-          process.stdout.write(
-            `Editor dependency \x1B[1m${target}\x1B[0m ` +
-            `updated in \x1B[1m${repo}\x1B[0m` +
-            ` \x1B[32mOK\x1B[0m ${dep.majorVersion}.${minorVersion}\u000A`
-          );
-        }
-      }
-
-      if (libModified && !skipWriting) {
-        await this.adapter.writeLibraryJson(repo, library);
-      }
-
-      let semanticsModified = false;
-      try {
-        const semantics = await this.adapter.readSemanticsJson(repo);
-        const foundFields = semanticBump(semantics, minorVersion, target);
-        if (foundFields.length) {
-          for (const majorVer of foundFields) {
-            process.stdout.write(
-              `Semantics dependency \x1B[1m${target}\x1B[0m ` +
-              `updated in \x1B[1m${repo}\x1B[0m` +
-              ` \x1B[32mOK\x1B[0m ${majorVer}.${minorVersion}\u000A`
-            );
-          }
-          if (!skipWriting) {
-            await this.adapter.writeSemanticsJson(repo, semantics);
-          }
-          semanticsModified = true;
-        }
-      } catch { /* no semantics.json — skip */ }
-
-      if ((libModified || semanticsModified) && !visited.has(repo)) {
-        visited.add(repo);
-        await this._minorBump([repo], skipWriting, visited);
-      }
-    }));
   }
 
   async changesSince(repos: string[], versions: number): Promise<RepoResult<VersioningResult>[]> {
@@ -260,28 +158,4 @@ export class VersioningService {
     const firstCommit = await this.adapter.gitFirstCommit(repo);
     return { versionRef: firstCommit, isFirstCommit: true };
   }
-}
-
-/** Bump instances of machineName in semantics to minorVersion. Returns major versions found. */
-function semanticBump(semantics: any, minorVersion: number, machineName: string): string[] {
-  const found: string[] = [];
-  if (!semantics) return found;
-
-  for (const field of semantics) {
-    if (field.type === 'library') {
-      field.options?.forEach((option: string, index: number) => {
-        if (option.split(' ')[0] === machineName) {
-          const major = option.split(' ')[1].split('.')[0];
-          field.options[index] = `${machineName} ${major}.${minorVersion}`;
-          found.push(major);
-        }
-      });
-    } else if (field.fields) {
-      found.push(...semanticBump(field.fields, minorVersion, machineName));
-    } else if (field.field) {
-      found.push(...semanticBump([field.field], minorVersion, machineName));
-    }
-  }
-
-  return found;
 }

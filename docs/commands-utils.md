@@ -246,15 +246,8 @@ h5p utils increase-patch-version [options] [libraries...]
 
 ## `h5p utils recursive-minor-bump`
 
-Bump the minor version recursively for the specified libraries and their dependants.
-
-```
-h5p utils recursive-minor-bump <libraries...>
-```
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. |
+Removed. Use [`h5p utils dependency-check --apply`](#h5p-utils-dependency-check), which
+does the same job with a proper dependency graph.
 
 ---
 
@@ -519,17 +512,65 @@ h5p utils build [options] <libraries...>
 
 ---
 
-## `h5p utils list-deps`
+## `h5p utils dependency-check`
 
-List all libraries that have a dependency on the given library or libraries.
+Work out which libraries need a minor bump when you bump one or more libraries, and in
+what order — then optionally write the bumps and the reference updates.
+
+Replaces the old `list-deps` (report) and `recursive-minor-bump` (write) commands.
 
 ```
-h5p utils list-deps <libraries...>
+h5p utils dependency-check <libraries...> [--libraries <path>] [--apply]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | One or more libraries being bumped. Accepts a machine name (`H5P.Accordion`), a checkout folder name (`h5p-accordion`), or either with an explicit version range (`H5P.Accordion@1.0..1.2`). |
+
+| Option | Description |
+|--------|-------------|
+| `--libraries <path>` | Folder of library checkouts to analyse. Defaults to `$H5P_LIBRARIES`, or the current directory. |
+| `--apply` | Write the changes. Without it the command only reports. |
+
+### What it does
+
+Bumping a library strands everyone who pins its old version. This command walks the
+*reverse* dependency graph from the libraries you name and reports the full ripple:
+
+- Both kinds of reference are followed — `options` entries in `semantics.json` and
+  entries in `preloadedDependencies` / `editorDependencies` / `dynamicDependencies` in
+  `library.json`. Fixing either one is itself a minor bump, so the ripple continues.
+- References pinned to a **different major version** are left alone.
+- Each library is bumped **once**, no matter how many paths reach it, and once only
+  even when several libraries are named in one run.
+- Results are ordered dependencies-first, so you can work straight down the list.
+  Mutually-referencing libraries (Column ↔ Row) are reported as a cycle and should be
+  bumped and updated in one commit.
+- References that already point at the new version are reported as up to date and not
+  touched.
+
+`--apply` writes `library.json` and `semantics.json` as text, so key order, indentation
+and blank lines survive — the diff is only the numbers that changed. `patchVersion` is
+reset to 0 on every bump.
+
+Note that `H5P_IGNORE_REPOS` / `H5P_SEMI_IGNORE_REPOS` do **not** apply here: the ripple
+is only correct if every referring library is visible.
+
+### Examples
+
+```bash
+# what breaks if I bump Accordion?
+h5p utils dependency-check H5P.Accordion
+
+# the chains and the exact file:line edits
+h5p --verbose utils dependency-check H5P.Accordion
+
+# several libraries at once, one of them to an explicit version
+h5p utils dependency-check H5P.Accordion H5P.Column@1.22..1.25
+
+# do it
+h5p utils dependency-check H5P.Accordion --apply
+```
 
 ---
 
