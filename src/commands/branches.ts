@@ -5,7 +5,7 @@ import * as path from 'path';
 
 const gitRefExists = (ref: string): boolean => {
   try {
-    execSync(`git show-ref --verify --quiet refs/heads/${ref} || git show-ref --verify --quiet refs/remotes/${ref}`, {
+    execSync(`git show-ref --verify --quiet refs/heads/${ref} || git show-ref --verify --quiet refs/remotes/${ref} || git show-ref --verify --quiet refs/tags/${ref}`, {
       stdio: 'ignore',
     });
     return true;
@@ -19,14 +19,20 @@ export function branchesCommand(): Command {
     .alias('@branches')
     .description('Clone library branches into @branch folders')
     .argument('<branches...>', 'Branch names to clone')
-    .action((branches: string[]) => {
+    .option('-n, --name [string]', 'Optional name to use for folder instead of branch name. If several branches names will be <name>, <name>1 etc.')
+    .action((branches: string[], options: {name?: string}) => {
       try {
         console.log(execSync('git checkout .').toString());
         execSync('rm -rdf @*');
         const initialBranch = execSync('git rev-parse --abbrev-ref HEAD').toString();
         const validBranches: string[] = [];
         for (const branch of branches) {
-          const target = `@${branch.replace('/', '_')}`;
+          let folderName: string = branch;
+          if (options?.name) {
+            folderName = `${options.name}${validBranches.length ? validBranches.length : ''}`
+          }
+
+          const target = `@${folderName.replace('/', '_')}`;
           const tmpTarget = `/tmp/h5p-cli-${target}`;
 
           let checkoutRef = branch;
@@ -47,8 +53,14 @@ export function branchesCommand(): Command {
         }
         execSync(`git checkout ${initialBranch}`);
         const libraryJson = JSON.parse(fs.readFileSync('library.json', 'utf-8'));
-        for (const branch of validBranches) {
-          const target = `@${branch.replace('/', '_')}`;
+        for (let i = 0; i < validBranches.length; i++) {
+          const branch = validBranches[i];
+          let folderName: string = branch;
+          if (options?.name) {
+            folderName = `${options.name}${i ? i : ''}`
+          }
+
+          const target = `@${folderName.replace('/', '_')}`;
           const tmpTarget = `/tmp/h5p-cli-${target}`;
           execSync(`cp -r ${tmpTarget} ${target}`);
           fs.rmSync(tmpTarget, { recursive: true, force: true });
