@@ -6,7 +6,7 @@ export type UiKind = 'info' | 'step' | 'success' | 'warn' | 'error' | 'data' | '
 /** How much of it the user wants to see. */
 export type UiLevel = 'quiet' | 'normal' | 'verbose';
 
-export interface UiRecord {
+export type UiRecord = {
   kind: UiKind;
   stream: 'stdout' | 'stderr';
   /** Uncolored, unprefixed text. Color and prefixes are applied when rendered. */
@@ -14,7 +14,7 @@ export interface UiRecord {
   depth?: number;
   /** Populated by error() when running verbose. */
   detail?: string;
-}
+};
 
 const RESET = '\x1b[0m';
 const CODES = {
@@ -116,13 +116,13 @@ const BOX = {
 /** Narrowest a column may be squeezed to before we stop shrinking it. */
 const MIN_COLUMN = 4;
 
-export interface TableLayout {
+export type TableLayout = {
   head?: string[];
   /** Draw box-drawing borders. Callers gate this on isTTY. */
   box?: boolean;
   /** Terminal width the box must fit inside. Ignored when box is false. */
   width?: number;
-}
+};
 
 function columnWidths(all: string[][], columns: number): number[] {
   return Array.from({ length: columns }, (_, i) =>
@@ -199,21 +199,21 @@ export function renderTable(rows: string[][], options: TableLayout = {}): string
 
 // ------------------------------------------------------------- progress rows
 
-export interface ProgressRow {
+export type ProgressRow = {
   id: string;
   label: string;
   /** undefined means indeterminate — spinner, no bar. */
   percent?: number;
-}
+};
 
-export interface RenderOptions {
+export type RenderOptions = {
   width: number;
   limit: number;
   /** Index into SPINNER; the caller advances it. */
   frame: number;
   /** Escape sequences are omitted when false, which keeps tests readable. */
   color?: boolean;
-}
+};
 
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const;
 const BAR_WIDTH = 16;
@@ -426,25 +426,26 @@ function normalizeError(error: unknown): { message: string; stack?: string } {
   }
 }
 
-export interface StepOptions {
+export type StepOptions = {
   depth?: number;
-}
+};
 
-export interface ProgressOptions {
+export type ProgressOptions = {
   label?: string;
-}
+};
 
-export interface ListOptions {
+export type ListOptions = {
   /** Printed above the bullets. */
   title?: string;
   /** Printed instead of the bullets when there is nothing to list. */
   empty?: string;
-}
+};
 
-export interface TableOptions {
-  /** Column headings. Only shown when stdout is a terminal. */
-  head?: string[];
-}
+/**
+ * `ui.table` callers pick the headings only; `box` and `width` are derived from
+ * TTY state inside `table()`, so they are deliberately not exposed here.
+ */
+export type TableOptions = Pick<TableLayout, 'head'>;
 
 export const ui = {
   setLevel,

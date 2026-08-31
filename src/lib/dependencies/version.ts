@@ -1,7 +1,10 @@
-export interface Version {
+export type Version = {
   major: number;
   minor: number;
-}
+};
+
+/** A full semantic version: `Version` plus the patch component. */
+export type SemVer = Version & { patch: number };
 
 export function parseVersion(input: string, label: string): Version {
   const match = /^(\d+)\.(\d+)$/.exec(String(input).trim());
@@ -12,11 +15,11 @@ export function parseVersion(input: string, label: string): Version {
 }
 
 /** One `<machineName>` or `<machineName>@<from>..<to>` command-line argument. */
-export interface SeedArg {
+export type SeedArg = {
   machineName: string;
   from?: Version;
   to?: Version;
-}
+};
 
 export function parseSeedArg(input: string): SeedArg {
   const text = String(input).trim();

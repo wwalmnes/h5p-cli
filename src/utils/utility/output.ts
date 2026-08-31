@@ -1,3 +1,4 @@
+import type { RepoOpResult } from '../../lib/repo-types.ts';
 const lf = '\u000A';
 const cr = '\u000D';
 export const color = {
@@ -11,16 +12,12 @@ export const color = {
 
 const noCr = (process.platform === 'win32');
 
-export interface Repo {
-  name?: string;
-  failed?: boolean;
-  skipped?: boolean;
-  msg?: any;
-  branch?: string;
-  error?: any;
-  changes?: string[];
-  commit?: string;
-}
+/**
+ * The print target every per-repo result flows into. Deliberately the widest
+ * shape: `name` is optional and `msg`/`error` stay `any`, so any RepoOpResult
+ * variant — including the structured versioning payload — can be printed.
+ */
+export type Repo = Partial<RepoOpResult> & { msg?: any; error?: any };
 
 export function emphasizeExpressions(strings: TemplateStringsArray, ...expressions: any[]): string {
   let emphasizedString = '';

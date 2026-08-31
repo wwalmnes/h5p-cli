@@ -4,6 +4,7 @@ import { pathToFileURL } from 'url';
 import { Command } from 'commander';
 import { adapterRegistry } from './adapter-registry.ts';
 import type { H5PPlugin } from './plugin-types.ts';
+import type { PluginsConfig } from '../adapters/plugin-adapter.ts';
 
 const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
@@ -11,7 +12,7 @@ export async function loadPlugins(program: Command): Promise<void> {
   const filePath = path.join(H5P_CLI_ROOT, 'h5p.plugins.json');
   if (!fs.existsSync(filePath)) return;
 
-  let config: { plugins?: Array<{ name: string; path: string }> };
+  let config: Partial<PluginsConfig>;
   try {
     config = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   } catch (e) {

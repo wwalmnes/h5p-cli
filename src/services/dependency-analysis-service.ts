@@ -1,11 +1,11 @@
 import fs from 'fs';
 import { findRepos } from '../lib/process-repos.ts';
-import { parseSemanticLibraries } from '../lib/h5p-utils.ts';
+import { parseSemanticLibraries, type SemanticLibraryEntry } from '../lib/h5p-utils.ts';
 
-interface LibraryNode {
-  library: { name: string; version: string };
+type LibraryNode = {
+  library: SemanticLibraryEntry;
   deps: LibraryNode[];
-}
+};
 
 export class DependencyAnalysisService {
   async findInconsistencies(): Promise<void> {

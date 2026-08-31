@@ -1,12 +1,10 @@
 import { processRepos, type RepoResult } from '../lib/process-repos.ts';
+import type { RepoOpResult } from '../lib/repo-types.ts';
 import { VersioningAdapter, type IVersioningAdapter } from '../adapters/versioning-adapter.ts';
 
-export interface VersioningResult {
-  name: string;
-  skipped?: boolean;
-  failed?: boolean;
-  msg?: string | { version?: string; changes?: string; error?: string; output?: string };
-}
+export type VersioningResult = RepoOpResult<
+  string | { version?: string; changes?: string; error?: string; output?: string }
+>;
 
 export class VersioningService {
   private adapter: IVersioningAdapter;

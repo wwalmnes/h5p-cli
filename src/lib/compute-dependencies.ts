@@ -1,51 +1,24 @@
 import { ui } from './ui.ts';
 import { fromTemplate, parseGitUrl, pathHasDuplicates, parseSemanticLibraries } from './h5p-utils.ts';
 import type { ParsedGitUrl } from './h5p-utils.ts';
+import type { LibraryDependency, LibraryEntry, Registry, DependencyMap } from './library-types.ts';
 
-export interface LibraryVersion {
-  major: number;
-  minor: number;
-  patch: number;
-}
+// Library shapes live in ./library-types.ts so that h5p-utils.ts can use them
+// without importing this module back. Re-exported here to keep the public
+// `h5p-cli/compute-dependencies` subpath intact.
+export type {
+  LibraryDependency,
+  LibraryEntry,
+  Registry,
+  DependencyMap,
+} from './library-types.ts';
 
-export interface LibraryDependencyRef {
-  machineName: string;
-  majorVersion: number;
-  minorVersion: number;
-}
+/* @deprecated Use `LibraryDependency`. */
+// export type { LibraryDependency as LibraryDependencyRef } from './library-types.ts';
+/* @deprecated Use `SemVer` from ./dependencies/version.ts. */
+// export type { SemVer as LibraryVersion } from './dependencies/version.ts';
 
-export interface LibraryEntry {
-  id: string;
-  title: string;
-  author?: string;
-  runnable?: number;
-  fullscreen?: number;
-  shortName: string;
-  repoName: string;
-  org: string;
-  parent?: string;
-  repo?: { type: string; url: string };
-  requiredBy?: string[];
-  optional?: boolean;
-  // version is added by computeDependencies, not present in raw registry
-  version?: LibraryVersion;
-  preloadedJs?: Array<{ path: string }>;
-  preloadedCss?: Array<{ path: string }>;
-  preloadedDependencies?: LibraryDependencyRef[];
-  editorDependencies?: LibraryDependencyRef[];
-  metadataSettings?: any;
-  level?: number;
-}
-
-export interface Registry {
-  regular: Record<string, LibraryEntry>;
-  reversed: Record<string, LibraryEntry>;
-  runnable?: Record<string, LibraryEntry>;
-}
-
-export type DependencyMap = Record<string, LibraryEntry>;
-
-export interface IComputeDependenciesPort {
+export type IComputeDependenciesPort = {
   getRegistry(): Promise<Registry>;
   parseLibraryFolders(): Promise<Record<string, string>>;
   getLibraryJson(
@@ -61,7 +34,7 @@ export interface IComputeDependenciesPort {
     version: string
   ): Promise<any>;
   getTags(org: string, repo: string): string[];
-}
+};
 
 export async function computeDependencies(
   library: string,
@@ -141,7 +114,7 @@ export async function computeDependencies(
     if (parent && parent.optional) {
       return true;
     }
-    const finder = (element: LibraryDependencyRef) => element.machineName === machineName;
+    const finder = (element: LibraryDependency) => element.machineName === machineName;
     if (parent?.preloadedDependencies?.find(finder) !== undefined || parent?.editorDependencies?.find(finder) !== undefined) {
       return false;
     }

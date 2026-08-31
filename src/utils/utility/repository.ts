@@ -1,22 +1,15 @@
 import fs from 'fs';
 import child from 'child_process';
+import type { LibraryDependency } from '../../lib/library-types.ts';
+import type { RepoOpResult } from '../../lib/repo-types.ts';
 
 const env = process.env;
 
-export interface RepoStatus {
-  name: string;
-  branch?: string;
-  changes?: string[];
-  error?: any;
-}
+export type RepoStatus = RepoOpResult;
 
-export interface LibraryDependency {
-  machineName: string;
-  majorVersion: number;
-  minorVersion: number;
-}
+export type { LibraryDependency };
 
-export interface LibraryJson {
+export type LibraryJson = {
   machineName: string;
   majorVersion: number;
   minorVersion: number;
@@ -25,7 +18,7 @@ export interface LibraryJson {
   title?: string;
   preloadedDependencies?: LibraryDependency[];
   editorDependencies?: LibraryDependency[];
-}
+};
 
 /**
  * Find status lines for the given repo.
@@ -45,7 +38,7 @@ export const statusRepository = function (repo: string): Promise<RepoStatus> {
         });
 
     proc.on('error', function (error) {
-      (status as any).error = error;
+      status.error = String(error);
       reject(status);
     });
 

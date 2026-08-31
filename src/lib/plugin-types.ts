@@ -4,8 +4,8 @@ import { Command } from 'commander';
 // and custom plugin-defined adapters ('s3-storage', etc.)
 export type AdapterOverrides = Record<string, new () => unknown>;
 
-export interface H5PPlugin {
+export type H5PPlugin = {
   name: string;
   commands?(): Command[];
   adapters?(): AdapterOverrides;
-}
+};

@@ -1,10 +1,11 @@
 import type { IDepsAdapter } from '../adapters/deps-adapter.ts';
+import type { Logger } from '../lib/repo-types.ts';
 
 export class DepsService {
   private adapter: IDepsAdapter;
-  private logger: { log: (...args: any[]) => void };
+  private logger: Logger;
 
-  constructor(adapter: IDepsAdapter, logger: { log: (...args: any[]) => void } = console) {
+  constructor(adapter: IDepsAdapter, logger: Logger = console) {
     this.adapter = adapter;
     this.logger = logger;
   }

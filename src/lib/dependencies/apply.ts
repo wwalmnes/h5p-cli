@@ -7,11 +7,11 @@ import {
 } from './json-edit.ts';
 import type { Edit, Plan } from './plan.ts';
 
-export interface ApplyResult {
+export type ApplyResult = {
   filesWritten: string[];
   /** Edits that could not be located in the file; nothing was written for these. */
   failures: { relFile: string; detail: string; reason: string }[];
-}
+};
 
 function applyEdit(raw: string, edit: Edit): { raw: string; changed: boolean; reason?: string } {
   switch (edit.kind) {

@@ -1,8 +1,9 @@
 import logic from '../../logic.ts';
+import type { Registry } from '../lib/library-types.ts';
 
 export interface IMissingAdapter {
   parseLibraryFolders(): Promise<Record<string, any>>;
-  getRegistry(): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }>;
+  getRegistry(): Promise<Registry>;
   computeDependencies(library: string, mode: string, version: null, folder?: string): Promise<Record<string, any>>;
 }
 
@@ -11,7 +12,7 @@ export class MissingAdapter implements IMissingAdapter {
     return logic.parseLibraryFolders();
   }
 
-  getRegistry(): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }> {
+  getRegistry(): Promise<Registry> {
     return logic.getRegistry();
   }
 
