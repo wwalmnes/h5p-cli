@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import type { ExecResult } from '../lib/repo-types.ts';
 
 const GIT_SSH = path.resolve(import.meta.dirname, '..', 'utils', 'bin', 'h5p-ssh');
 
@@ -10,17 +11,17 @@ export interface IVersioningAdapter {
   readSemanticsJson(repo: string): Promise<any>;
   writeSemanticsJson(repo: string, data: any): Promise<void>;
   isHeadDetached(repo: string): Promise<boolean>;
-  gitDiff(repo: string, range: string): Promise<{ stdout: string; stderr: string }>;
+  gitDiff(repo: string, range: string): Promise<ExecResult>;
   gitTagList(repo: string): Promise<string[]>;
   gitFirstCommit(repo: string): Promise<string>;
-  gitDiffStat(repo: string, range: string): Promise<{ stdout: string; stderr: string }>;
-  gitDiffStatBranches(repo: string): Promise<{ stdout: string; stderr: string }>;
-  gitDescribeTag(repo: string): Promise<{ stdout: string; stderr: string }>;
-  gitLogOneline(repo: string, range: string): Promise<{ stdout: string; stderr: string }>;
+  gitDiffStat(repo: string, range: string): Promise<ExecResult>;
+  gitDiffStatBranches(repo: string): Promise<ExecResult>;
+  gitDescribeTag(repo: string): Promise<ExecResult>;
+  gitLogOneline(repo: string, range: string): Promise<ExecResult>;
 }
 
 export class VersioningAdapter implements IVersioningAdapter {
-  private spawnGit(dir: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  private spawnGit(dir: string, args: string[]): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
       const env = { ...process.env, GIT_SSH };
       const proc = spawn('git', args, { cwd: `${process.cwd()}/${dir}`, env });
@@ -64,7 +65,7 @@ export class VersioningAdapter implements IVersioningAdapter {
     return content.substr(0, 3) !== 'ref';
   }
 
-  async gitDiff(repo: string, range: string): Promise<{ stdout: string; stderr: string }> {
+  async gitDiff(repo: string, range: string): Promise<ExecResult> {
     return this.spawnGit(repo, ['diff', range]);
   }
 
@@ -78,19 +79,19 @@ export class VersioningAdapter implements IVersioningAdapter {
     return stdout.split('\n')[0];
   }
 
-  async gitDiffStat(repo: string, range: string): Promise<{ stdout: string; stderr: string }> {
+  async gitDiffStat(repo: string, range: string): Promise<ExecResult> {
     return this.spawnGit(repo, ['diff', '--stat', `${range}..HEAD`]);
   }
 
-  async gitDiffStatBranches(repo: string): Promise<{ stdout: string; stderr: string }> {
+  async gitDiffStatBranches(repo: string): Promise<ExecResult> {
     return this.spawnGit(repo, ['diff', '--stat', 'master..release']);
   }
 
-  async gitDescribeTag(repo: string): Promise<{ stdout: string; stderr: string }> {
+  async gitDescribeTag(repo: string): Promise<ExecResult> {
     return this.spawnGit(repo, ['describe', '--abbrev=0', '--tags']);
   }
 
-  async gitLogOneline(repo: string, range: string): Promise<{ stdout: string; stderr: string }> {
+  async gitLogOneline(repo: string, range: string): Promise<ExecResult> {
     return this.spawnGit(repo, ['log', '--oneline', `${range}..HEAD`]);
   }
 }

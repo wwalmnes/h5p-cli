@@ -1,10 +1,11 @@
 import type { IMissingAdapter } from '../adapters/missing-adapter.ts';
+import type { Logger } from '../lib/repo-types.ts';
 
 export class MissingService {
   private adapter: IMissingAdapter;
-  private logger: { log: (...args: any[]) => void };
+  private logger: Logger;
 
-  constructor(adapter: IMissingAdapter, logger: { log: (...args: any[]) => void } = console) {
+  constructor(adapter: IMissingAdapter, logger: Logger = console) {
     this.adapter = adapter;
     this.logger = logger;
   }

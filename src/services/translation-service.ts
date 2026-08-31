@@ -1,13 +1,9 @@
 import { processRepos, type RepoResult } from '../lib/process-repos.ts';
+import type { RepoOpResult } from '../lib/repo-types.ts';
 import { TranslationAdapter, type ITranslationAdapter } from '../adapters/translation-adapter.ts';
 import { removeUntranslatables, itemUntranslatable } from '../lib/semantics-utils.ts';
 
-export interface TranslationResult {
-  name: string;
-  skipped?: boolean;
-  failed?: boolean;
-  msg?: string;
-}
+export type TranslationResult = RepoOpResult;
 
 export class TranslationService {
   private adapter: ITranslationAdapter;

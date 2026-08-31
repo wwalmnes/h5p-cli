@@ -35,10 +35,10 @@ function packLibraries(repos: string[], file: string): Promise<void> {
 
 const c = output.color;
 
-interface DirectoryData {
+type DirectoryData = {
   dirName: string;
   libData: any;
-}
+};
 
 function printDependencies(totalDependencies: number): void {
   if (totalDependencies > 0) {

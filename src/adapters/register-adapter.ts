@@ -1,15 +1,16 @@
 import * as fs from 'fs';
 import logic from '../../logic.ts';
+import type { Registry } from '../lib/library-types.ts';
 
 export interface IRegisterAdapter {
-  getRegistry(): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }>;
+  getRegistry(): Promise<Registry>;
   registryEntryFromRepoUrl(gitUrl: string): Record<string, any>;
   readJsonFile(path: string): Record<string, any>;
   writeJsonFile(path: string, data: Record<string, any>): void;
 }
 
 export class RegisterAdapter implements IRegisterAdapter {
-  getRegistry(): Promise<{ regular: Record<string, any>; reversed: Record<string, any> }> {
+  getRegistry(): Promise<Registry> {
     return logic.getRegistry();
   }
 

@@ -1,17 +1,18 @@
 import type { ISetupAdapter } from '../adapters/setup-adapter.ts';
 import { RegisterService } from './register-service.ts';
+import type { Logger } from '../lib/repo-types.ts';
 
 export class SetupService {
   private setupAdapter: ISetupAdapter;
   private registerService: RegisterService;
   private librariesFolder: string;
-  private logger: { log: (...args: any[]) => void };
+  private logger: Logger;
 
   constructor(
     setupAdapter: ISetupAdapter,
     registerService: RegisterService,
     librariesFolder: string,
-    logger: { log: (...args: any[]) => void } = console
+    logger: Logger = console
   ) {
     this.setupAdapter = setupAdapter;
     this.registerService = registerService;

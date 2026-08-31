@@ -1,5 +1,6 @@
 import path from 'path';
 import type { IPluginAdapter, PluginEntry } from '../adapters/plugin-adapter.ts';
+import type { Logger } from '../lib/repo-types.ts';
 
 function isGitUrl(input: string): boolean {
   return input.startsWith('https://') || input.startsWith('git@');
@@ -14,9 +15,9 @@ function repoNameFromUrl(url: string): string {
 export class PluginService {
   private adapter: IPluginAdapter;
   private pluginsDir: string;
-  private logger: { log: (...args: any[]) => void };
+  private logger: Logger;
 
-  constructor(adapter: IPluginAdapter, pluginsDir: string, logger: { log: (...args: any[]) => void } = console) {
+  constructor(adapter: IPluginAdapter, pluginsDir: string, logger: Logger = console) {
     this.adapter = adapter;
     this.pluginsDir = pluginsDir;
     this.logger = logger;

@@ -1,13 +1,14 @@
-export interface ParsedGitUrl {
+import type { Registry } from './library-types.ts';
+export type ParsedGitUrl = {
   host: string;
   org: string;
   repoName: string;
-}
+};
 
-export interface SemanticLibraryEntry {
+export type SemanticLibraryEntry = {
   name: string;
   version: string;
-}
+};
 
 // builds content from template and input
 export const fromTemplate = (template: string, input: Record<string, string>): string => {
@@ -122,7 +123,7 @@ export const machineToShort = (machineName: string): string => {
 }
 
 // normalizes raw registry JSON into { regular, reversed } lookup maps
-export const normalizeRegistry = (rawList: Record<string, any>): { regular: Record<string, any>; reversed: Record<string, any> } => {
+export const normalizeRegistry = (rawList: Record<string, any>): Registry => {
   const output = { regular: {} as Record<string, any>, reversed: {} as Record<string, any> };
   for (const item in rawList) {
     if (rawList[item].repo) {

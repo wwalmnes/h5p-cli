@@ -49,15 +49,15 @@ export type Edit =
       note?: string;
     };
 
-export interface Cause {
+export type Cause = {
   /** The library whose bump forces this one. */
   via: string;
   viaTo: Version;
   kind: RefKind;
   where: string;
-}
+};
 
-export interface BumpNode {
+export type BumpNode = {
   machineName: string;
   title?: string;
   dirName: string;
@@ -68,15 +68,15 @@ export interface BumpNode {
   edits: Edit[];
   /** Index into `Plan.cycles`, when this node sits in a reference cycle. */
   cycle?: number;
-}
+};
 
-export interface UpToDate {
+export type UpToDate = {
   machineName: string;
   dependencyName: string;
   pinned: Version;
-}
+};
 
-export interface Plan {
+export type Plan = {
   librariesDir: string;
   scanned: number;
   /** The bumps that were asked for, in the order they were named. */
@@ -86,22 +86,22 @@ export interface Plan {
   cycles: string[][];
   upToDate: UpToDate[];
   warnings: string[];
-}
+};
 
-export interface PlanOptions {
+export type PlanOptions = {
   /** The libraries being bumped, each with an optional explicit version range. */
   seeds: SeedArg[];
   librariesDir: string;
-}
+};
 
 function refKey(machineName: string, major: number): string {
   return `${machineName}|${major}`;
 }
 
-interface Referrer {
+type Referrer = {
   library: LibraryRecord;
   ref: LibraryRef;
-}
+};
 
 function buildReverseIndex(libraries: LibraryRecord[]): Map<string, Referrer[]> {
   const index = new Map<string, Referrer[]>();

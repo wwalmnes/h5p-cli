@@ -5,7 +5,7 @@ import { compareVersions, formatVersion, type Version } from './version.ts';
 
 export type RefKind = 'semantics' | 'dependency';
 
-export interface LibraryRef {
+export type LibraryRef = {
   /** Library being referenced, e.g. H5P.Accordion. */
   machineName: string;
   /** Version the reference is pinned to. */
@@ -15,9 +15,9 @@ export interface LibraryRef {
   where: string;
   /** 1-indexed line(s) in the declaring file. */
   lines: number[];
-}
+};
 
-export interface LibraryRecord {
+export type LibraryRecord = {
   machineName: string;
   version: Version;
   patch: number;
@@ -27,13 +27,13 @@ export interface LibraryRecord {
   dirName: string;
   hasSemantics: boolean;
   refs: LibraryRef[];
-}
+};
 
-export interface ScanResult {
+export type ScanResult = {
   libraries: LibraryRecord[];
   /** Directories that looked like libraries but could not be read. */
   problems: string[];
-}
+};
 
 /** `"H5P.Accordion 1.0"` as it appears in a semantics `options` array. */
 export function optionToken(machineName: string, version: Version): string {
@@ -49,11 +49,11 @@ function parseOption(option: string): { machineName: string; version: Version } 
   };
 }
 
-interface RawOption {
+type RawOption = {
   machineName: string;
   version: Version;
   fieldPath: string;
-}
+};
 
 /**
  * Collect every `library`-type field's `options` entry.

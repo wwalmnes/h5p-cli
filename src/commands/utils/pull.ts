@@ -17,7 +17,7 @@ export function pullCommand(adapter?: IGitAdapter): Command {
       try {
         const results = await processRepos(repos, repo => git.pull(repo));
         spinner.succeeded('Finished pulling repositories');
-        output.printPulled(results as any);
+        output.printPulled(results);
       } catch (error: any) {
         spinner.failed(error.message);
       }

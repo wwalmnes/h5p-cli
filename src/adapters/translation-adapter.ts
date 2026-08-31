@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import archiver from 'archiver';
+import type { ExecResult } from '../lib/repo-types.ts';
 
 const GIT_SSH = path.resolve(import.meta.dirname, '..', 'utils', 'bin', 'h5p-ssh');
 
@@ -20,7 +21,7 @@ export interface ITranslationAdapter {
 }
 
 export class TranslationAdapter implements ITranslationAdapter {
-  private spawnGit(dir: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  private spawnGit(dir: string, args: string[]): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
       const env = { ...process.env, GIT_SSH };
       const proc = spawn('git', args, { cwd: `${process.cwd()}/${dir}`, env });

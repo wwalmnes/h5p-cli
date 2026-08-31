@@ -8,15 +8,15 @@ import config from './configLoader.ts';
 import { upgradeContent } from './logic-content-upgrade.cjs';
 import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './src/lib/h5p-utils.ts';
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies.ts';
-import type { IComputeDependenciesPort, LibraryEntry, LibraryVersion, LibraryDependencyRef, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
+import type { IComputeDependenciesPort, LibraryEntry, LibraryDependency, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
 import { ui } from './src/lib/ui.ts';
 import type { ParsedGitUrl } from './src/lib/h5p-utils.ts';
 
-interface VerifySetupResult {
+type VerifySetupResult = {
   registry: boolean;
   libraries: Record<string, { optional: boolean; present: boolean }>;
   ok: boolean;
-}
+};
 
 /** Map from machineName (or folder key) to folder name string */
 type LibraryFolderMap = Record<string, string>;
@@ -407,7 +407,7 @@ const logic = {
     const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
     libs = {...libs, ...editLibs};
     const map: Record<string, boolean> = {};
-    const preloadedDependencies: LibraryDependencyRef[] = [];
+    const preloadedDependencies: LibraryDependency[] = [];
     for (let item in libs) {
       for (let predep of libs[item].preloadedDependencies ?? []) {
         if (map[predep.machineName]) {
@@ -461,7 +461,7 @@ const logic = {
     for (let item of metadataAttributesInH5PJSON) {
       metadata[item] = info[item];
     }
-    let mainLib: LibraryDependencyRef & { machineName: string } = {
+    let mainLib: LibraryDependency = {
       machineName: '',
       majorVersion: 0,
       minorVersion: 0,

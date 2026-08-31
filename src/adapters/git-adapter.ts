@@ -1,19 +1,11 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import type { ExecResult, RepoOpResult } from '../lib/repo-types.ts';
 
 const GIT_SSH = path.resolve(import.meta.dirname, '..', 'utils', 'bin', 'h5p-ssh');
 
-export interface GitOpResult {
-  name: string;
-  skipped?: boolean;
-  failed?: boolean;
-  msg?: string;
-  branch?: string;
-  commit?: string;
-  changes?: string[];
-  error?: string;
-}
+export type GitOpResult = RepoOpResult;
 
 export interface IGitAdapter {
   commit(repo: string, message: string): Promise<GitOpResult>;
@@ -38,7 +30,7 @@ function sshError(error: string): string {
 }
 
 export class GitAdapter implements IGitAdapter {
-  private spawnGit(dir: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  private spawnGit(dir: string, args: string[]): Promise<ExecResult> {
     return new Promise((resolve, reject) => {
       const env = { ...process.env, GIT_SSH };
       const proc = spawn('git', args, { cwd: `${process.cwd()}/${dir}`, env });

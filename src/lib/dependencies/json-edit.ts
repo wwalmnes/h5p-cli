@@ -8,14 +8,14 @@
  * one-line change we actually made in an unreviewable diff.
  */
 
-export interface KeyToken {
+export type KeyToken = {
   key: string;
   /** Nesting depth of the object holding the key; top-level keys are 1. */
   depth: number;
   keyStart: number;
   /** Offset of the first non-whitespace character after the colon. */
   valueStart: number;
-}
+};
 
 const WHITESPACE = /\s/;
 
@@ -76,11 +76,11 @@ export function scanKeys(raw: string): KeyToken[] {
   return tokens;
 }
 
-export interface NumberValue {
+export type NumberValue = {
   token: KeyToken;
   value: number;
   valueEnd: number;
-}
+};
 
 function readNumber(raw: string, token: KeyToken): NumberValue | undefined {
   let end = token.valueStart;

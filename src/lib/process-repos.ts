@@ -1,13 +1,10 @@
 import fs from 'fs';
+import type { RepoOpResult } from './repo-types.ts';
 
 const ignoredRepos = process.env.H5P_IGNORE_REPOS ? process.env.H5P_IGNORE_REPOS.split(',') : [];
 const semiIgnoredRepos = process.env.H5P_SEMI_IGNORE_REPOS ? process.env.H5P_SEMI_IGNORE_REPOS.split(',') : [];
 
-export interface RepoSkipped {
-  name: string;
-  skipped: true;
-  msg: string;
-}
+export type RepoSkipped = RepoOpResult & { skipped: true; msg: string };
 
 export type RepoResult<T> = RepoSkipped | ({ name: string } & T);
 
