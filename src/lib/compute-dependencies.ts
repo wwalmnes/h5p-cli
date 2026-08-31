@@ -13,11 +13,6 @@ export type {
   DependencyMap,
 } from './library-types.ts';
 
-/* @deprecated Use `LibraryDependency`. */
-// export type { LibraryDependency as LibraryDependencyRef } from './library-types.ts';
-/* @deprecated Use `SemVer` from ./dependencies/version.ts. */
-// export type { SemVer as LibraryVersion } from './dependencies/version.ts';
-
 export type IComputeDependenciesPort = {
   getRegistry(): Promise<Registry>;
   parseLibraryFolders(): Promise<Record<string, string>>;
