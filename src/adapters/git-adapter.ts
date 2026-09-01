@@ -15,6 +15,7 @@ export interface IGitAdapter {
   deleteBranch(repo: string, branch: string): Promise<GitOpResult>;
   merge(repo: string, branch: string): Promise<GitOpResult>;
   diff(repo: string): Promise<string>;
+  status(repo: string): Promise<GitOpResult>;
   tag(repo: string, tagName: string): Promise<GitOpResult>;
   tagVersion(repo: string): Promise<GitOpResult>;
 }
@@ -197,6 +198,29 @@ export class GitAdapter implements IGitAdapter {
     return stdout
       .replace(/\n(---|\+\+\+) (a|b)\/(.+)/g, `\n$1 $2/${repo}/$3`)
       .replace(/(^|\n)(diff --git a\/)(.+ b\/)(.+)/g, `$1$2${repo}/$3${repo}/$4`);
+  }
+
+  async status(repo: string): Promise<GitOpResult> {
+    const result: GitOpResult = { name: repo };
+
+    try {
+      const { stdout } = await this.spawnGit(repo, ['status', '--porcelain', '--branch']);
+      const lines = stdout.split('\n');
+      lines.pop(); // Empty
+
+      const branchLine = lines.shift();
+      if (branchLine !== undefined) {
+        result.branch = branchLine.split('## ')[1];
+      }
+      if (lines.length) {
+        result.changes = lines;
+      }
+    }
+    catch (error: any) {
+      result.error = String(error);
+    }
+
+    return result;
   }
 
   async tag(repo: string, tagName: string): Promise<GitOpResult> {

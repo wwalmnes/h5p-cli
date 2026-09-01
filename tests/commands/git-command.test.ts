@@ -24,11 +24,15 @@ const { pushCommand } = await import('../../src/commands/git/push.ts');
 const { mergeCommand } = await import('../../src/commands/git/merge.ts');
 const { diffCommand } = await import('../../src/commands/git/diff.ts');
 const { tagCommand } = await import('../../src/commands/git/tag.ts');
+const { statusCommand } = await import('../../src/commands/git/status.ts');
 
 type Call = { method: string; repo: string; args: any[] };
 
-/** Records every adapter call and always reports success. */
-function fakeGit(): IGitAdapter & { calls: Call[] } {
+/**
+ * Records every adapter call and always reports success.
+ * `statuses` overrides what `status()` reports per repo; the default is a clean repo.
+ */
+function fakeGit(statuses: Record<string, Partial<GitOpResult>> = {}): IGitAdapter & { calls: Call[] } {
   const calls: Call[] = [];
   const ok = (method: string) => async (repo: string, ...args: any[]): Promise<GitOpResult> => {
     calls.push({ method, repo, args });
@@ -47,6 +51,10 @@ function fakeGit(): IGitAdapter & { calls: Call[] } {
     diff: async (repo: string) => {
       calls.push({ method: 'diff', repo, args: [] });
       return `diff --git a/${repo}\n`;
+    },
+    status: async (repo: string) => {
+      calls.push({ method: 'status', repo, args: [] });
+      return { name: repo, branch: 'main', ...statuses[repo] };
     },
   };
 }
@@ -158,5 +166,70 @@ describe('h5p git subcommands', () => {
     await run(tagCommand(git), ['1.2.3', 'h5p-column']);
 
     expect(git.calls).toEqual([{ method: 'tag', repo: 'h5p-column', args: ['1.2.3'] }]);
+  });
+
+  it('status inspects every repo when none are named', async () => {
+    const git = fakeGit();
+    await run(statusCommand(git), []);
+
+    expect(git.calls).toEqual([
+      { method: 'status', repo: 'h5p-accordion', args: [] },
+      { method: 'status', repo: 'h5p-column', args: [] },
+    ]);
+  });
+
+  it('status limits itself to the named libraries', async () => {
+    const git = fakeGit();
+    await run(statusCommand(git), ['h5p-column']);
+
+    expect(git.calls).toEqual([{ method: 'status', repo: 'h5p-column', args: [] }]);
+  });
+
+  it('status reports only repos with changes', async () => {
+    const git = fakeGit({ 'h5p-column': { changes: [' M library.json'] } });
+    await run(statusCommand(git), []);
+
+    expect(written).toContain('h5p-column');
+    expect(written).toContain(' M library.json');
+    expect(written).not.toContain('h5p-accordion');
+  });
+
+  it('status -f reports every repo with its branch', async () => {
+    const git = fakeGit();
+    await run(statusCommand(git), ['-f']);
+
+    expect(written).toContain('h5p-accordion');
+    expect(written).toContain('h5p-column');
+    expect(written).toContain('(main)');
+  });
+
+  it('status rejects an empty library name', async () => {
+    const git = fakeGit();
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    await run(statusCommand(git), ['']);
+
+    expect(git.calls).toEqual([]);
+    expect(stderr.mock.calls.flat().join('')).toContain('Library names cannot be empty');
+    stderr.mockRestore();
+  });
+
+  it('status explains why a named library was skipped', async () => {
+    const { processRepos } = await import('../../src/lib/process-repos.ts');
+    vi.mocked(processRepos).mockResolvedValueOnce([
+      { name: 'not-a-repo', skipped: true, msg: 'no git repository found' },
+    ]);
+
+    await run(statusCommand(fakeGit()), ['not-a-repo']);
+
+    expect(written).toContain('not-a-repo');
+    expect(written).toContain('no git repository found');
+  });
+
+  it('status prints a repo that failed to report', async () => {
+    const git = fakeGit({ 'h5p-column': { error: 'not a git repository' } });
+    await run(statusCommand(git), []);
+
+    expect(written).toContain('not a git repository');
   });
 });

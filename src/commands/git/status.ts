@@ -1,15 +1,46 @@
 import { Command } from 'commander';
-import statusCmd from '../../utils/commands/status.ts';
+import { z } from 'zod';
+import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import { processRepos } from '../../lib/process-repos.ts';
+import * as output from '../../utils/utility/output.ts';
+import { ui } from '../../lib/ui.ts';
 
-export function statusCommand(): Command {
+const statusArgsSchema = z.object({
+  libraries: z.array(z.string().min(1, 'Library names cannot be empty')),
+  f: z.boolean().optional(),
+});
+
+export function statusCommand(adapter?: IGitAdapter): Command {
+  const git = adapter ?? new GitAdapter();
   return new Command('status')
     .description('Show the status for the given or all libraries')
     .argument('[libraries...]', 'Library names')
     .option('-f', 'Display which branch each library is on')
-    .action((libraries: string[], options: { f?: boolean }) => {
-      const args: string[] = [];
-      if (options.f) args.push('-f');
-      args.push(...libraries);
-      statusCmd(...args);
+    .action(async (libraries: string[], options: { f?: boolean }) => {
+      const result = statusArgsSchema.safeParse({ libraries, f: options.f });
+
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          ui.error(issue.message);
+        }
+        return;
+      }
+
+      const args = result.data;
+
+      try {
+        const named = args.libraries.length > 0;
+        const results = await processRepos(named ? args.libraries : ['*'], repo => git.status(repo));
+
+        results
+          // A skipped repo carries its reason in `msg`, which printStatus does not
+          // render; surface it as the error line instead. Only when the user named
+          // the library explicitly, so ignored repos stay quiet under `*`.
+          .map(repo => (repo.skipped && named ? { name: repo.name, error: repo.msg } : repo))
+          .filter(repo => repo.error || repo.changes || args.f)
+          .forEach(repo => output.printStatus(repo));
+      } catch (error: any) {
+        output.printError(error.message);
+      }
     });
 }
