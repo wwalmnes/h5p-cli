@@ -25,6 +25,7 @@ const { mergeCommand } = await import('../../src/commands/git/merge.ts');
 const { diffCommand } = await import('../../src/commands/git/diff.ts');
 const { tagCommand } = await import('../../src/commands/git/tag.ts');
 const { statusCommand } = await import('../../src/commands/git/status.ts');
+const { ui } = await import('../../src/lib/ui.ts');
 
 type Call = { method: string; repo: string; args: any[] };
 
@@ -65,11 +66,23 @@ function run(cmd: Command, args: string[]): Promise<unknown> {
 }
 
 let stdout: ReturnType<typeof vi.spyOn>;
+let stderr: ReturnType<typeof vi.spyOn>;
+/** Everything the command emitted, on either stream. */
 let written: string;
+/** The data channel alone — what a pipeline would receive. */
+let data: string;
 
 beforeEach(() => {
   written = '';
+  data = '';
+  // ui splits its output across both streams: chrome on stderr, data on stdout.
+  // Most assertions only care that something was said, so accumulate both.
   stdout = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: any) => {
+    written += String(chunk);
+    data += String(chunk);
+    return true;
+  });
+  stderr = vi.spyOn(process.stderr, 'write').mockImplementation((chunk: any) => {
     written += String(chunk);
     return true;
   });
@@ -77,6 +90,8 @@ beforeEach(() => {
 
 afterEach(() => {
   stdout.mockRestore();
+  stderr.mockRestore();
+  ui.resetLevel();
   vi.useRealTimers();
 });
 
@@ -158,7 +173,7 @@ describe('h5p git subcommands', () => {
     await run(diffCommand(git), []);
 
     expect(git.calls.map(c => c.repo)).toEqual(REPOS);
-    expect(written).toBe('diff --git a/h5p-accordion\ndiff --git a/h5p-column\n');
+    expect(data).toBe('diff --git a/h5p-accordion\ndiff --git a/h5p-column\n');
   });
 
   it('tag tags the given libraries', async () => {
@@ -205,13 +220,11 @@ describe('h5p git subcommands', () => {
 
   it('status rejects an empty library name', async () => {
     const git = fakeGit();
-    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     await run(statusCommand(git), ['']);
 
     expect(git.calls).toEqual([]);
-    expect(stderr.mock.calls.flat().join('')).toContain('Library names cannot be empty');
-    stderr.mockRestore();
+    expect(written).toContain('Library names cannot be empty');
   });
 
   it('status explains why a named library was skipped', async () => {
@@ -231,5 +244,56 @@ describe('h5p git subcommands', () => {
     await run(statusCommand(git), []);
 
     expect(written).toContain('not a git repository');
+  });
+});
+
+describe('git output channels', () => {
+  it('reports a failed repo along with its detail', async () => {
+    const git = fakeGit();
+    git.checkout = async (repo: string) => ({ name: repo, failed: true, msg: 'local changes' });
+
+    await run(checkoutCommand(git), ['main', 'h5p-column']);
+
+    expect(written).toContain('h5p-column FAILED');
+    expect(written).toContain('local changes');
+  });
+
+  it('reports why a repo was skipped', async () => {
+    const { processRepos } = await import('../../src/lib/process-repos.ts');
+    vi.mocked(processRepos).mockResolvedValueOnce([
+      { name: 'h5p-column', skipped: true, msg: 'ignored' },
+    ]);
+
+    await run(checkoutCommand(fakeGit()), ['main', 'h5p-column']);
+
+    expect(written).toContain('h5p-column SKIPPED');
+    expect(written).toContain('ignored');
+  });
+
+  it('keeps per-repo chrome off the data channel', async () => {
+    await run(checkoutCommand(fakeGit()), ['main']);
+
+    expect(written).toContain('h5p-accordion');
+    // Results are annotation, not data: a pipeline must see none of it.
+    expect(data).toBe('');
+  });
+
+  it('drops per-repo chrome under --quiet but still emits diff data', async () => {
+    ui.setLevel('quiet');
+
+    await run(checkoutCommand(fakeGit()), ['main']);
+    expect(written).toBe('');
+
+    await run(diffCommand(fakeGit()), []);
+    expect(data).toBe('diff --git a/h5p-accordion\ndiff --git a/h5p-column\n');
+  });
+
+  it('prints nothing for a diff when no repo has changes', async () => {
+    const git = fakeGit();
+    git.diff = async () => '';
+
+    await run(diffCommand(git), []);
+
+    expect(data).toBe('');
   });
 });

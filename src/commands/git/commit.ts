@@ -1,6 +1,8 @@
 import { Command } from 'commander';
 import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
 import { processRepos } from '../../lib/process-repos.ts';
+import { reportChanges } from '../../lib/repo-report.ts';
+import { ui } from '../../lib/ui.ts';
 
 export function commitCommand(adapter?: IGitAdapter): Command {
   const git = adapter ?? new GitAdapter();
@@ -9,35 +11,24 @@ export function commitCommand(adapter?: IGitAdapter): Command {
     .argument('<message>', 'Commit message')
     .argument('[libraries...]', 'Library names')
     .action(async (message: string, libraries: string[]) => {
-      const lf = '\u000A';
-      const color = { default: '\x1B[0m', emphasize: '\x1B[1m' };
-
       if (!message) {
-        process.stdout.write('No message means no commit.' + lf);
+        ui.warn('No message means no commit.');
         return;
       }
       if (message.split(' ', 2).length < 2) {
-        process.stdout.write('Commit message to short.' + lf);
+        ui.warn('Commit message to short.');
         return;
       }
 
       try {
         const results = await processRepos(libraries, repo => git.commit(repo, message));
-        let first = true;
         for (const result of results) {
+          // Repos with nothing to say are silent, as before.
           if (!('error' in result) && !('changes' in result)) continue;
-          if (first) { process.stdout.write(lf); first = false; }
-          process.stdout.write(color.emphasize + result.name + color.default);
-          if ('branch' in result && result.branch && result.commit) {
-            process.stdout.write(' (' + result.branch + ' ' + result.commit + ')');
-          }
-          process.stdout.write(lf);
-          if ('error' in result && result.error) process.stdout.write(result.error + lf);
-          else if ('changes' in result && result.changes) process.stdout.write(result.changes.join(lf) + lf);
-          process.stdout.write(lf);
+          reportChanges(result);
         }
-      } catch (error: any) {
-        process.stdout.write(error.message + lf);
+      } catch (error) {
+        ui.error(error);
       }
     });
 }

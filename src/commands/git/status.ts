@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { z } from 'zod';
 import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
 import { processRepos } from '../../lib/process-repos.ts';
-import * as output from '../../utils/utility/output.ts';
+import { reportChanges } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
 const statusArgsSchema = z.object({
@@ -33,14 +33,14 @@ export function statusCommand(adapter?: IGitAdapter): Command {
         const results = await processRepos(named ? args.libraries : ['*'], repo => git.status(repo));
 
         results
-          // A skipped repo carries its reason in `msg`, which printStatus does not
-          // render; surface it as the error line instead. Only when the user named
-          // the library explicitly, so ignored repos stay quiet under `*`.
+          // A skipped repo carries its reason in `msg`, which reportChanges does
+          // not render; surface it as the error line instead. Only when the user
+          // named the library explicitly, so ignored repos stay quiet under `*`.
           .map(repo => (repo.skipped && named ? { name: repo.name, error: repo.msg } : repo))
           .filter(repo => repo.error || repo.changes || args.f)
-          .forEach(repo => output.printStatus(repo));
-      } catch (error: any) {
-        output.printError(error.message);
+          .forEach(repo => reportChanges(repo));
+      } catch (error) {
+        ui.error(error);
       }
     });
 }

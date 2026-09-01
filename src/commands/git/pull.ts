@@ -1,7 +1,8 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
-import { processRepos } from '../../lib/process-repos.ts';
-import * as output from '../../utils/utility/output.ts';
+import { GitAdapter, type GitOpResult, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import { processRepos, type RepoResult } from '../../lib/process-repos.ts';
+import { reportResults, reportSummary, sortByNameDescending } from '../../lib/repo-report.ts';
+import { ui } from '../../lib/ui.ts';
 
 export function pullCommand(adapter?: IGitAdapter): Command {
   const git = adapter ?? new GitAdapter();
@@ -12,14 +13,21 @@ export function pullCommand(adapter?: IGitAdapter): Command {
       const repos = libraries.length ? libraries : ['*'];
       const repoCount = libraries.length ? libraries.length : 'all';
       const repoLabel = libraries.length === 1 ? 'repository' : 'repositories';
-      const spinner = new (output.Spinner as any)(`Pulling ${repoCount} ${repoLabel}`);
 
+      let results: RepoResult<GitOpResult>[];
+      ui.status('git-pull', `Pulling ${repoCount} ${repoLabel}`);
       try {
-        const results = await processRepos(repos, repo => git.pull(repo));
-        spinner.succeeded('Finished pulling repositories');
-        output.printPulled(results);
-      } catch (error: any) {
-        spinner.failed(error.message);
+        results = await processRepos(repos, repo => git.pull(repo));
+      } catch (error) {
+        ui.error(error);
+        return;
+      } finally {
+        ui.statusDone('git-pull');
       }
+
+      ui.success('Finished pulling repositories');
+      const sorted = sortByNameDescending(results);
+      reportResults(sorted);
+      reportSummary(sorted);
     });
 }
