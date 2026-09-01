@@ -19,6 +19,7 @@ import { verifyCommand } from './commands/verify.ts';
 import { serverCommand } from './commands/server.ts';
 import { createCommand } from './commands/create.ts';
 import { pluginCommand } from './commands/plugin.ts';
+import { gitCommand } from './commands/git/index.ts';
 import { utilsCommand } from './commands/utils/index.ts';
 
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
@@ -55,13 +56,14 @@ program.addCommand(verifyCommand());
 program.addCommand(serverCommand());
 program.addCommand(createCommand());
 program.addCommand(pluginCommand());
+program.addCommand(gitCommand());
 program.addCommand(utilsCommand());
 
 await loadPlugins(program);
 
-// Replicate the original guard: skip setupFolders for 'utils', 'help', 'plugin', no-arg
+// Replicate the original guard: skip setupFolders for 'utils', 'git', 'help', 'plugin', no-arg
 const subcommandName = process.argv[2];
-if (subcommandName && !['utils', 'help', '--help', '-h', '--version', '-V', 'plugin'].includes(subcommandName)) {
+if (subcommandName && !['utils', 'git', 'help', '--help', '-h', '--version', '-V', 'plugin'].includes(subcommandName)) {
   // setupFolders();
 }
 

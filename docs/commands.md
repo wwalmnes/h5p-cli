@@ -346,9 +346,28 @@ h5p utils help <cmd>     # detailed help for a specific utils subcommand
 
 ---
 
+## `h5p git`
+
+Multi-repo git operations across H5P libraries: branching, status, diff, commit, pull, push, tag.
+
+```bash
+h5p git <subcommand> [args]
+```
+
+See [commands-git.md](./commands-git.md) for the full reference.
+
+For quick help in the terminal:
+
+```bash
+h5p git --help           # list all git subcommands
+h5p git <cmd> --help     # detailed help for a specific subcommand
+```
+
+---
+
 ## `h5p utils`
 
-Utility commands for multi-repo git workflows, versioning, translations, packaging, and validation.
+Utility commands for versioning, translations, packaging, and validation.
 
 ```bash
 h5p utils <subcommand> [args]
