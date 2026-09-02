@@ -5,6 +5,7 @@ import Input from '../utility/input.ts';
 import parallel from '../utility/parallel.ts';
 import { createDefaultLanguage } from '../../lib/semantics-utils.ts';
 import path from 'path';
+import { ui } from '../../lib/ui.ts';
 
 async function readJSONFiles(fileNames: Record<string, string>): Promise<Record<string, { file: string; error: any; content: any }>> {
   const entries = await Promise.all(
@@ -40,7 +41,7 @@ const validate = function (...inputList: string[]): Promise<any[]> {
       });
     })
     .catch((error: any) => {
-      console.log(error.message);
+      ui.error(error);
     });
   });
 };
@@ -57,7 +58,7 @@ const outputReport = (results: any[]): void => {
   });
 
   if (results.length > 0) {
-    console.log(JSON.stringify(results, null, 2));
+    ui.data(JSON.stringify(results, null, 2));
   }
 };
 

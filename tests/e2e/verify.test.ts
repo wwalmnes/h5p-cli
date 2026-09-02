@@ -24,12 +24,14 @@ vi.mock('../../logic', () => ({
 describe('verify — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
+  let stdout: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -47,11 +49,12 @@ describe('verify — end-to-end', () => {
     expect(logic.default.verifySetup).toHaveBeenCalledWith('H5P.Blanks');
   });
 
-  it('logs the verification result', async () => {
+  it('writes the verification result to stdout as JSON', async () => {
     const { verifyCommand } = await import('../../src/commands/verify.ts');
 
     await verifyCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
-    expect(console.log).toHaveBeenCalledWith(VERIFY_RESULT);
+    const written = stdout.mock.calls.map(([chunk]) => String(chunk)).join('');
+    expect(JSON.parse(written)).toEqual(VERIFY_RESULT);
   });
 });

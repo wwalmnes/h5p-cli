@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { upgradeContent } from '../../logic-content-upgrade.cjs';
+import { upgradeContent } from '../../logic-content-upgrade.ts';
 
 // --- helpers ---
 
@@ -15,7 +15,8 @@ function makeGetLatest(map: Record<string, { major: number; minor: number }>) {
 
 describe('upgradeContent', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {

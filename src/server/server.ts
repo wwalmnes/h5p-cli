@@ -3,6 +3,7 @@ import config from '../config.ts';
 import multerLib from 'multer';
 import api from './api.ts';
 import path from 'path';
+import { ui } from '../lib/ui.ts';
 
 const rootFolder = path.resolve(import.meta.dirname, '../', '..');
 const multer = multerLib({ dest: `./${config.folders.temp}` });
@@ -36,7 +37,9 @@ app.use(express.static('./'));
 
 let port = config.port;
 app.listen(port, () => {
-  console.log(`h5p content type development server running on http://localhost:${port}/dashboard`);
+  // ui.data, not ui.info: `h5p server` sets the level to quiet before importing
+  // this module, and the URL is the one thing the user actually needs to see.
+  ui.data(`h5p content type development server running on http://localhost:${port}/dashboard`);
 });
 
 if (config.files.watch) {

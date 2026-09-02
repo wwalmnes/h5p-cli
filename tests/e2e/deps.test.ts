@@ -23,12 +23,14 @@ vi.mock('../../logic', () => ({
 describe('deps — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
+  let stderr: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -62,7 +64,6 @@ describe('deps — end-to-end', () => {
   it('rejects an invalid mode and does not call computeDependencies', async () => {
     const logic = await import('../../logic.ts');
     const { depsCommand } = await import('../../src/commands/deps.ts');
-    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await depsCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'invalid']);
 
@@ -73,12 +74,14 @@ describe('deps — end-to-end', () => {
 describe('missing — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
+  let stderr: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -105,7 +108,8 @@ describe('missing — end-to-end', () => {
 
     await missingCommand().parseAsync(['node', 'h5p', 'H5P.Blanks']);
 
-    const logged = (console.log as ReturnType<typeof vi.fn>).mock.calls.flat() as string[];
+    // MissingService's default logger routes '> ...' chrome to ui.info -> stderr.
+    const logged = stderr.mock.calls.map(([chunk]) => String(chunk));
     expect(logged.some(l => l.includes('H5P.Blanks has no unregistered dependencies'))).toBe(true);
   });
 });

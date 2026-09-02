@@ -34,7 +34,8 @@ describe('RegisterService integration — real filesystem', () => {
       registryPath,
       JSON.stringify({ 'H5P.Existing': { id: 'h5p-existing', org: 'h5p' } }, null, 2)
     );
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {

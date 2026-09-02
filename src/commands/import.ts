@@ -20,7 +20,7 @@ export function importCommand(adapter?: IImportAdapter): Command {
       const args = importArgsSchema.parse({ folder, archive });
       try {
         const output = a.import(args.folder, args.archive);
-        console.log(`content/${output}`);
+        ui.data(`content/${output}`);
       } catch (error) {
         ui.error(error);
       }

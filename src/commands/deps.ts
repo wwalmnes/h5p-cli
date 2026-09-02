@@ -28,7 +28,7 @@ export function depsCommand(service?: DepsService): Command {
 
       if (!result.success) {
         for (const issue of result.error.issues) {
-          console.error(issue.message);
+          ui.error(issue.message);
         }
         return;
       }

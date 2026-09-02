@@ -4,6 +4,7 @@ import path from 'path';
 import { createDefaultLanguage } from '../../lib/semantics-utils.ts';
 import fs from 'fs';
 import sanitizeHtml from 'sanitize-html';
+import { ui } from '../../lib/ui.ts';
 
 export function languageComparison(language: any, assertLanguage: any, errors?: string[]): { hasValidJson: boolean; errors: string[] } {
   let hasValidJson = true;
@@ -128,7 +129,7 @@ export function compareEditorLanguageFile(defaults: any, translation: any): bool
       valid = false;
     }
     else if (!isSafeTranslation(translation[key])) {
-      console.warn('Unsafe translation: ' + translation[key]);
+      ui.warn('Unsafe translation: ' + translation[key]);
       valid = false;
     }
   });

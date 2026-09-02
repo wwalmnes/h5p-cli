@@ -18,7 +18,7 @@ export function verifyCommand(adapter?: IVerifyAdapter): Command {
       const args = verifyArgsSchema.parse({ library });
       try {
         const result = await a.verifySetup(args.library);
-        console.log(result);
+        ui.data(JSON.stringify(result, null, 2));
       } catch (error) {
         ui.error(error);
       }

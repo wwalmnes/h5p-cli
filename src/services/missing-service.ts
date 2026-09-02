@@ -1,11 +1,12 @@
 import type { IMissingAdapter } from '../adapters/missing-adapter.ts';
 import type { Logger } from '../lib/repo-types.ts';
+import { uiLogger } from '../lib/ui-logger.ts';
 
 export class MissingService {
   private adapter: IMissingAdapter;
   private logger: Logger;
 
-  constructor(adapter: IMissingAdapter, logger: Logger = console) {
+  constructor(adapter: IMissingAdapter, logger: Logger = uiLogger) {
     this.adapter = adapter;
     this.logger = logger;
   }

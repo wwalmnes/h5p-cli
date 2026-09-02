@@ -27,7 +27,8 @@ describe('setup — end-to-end', () => {
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
     fs.mkdirSync(path.join(fixture.dir, 'libraries'), { recursive: true });
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     const logic = await import('../../logic.ts');
     vi.mocked(logic.default.getWithDependencies).mockImplementation(

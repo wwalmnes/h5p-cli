@@ -20,7 +20,7 @@ export function exportCommand(adapter?: IExportAdapter): Command {
       const args = exportArgsSchema.parse({ library, folder });
       try {
         const file = await a.export(args.library, args.folder);
-        console.log(file);
+        ui.data(file);
       } catch (error) {
         ui.error(error);
       }

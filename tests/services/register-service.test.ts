@@ -16,7 +16,8 @@ describe('RegisterService', () => {
   const registryPath = 'libraryRegistry.json';
 
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   it('uses registryEntryFromRepoUrl for http URL', async () => {
