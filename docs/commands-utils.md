@@ -4,6 +4,27 @@ Quick reference for all `h5p utils` subcommands. Run `h5p utils --help` to print
 
 Multi-repo git operations live under [`h5p git`](./commands-git.md).
 
+## Working directory
+
+**Run these commands from inside `libraries/`**, where each library is a direct subfolder:
+
+```bash
+cd libraries
+h5p utils get H5P.Accordion
+h5p utils validate h5p-accordion
+```
+
+A library argument names a subfolder of the current directory — `<name>`, not
+`libraries/<name>`. This is the opposite of the top-level
+[`h5p` commands](./commands.md), which run from the workspace root. If no git repository is
+found in the current folder, the command stops with a message instead of quietly doing
+nothing.
+
+Exceptions: `list` and `help` touch no files and work from anywhere; `get` and `init`
+*create* the checkouts, so they run in an empty folder too. `dependency-check` takes an
+explicit `--libraries <path>` (also settable via `H5P_LIBRARIES`) if you need to point it
+somewhere other than the current folder.
+
 ---
 
 ## Version Control
@@ -30,7 +51,7 @@ h5p utils tag-version [libraries...]
 
 ## `h5p utils get`
 
-Clone a library and all its dependencies into the `libraries/` folder.
+Clone a library and all its dependencies into the **current** folder — run it from inside `libraries/`.
 
 ```
 h5p utils get [options] <libraries...>
@@ -60,7 +81,7 @@ No arguments.
 
 ## `h5p utils init`
 
-Initialize a new H5P library scaffold in the current directory.
+Initialize a new H5P library scaffold in a subfolder of the current directory.
 
 ```
 h5p utils init <library>
@@ -68,7 +89,9 @@ h5p utils init <library>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library name. |
+| `library` | Yes | Library name. Also the folder it is created in. |
+
+Prompts for title, description, entry point, author and license.
 
 ---
 
@@ -103,15 +126,15 @@ does the same job with a proper dependency graph.
 
 ## `h5p utils bump`
 
-Interactively bump the version of a library.
+Bump the patch version of a library, then commit, tag and push it.
 
 ```
-h5p utils bump [options] [library]
+h5p utils bump [options] <library>
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | No | Library name. Defaults to the library in the current directory. |
+| `library` | Yes | Library folder inside the current directory. |
 
 | Option | Description |
 |--------|-------------|

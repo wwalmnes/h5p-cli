@@ -2,7 +2,6 @@ import * as output from '../utility/output.ts';
 import Input from '../utility/input.ts';
 import { getLibraryData } from '../utility/repository.ts';
 import { execSync } from 'child_process';
-import path from 'path';
 import readline from 'readline';
 
 const c = output.color;
@@ -14,7 +13,7 @@ async function bump(...inputList: string[]) {
   const input = new Input(inputList);
   await input.init(true);
 
-  const lib = detectLibrary(input);
+  const lib = detectLibrary(input, inputList);
   if (!lib) {
     return;
   }
@@ -23,31 +22,36 @@ async function bump(...inputList: string[]) {
     return;
   }
 
-  process.chdir(lib);
-  output.printLn(`${c.blue}Changed directory back to: ${c.emphasize}${lib}${c.default}`);
-
-  const version = getVersion();
+  // Like the other utils sweeps, this runs from inside `libraries/`, so the library is a
+  // direct subfolder of cwd. Every git call below is scoped with `cwd` rather than by
+  // chdir'ing the process.
+  const version = getVersion(lib);
   if (!version) return;
 
-  if (!stageChanges(autoYes)) return;
-  if (!commitChanges(version)) return;
+  if (!stageChanges(lib, autoYes)) return;
+  if (!commitChanges(lib, version)) return;
 
   if (autoYes) {
-    tagAndPush(version, true, true);
+    tagAndPush(lib, version, true, true);
   }
   else {
-    promptTagAndPush(version);
+    promptTagAndPush(lib, version);
   }
 }
 
-function detectLibrary(input: Input): string | null {
-  let libraries = input.getLibraries();
+function detectLibrary(input: Input, requested: string[]): string | null {
+  const libraries = input.getLibraries();
   if (!libraries.length) {
-    const cwd = process.cwd();
-    const libName = path.basename(cwd);
-    libraries = [libName];
-    process.chdir(path.dirname(cwd));
-    output.printLn(`${c.blue}Defaulting to current folder: ${c.emphasize}${libName}${c.default}`);
+    // `Input` only keeps names that match a folder in cwd, so an unmatched name means the
+    // library is not here — most often because cwd is not the libraries folder.
+    const message = requested.length
+      ? `${c.red}No library named ${c.emphasize}${requested[0]}${c.default}${c.red} in this folder.${c.default}`
+      : `${c.red}No library given.${c.default}`;
+    output.printLn(
+      `${message} Run this from inside the libraries folder and name the library to bump, ` +
+      `e.g. ${c.emphasize}h5p utils bump h5p-accordion${c.default}.`
+    );
+    return null;
   }
   output.printLn(`${c.blue}Bumping patch version of: ${c.emphasize}${libraries[0]}${c.default}`);
   return libraries[0];
@@ -74,8 +78,8 @@ function isValidSemver(...args: any[]): boolean {
   return args.every(n => typeof n === 'number');
 }
 
-function getVersion(): string | null {
-  const libData = getLibraryData('.');
+function getVersion(lib: string): string | null {
+  const libData = getLibraryData(lib);
   const { majorVersion, minorVersion, patchVersion } = libData;
   if (!isValidSemver(majorVersion, minorVersion, patchVersion)) {
     output.printLn(`${c.red}Failed to read version from library.json.${c.default}`);
@@ -86,16 +90,16 @@ function getVersion(): string | null {
   return version;
 }
 
-function stageChanges(autoYes: boolean): boolean {
+function stageChanges(lib: string, autoYes: boolean): boolean {
   try {
-    execSync(`git restore --staged library.json`, { stdio: 'inherit' });
+    execSync(`git restore --staged library.json`, { stdio: 'inherit', cwd: lib });
     if (autoYes) {
       output.printLn(`${c.yellow}Staging version bump automatically…${c.default}`);
-      execSync(`git add library.json`, { stdio: 'inherit' });
+      execSync(`git add library.json`, { stdio: 'inherit', cwd: lib });
     }
     else {
       output.printLn(`${c.yellow}Staging version bump interactively…${c.default}`);
-      execSync(`git add -p library.json`, { stdio: 'inherit' });
+      execSync(`git add -p library.json`, { stdio: 'inherit', cwd: lib });
     }
   }
   catch {
@@ -103,7 +107,7 @@ function stageChanges(autoYes: boolean): boolean {
     return false;
   }
 
-  const gitStatus = execSync(`git status --porcelain library.json`, { encoding: 'utf8' }).trim();
+  const gitStatus = execSync(`git status --porcelain library.json`, { encoding: 'utf8', cwd: lib }).trim();
   if (!gitStatus) {
     output.printLn(`${c.yellow}No changes detected in library.json — nothing to commit.${c.default}`);
     return false;
@@ -112,9 +116,9 @@ function stageChanges(autoYes: boolean): boolean {
   return true;
 }
 
-function commitChanges(version: string): boolean {
+function commitChanges(lib: string, version: string): boolean {
   try {
-    execSync(`git commit -m "Bump to ${version}"`, { stdio: 'inherit' });
+    execSync(`git commit -m "Bump to ${version}"`, { stdio: 'inherit', cwd: lib });
     output.printLn(`${c.green}Committed version bump to ${version}.${c.default}`);
   }
   catch {
@@ -124,12 +128,12 @@ function commitChanges(version: string): boolean {
   return true;
 }
 
-function tagAndPush(version: string, doTag: boolean, doPush: boolean): void {
+function tagAndPush(lib: string, version: string, doTag: boolean, doPush: boolean): void {
   let tagHandled = true;
 
   if (doTag) {
     try {
-      execSync(`git tag -a ${version} -m "${version}"`, { stdio: 'inherit' });
+      execSync(`git tag -a ${version} -m "${version}"`, { stdio: 'inherit', cwd: lib });
       output.printLn(`${c.green}Tag ${version} created.${c.default}`);
     }
     catch {
@@ -144,10 +148,10 @@ function tagAndPush(version: string, doTag: boolean, doPush: boolean): void {
   if (doPush && tagHandled) {
     try {
       output.printLn(`${c.blue}Pushing commits…${c.default}`);
-      execSync(`git push`, { stdio: 'inherit' });
+      execSync(`git push`, { stdio: 'inherit', cwd: lib });
       if (doTag) {
         output.printLn(`${c.blue}Pushing tag ${version}…${c.default}`);
-        execSync(`git push origin ${version}`, { stdio: 'inherit' });
+        execSync(`git push origin ${version}`, { stdio: 'inherit', cwd: lib });
       }
       output.printLn(`${c.green}Changes pushed successfully.${c.default}`);
     }
@@ -163,7 +167,7 @@ function tagAndPush(version: string, doTag: boolean, doPush: boolean): void {
   }
 }
 
-function promptTagAndPush(version: string): void {
+function promptTagAndPush(lib: string, version: string): void {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -174,7 +178,7 @@ function promptTagAndPush(version: string): void {
 
     rl.question(`Do you want to push the changes? (y/n): `, pushAnswer => {
       const doPush = pushAnswer.trim().toLowerCase() === 'y';
-      tagAndPush(version, doTag, doPush);
+      tagAndPush(lib, version, doTag, doPush);
       rl.close();
     });
   });

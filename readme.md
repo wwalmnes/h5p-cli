@@ -70,7 +70,13 @@ h5p server
 ```
 You can now use your browser to view, edit, delete, import, export and create new content types.  
 > [!IMPORTANT]
-> Remember that the folder where you run the H5P server is where the server will look for the libraries. If you run the setup commands in another folder then the server will not find those libraries.  
+> Remember that the folder where you run the H5P server is where the server will look for the libraries. If you run the setup commands in another folder then the server will not find those libraries.
+>
+> That folder is your **workspace root**: it holds `libraries/`, `content/` and `temp/`, and
+> it is where every top-level `h5p` command runs. The `h5p git` and `h5p utils` subcommands
+> follow the opposite convention — they sweep the checkouts in the current folder, so run
+> them from **inside `libraries/`** (`cd libraries && h5p git status`). Each group tells you
+> if you are in the wrong place.
 
 <video src="https://github.com/h5p/h5p-cli/assets/5208532/b33a12e6-3200-488c-81c6-eae41b13f512"></video>
 

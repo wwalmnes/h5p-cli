@@ -3,6 +3,24 @@
 Quick reference for all `h5p` commands. Run `h5p help` in the terminal to print this list, or `h5p help <command>` for a specific entry.
 You can also do `h5p <command> --help` for the same information.
 
+## Working directory
+
+**Run these commands from the workspace root** — the folder that holds `libraries/`,
+`content/` and `temp/`. A library argument names a folder inside `libraries/`, so
+`h5p export H5P.Accordion-1.0 demo` reads `libraries/H5P.Accordion-1.0`. Running them
+anywhere else fails with a message telling you where to go.
+
+The other two command groups follow the opposite convention and run from **inside
+`libraries/`**, where each library is a direct subfolder:
+[`h5p git`](./commands-git.md) and [`h5p utils`](./commands-utils.md).
+
+`h5p plugin` is the exception on this page: it manages plugins of the installed CLI itself
+and works from anywhere. `h5p core` also works from anywhere, since it creates the
+workspace folders.
+
+The `libraries/` folder name comes from `folders.libraries` in `config.js`; drop a
+`config.js` in the workspace root to change it.
+
 ---
 
 ## `h5p core`
@@ -263,19 +281,27 @@ h5p verify <h5p-repo-name>
 
 ## `h5p branches` / `h5p @branches`
 
-Create `@<branch>` folders from other git branches of the current library. Must be run inside a git repository folder.
+Create `@<branch>` folders from other git branches of a library.
 
 ```bash
-h5p branches <branch...>
-h5p @branches <branch...>
+h5p branches <library> <branch...>
+h5p @branches <library> <branch...>
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
+| `library` | Yes | Library folder inside `libraries/`, e.g. `H5P.Accordion-1.0`. |
 | `branch...` | Yes | One or more branch names. Each becomes an `@<branch>` folder. |
 
+- Like every command on this page, it runs from the workspace root; the `@<branch>` folders
+  are created inside `libraries/<library>/`.
 - Runs `npm install --ignore-scripts` and `npm run build` inside each `@<branch>` folder if a `build` script is present.
-- Updates the `preloadedJs` and `preloadedCss` entries in `library.json` to include assets from each `@<branch>` folder.
+- Updates the `preloadedJs` and `preloadedCss` entries in `libraries/<library>/library.json` to include assets from each `@<branch>` folder.
+
+> [!NOTE]
+> This command used to be run from inside a library folder and took only branch names
+> (`h5p @branches master`). It now takes the library as its first argument and is run from
+> the workspace root like the rest of the top-level commands.
 
 ---
 

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { enforce, requireLibrariesCwd } from '../../lib/workspace.ts';
 import { initCommand } from './init.ts';
 import { utilsHelpCommand } from './help.ts';
 import { utilsListCommand } from './list.ts';
@@ -26,6 +27,16 @@ import { bumpCommand } from './bump.ts';
 export function utilsCommand(): Command {
   const utils = new Command('utils');
   utils.description('Utility commands for H5P library management');
+
+  // Most utils sweep the checkouts in cwd, so they run from inside `libraries/`. `list` and
+  // `help` touch no files, and `get`/`init` create the checkouts, so cwd may still be empty.
+  const cwdExempt = ['list', 'help', 'get', 'init'];
+  utils.hook('preAction', (_thisCommand, actionCommand) => {
+    const name = actionCommand.name();
+    if (!cwdExempt.includes(name)) {
+      enforce(() => requireLibrariesCwd(`utils ${name}`));
+    }
+  });
 
   utils.addCommand(initCommand());
   utils.addCommand(utilsHelpCommand());

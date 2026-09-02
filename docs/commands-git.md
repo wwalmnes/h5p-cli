@@ -4,6 +4,21 @@ Quick reference for all `h5p git` subcommands. These run git operations across e
 H5P library repository in the working directory (or just the ones you name).
 Run `h5p git --help` to print this list.
 
+## Working directory
+
+**Run these commands from inside `libraries/`**, where each library is a direct subfolder:
+
+```bash
+cd libraries
+h5p git status
+```
+
+A library argument names a subfolder of the current directory — `<name>`, not
+`libraries/<name>`. This is the opposite of the top-level
+[`h5p` commands](./commands.md), which run from the workspace root. If no git repository is
+found in the current folder, the command stops with a message instead of quietly doing
+nothing.
+
 ---
 
 ## Branches
