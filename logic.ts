@@ -5,7 +5,7 @@ import superAgent from 'superagent';
 // @ts-ignore - no type declarations for adm-zip in this project
 import admZip from 'adm-zip';
 import config from './configLoader.ts';
-import { upgradeContent } from './logic-content-upgrade.cjs';
+import { upgradeContent } from './logic-content-upgrade.ts';
 import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './src/lib/h5p-utils.ts';
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies.ts';
 import type { IComputeDependenciesPort, LibraryEntry, LibraryDependency, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';

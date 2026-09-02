@@ -23,7 +23,8 @@ describe('coreCommand', () => {
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stderr = '';
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
       stderr += chunk;

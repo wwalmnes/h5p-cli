@@ -24,7 +24,8 @@ describe('export — end-to-end', () => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {

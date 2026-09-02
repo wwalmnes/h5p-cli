@@ -1,13 +1,14 @@
 import path from 'path';
 import type { ICreateAdapter } from '../adapters/create-adapter.ts';
 import type { Logger } from '../lib/repo-types.ts';
+import { uiLogger } from '../lib/ui-logger.ts';
 
 export class CreateService {
   private adapter: ICreateAdapter;
   private librariesFolder: string;
   private logger: Logger;
 
-  constructor(adapter: ICreateAdapter, librariesFolder: string, logger: Logger = console) {
+  constructor(adapter: ICreateAdapter, librariesFolder: string, logger: Logger = uiLogger) {
     this.adapter = adapter;
     this.librariesFolder = librariesFolder;
     this.logger = logger;

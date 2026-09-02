@@ -19,12 +19,14 @@ vi.mock('../../logic', () => ({
 describe('tags — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
+  let stdout: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    stdout = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -42,13 +44,12 @@ describe('tags — end-to-end', () => {
     expect(logic.default.tags).toHaveBeenCalledWith('h5p', 'h5p-blanks', 'master');
   });
 
-  it('logs the tag list returned by logic.tags', async () => {
+  it('writes each tag returned by logic.tags to stdout as its own line', async () => {
     const { tagsCommand } = await import('../../src/commands/tags.ts');
 
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
 
-    const allCalls = (console.log as ReturnType<typeof vi.fn>).mock.calls;
-    const tagListCall = allCalls.find(([arg]) => Array.isArray(arg));
-    expect(tagListCall?.[0]).toEqual(['1.0.0', '1.1.0', '2.0.0']);
+    const written = stdout.mock.calls.map(([chunk]) => String(chunk));
+    expect(written).toEqual(['1.0.0\n', '1.1.0\n', '2.0.0\n']);
   });
 });

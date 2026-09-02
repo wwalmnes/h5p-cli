@@ -1,6 +1,7 @@
 import path from 'path';
 import type { IPluginAdapter, PluginEntry } from '../adapters/plugin-adapter.ts';
 import type { Logger } from '../lib/repo-types.ts';
+import { uiLogger } from '../lib/ui-logger.ts';
 
 function isGitUrl(input: string): boolean {
   return input.startsWith('https://') || input.startsWith('git@');
@@ -17,7 +18,7 @@ export class PluginService {
   private pluginsDir: string;
   private logger: Logger;
 
-  constructor(adapter: IPluginAdapter, pluginsDir: string, logger: Logger = console) {
+  constructor(adapter: IPluginAdapter, pluginsDir: string, logger: Logger = uiLogger) {
     this.adapter = adapter;
     this.pluginsDir = pluginsDir;
     this.logger = logger;

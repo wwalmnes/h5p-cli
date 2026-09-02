@@ -21,9 +21,11 @@ export function tagsCommand(adapter?: ITagsAdapter): Command {
       const a = adapter ?? adapterRegistry.resolve<ITagsAdapter>(options.adapter ?? 'tags') ?? new TagsAdapter();
       const args = tagsArgsSchema.parse({ org, library, mainBranch });
       try {
-        console.log('> fetching h5p library tags');
+        ui.info('fetching h5p library tags');
         const result = a.tags(args.org, args.library, args.mainBranch);
-        console.log(result);
+        for (const tag of result) {
+          ui.data(tag);
+        }
       } catch (error) {
         ui.error(error);
       }

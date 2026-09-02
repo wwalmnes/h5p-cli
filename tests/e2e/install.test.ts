@@ -27,7 +27,8 @@ describe('install — end-to-end', () => {
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
     fs.mkdirSync(path.join(fixture.dir, 'libraries'), { recursive: true });
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     const logic = await import('../../logic.ts');
     vi.mocked(logic.default.getWithDependencies).mockImplementation(
@@ -77,7 +78,8 @@ describe('install — end-to-end', () => {
   it('rejects invalid mode and does not call getWithDependencies', async () => {
     const logic = await import('../../logic.ts');
     const { installCommand } = await import('../../src/commands/install.ts');
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     await installCommand().parseAsync(['node', 'h5p', 'H5P.Blanks', 'invalid']);
 

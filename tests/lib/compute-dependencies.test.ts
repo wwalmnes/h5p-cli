@@ -86,7 +86,8 @@ const makePort = (overrides: Partial<IComputeDependenciesPort> = {}): IComputeDe
 });
 
 beforeEach(() => {
-  vi.spyOn(console, 'log').mockImplementation(() => {});
+  vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+  vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
   vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 });
 

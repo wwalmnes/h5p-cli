@@ -1,4 +1,5 @@
 import type { IRegisterAdapter } from '../adapters/register-adapter.ts';
+import { ui } from '../lib/ui.ts';
 
 export class RegisterService {
   private adapter: IRegisterAdapter;
@@ -17,8 +18,8 @@ export class RegisterService {
       : this.adapter.readJsonFile(input);
     registry.reversed = { ...registry.reversed, ...entry };
     this.adapter.writeJsonFile(this.registryPath, registry.reversed);
-    console.log('> updated registry entry');
-    console.log(entry);
+    ui.success('updated registry entry');
+    ui.data(JSON.stringify(entry, null, 2));
     return entry;
   }
 }

@@ -20,7 +20,8 @@ describe('logic.parseLibraryFolders', () => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     fs.mkdirSync('libraries', { recursive: true });
   });
 

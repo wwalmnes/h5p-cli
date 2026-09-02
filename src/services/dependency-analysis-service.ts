@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { findRepos } from '../lib/process-repos.ts';
 import { parseSemanticLibraries, type SemanticLibraryEntry } from '../lib/h5p-utils.ts';
+import { ui } from '../lib/ui.ts';
 
 type LibraryNode = {
   library: SemanticLibraryEntry;
@@ -94,7 +95,7 @@ function findDuplicatesWithDifferentVersions(
     for (const dep in flat[libraryId]) {
       if (flat[libraryId][dep].length > 1) {
         const versions = flat[libraryId][dep].join(', ');
-        console.log(`Inconsistency detected for ${libraryId} -> ${dep} (versions: ${versions})`);
+        ui.warn(`Inconsistency detected for ${libraryId} -> ${dep} (versions: ${versions})`);
       }
     }
   }

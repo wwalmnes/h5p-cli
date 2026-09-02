@@ -20,7 +20,8 @@ describe('logic.tags', () => {
     fixture = createEmptyProject();
     originalCwd = process.cwd();
     process.chdir(fixture.dir);
-    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     vi.mocked(execSync).mockReturnValue(Buffer.from(''));
     vi.mocked(spawnSync).mockImplementation((cmd: any) =>

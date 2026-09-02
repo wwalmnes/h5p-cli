@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import pack from '../../utils/commands/pack.ts';
 import validate from '../../utils/commands/validate.ts';
 import Input from '../../utils/utility/input.ts';
+import { ui } from '../../lib/ui.ts';
 
 export function packCommand(): Command {
   return new Command('pack')
@@ -21,13 +22,13 @@ export function packCommand(): Command {
           const result = await validate(...inputList);
           const notValid = result.some((item: any) => item.status !== 'ok');
           if (notValid) {
-            console.log('validation failed; use \'-f\' to skip validation');
+            ui.warn('validation failed; use \'-f\' to skip validation');
             return;
           }
         }
         pack(...inputList);
-      } catch (error: any) {
-        console.log(error.message);
+      } catch (error) {
+        ui.error(error);
       }
     });
 }

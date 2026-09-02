@@ -50,8 +50,8 @@
       "import": "./src/lib/ui.ts"
     },
     "./content-upgrade": {
-      "types": "./logic-content-upgrade.d.cts",
-      "import": "./logic-content-upgrade.cjs"
+      "types": "./logic-content-upgrade.ts",
+      "import": "./logic-content-upgrade.ts"
     }
   },
   "bin": {

@@ -1,6 +1,7 @@
 import type { ISetupAdapter } from '../adapters/setup-adapter.ts';
 import { RegisterService } from './register-service.ts';
 import type { Logger } from '../lib/repo-types.ts';
+import { uiLogger } from '../lib/ui-logger.ts';
 
 export class SetupService {
   private setupAdapter: ISetupAdapter;
@@ -12,7 +13,7 @@ export class SetupService {
     setupAdapter: ISetupAdapter,
     registerService: RegisterService,
     librariesFolder: string,
-    logger: Logger = console
+    logger: Logger = uiLogger
   ) {
     this.setupAdapter = setupAdapter;
     this.registerService = registerService;

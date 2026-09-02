@@ -4,6 +4,7 @@ import he from 'he';
 import imageSize from 'image-size';
 import logic from '../../logic.ts';
 import { fromTemplate } from '../lib/h5p-utils.ts';
+import { ui } from '../lib/ui.ts';
 // import config from '../../configLoader.ts';
 import config from '../config.ts';
 import l10n from '../../assets/l10n.json' with { type: 'json' };
@@ -838,7 +839,7 @@ const ajaxLibraries = async (options: { library?: string; libraries?: any[]; mac
 }
 
 const handleError = (error: any, response: any) => {
-  console.log(error);
+  ui.error(error);
   response.set('Content-Type', 'application/json');
   response.end(JSON.stringify({ error: error.toString() }));
 }

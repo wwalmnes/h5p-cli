@@ -1,11 +1,5 @@
 import fs from 'fs';
-import child from 'child_process';
 import type { LibraryDependency } from '../../lib/library-types.ts';
-import type { RepoOpResult } from '../../lib/repo-types.ts';
-
-const env = process.env;
-
-export type RepoStatus = RepoOpResult;
 
 export type { LibraryDependency };
 
@@ -18,47 +12,6 @@ export type LibraryJson = {
   title?: string;
   preloadedDependencies?: LibraryDependency[];
   editorDependencies?: LibraryDependency[];
-};
-
-/**
- * Find status lines for the given repo.
- * @param repo Repository name
- */
-export const statusRepository = function (repo: string): Promise<RepoStatus> {
-  const status: RepoStatus = {
-    name: repo
-  };
-
-  return new Promise((resolve, reject) => {
-    const proc =
-      child.spawn('git', ['status', '--porcelain', '--branch'],
-        {
-          cwd: process.cwd() + '/' + repo,
-          env: env
-        });
-
-    proc.on('error', function (error) {
-      status.error = String(error);
-      reject(status);
-    });
-
-    let buffer = '';
-    proc.stdout.on('data', function (data) {
-      buffer += data.toString();
-    });
-
-    proc.stdout.on('end', function () {
-      const lines = buffer.split('\n');
-      lines.pop(); // Empty
-
-      status.branch = lines.shift()!.split('## ')[1];
-      if (lines.length) {
-        status.changes = lines;
-      }
-
-      resolve(status);
-    });
-  });
 };
 
 /**

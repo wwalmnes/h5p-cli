@@ -1,6 +1,7 @@
 import type { ICoreAdapter } from '../adapters/core-adapter.ts';
 import { SetupService } from './setup-service.ts';
 import type { Logger } from '../lib/repo-types.ts';
+import { uiLogger } from '../lib/ui-logger.ts';
 
 export class CoreService {
   private adapter: ICoreAdapter;
@@ -16,7 +17,7 @@ export class CoreService {
     coreToClone: string[],
     coreToSetup: string[],
     librariesFolder: string,
-    logger: Logger = console
+    logger: Logger = uiLogger
   ) {
     this.adapter = adapter;
     this.setupService = setupService;
