@@ -7,11 +7,16 @@
  * different versions the library declares one version to the editor and another
  * to the runtime, pulls two copies, and the newer one wins by accident.
  *
- * H5P does treat `H5P.Accordion 1.x` and `2.x` as separate libraries, which is
- * why *resolving* a reference to a checkout still matches on major — but that is
- * about where a reference points, not about whether one library may point two
- * ways at once. Grouping for conflict detection is therefore by machine name
- * alone, and cross-major disagreement is a conflict like any other.
+ * Disagreeing about the major is a conflict too: a library naming
+ * `H5P.Accordion 1.0` in `semantics.json` and `H5P.Accordion 2.0` in
+ * `library.json` is the same mistake as naming `1.0` and `1.2`. Grouping for
+ * conflict detection is therefore by machine name alone — one library pins one
+ * version of a dependency, whichever major that is.
+ *
+ * Major does still matter one step later, when a reference is *resolved* to a
+ * checkout (`resolveKey`): H5P ships majors as separate libraries, so a `1.x`
+ * reference finds the `1.x` checkout and never the `2.x` one. That decides where
+ * a reference points, not how many ways one library may point at once.
  *
  * A library also has to agree with *itself*: naming itself in one of its own
  * dependency arrays at a version other than its top-level one is the same
