@@ -102,8 +102,6 @@ export function summary(plan: Plan): string {
   return `${dependents} other librar${dependents === 1 ? 'y' : 'ies'} need${dependents === 1 ? 's' : ''} a minor bump — bump them in this order:`;
 }
 
-// ------------------------------------------------------- inconsistencies
-
 /**
  * One row per conflicting reference, so the table reads as "this file, this
  * line, pins this version" — the three things needed to go and fix it.
@@ -130,9 +128,6 @@ export function conflictLines(conflicts: Conflict[]): string[] {
   return conflicts.map((conflict) => {
     const versions = conflict.versions.map(formatVersion).join(' and ');
 
-    // "H5P.Column: H5P.Column pinned at ..." reads as nonsense. Keyed on the pin
-    // rather than on the names matching, which is also true when a root merely
-    // reaches a library that pins the root at two versions.
     if (conflict.pins.some((pin) => pin.where === SELF_WHERE)) {
       return `${conflict.library.machineName}: names itself at ${versions}`;
     }
