@@ -1,17 +1,14 @@
 import fs from 'fs';
 import archiver from 'archiver';
 import { getLibraryData } from '../utility/repository.ts';
-import * as output from '../utility/output.ts';
-import Input from '../utility/input.ts';
+import { ui } from '../../lib/ui.ts';
+import { splitLibrariesAndLanguages } from '../../lib/resolve-libraries.ts';
 import { findRepos } from '../../lib/process-repos.ts';
 import { archiveDir } from '../../lib/archive-utils.ts';
 
+/** `repos` is already resolved against the filesystem by the caller. */
 function packLibraries(repos: string[], file: string): Promise<void> {
-  const dirs = fs.readdirSync('.');
-  const all = !repos.length || (repos.length === 1 && repos[0] === '*');
-  const toProcess = all ? dirs : repos.filter(r => dirs.includes(r));
-
-  const targets = toProcess.map(repo => {
+  const targets = repos.map(repo => {
     try {
       const lib = JSON.parse(fs.readFileSync(`${repo}/library.json`, 'utf-8'));
       return { path: repo, target: `${lib.machineName}-${lib.majorVersion}.${lib.minorVersion}` };
@@ -33,25 +30,23 @@ function packLibraries(repos: string[], file: string): Promise<void> {
   });
 }
 
-const c = output.color;
-
 type DirectoryData = {
   dirName: string;
   libData: any;
 };
 
-function printDependencies(totalDependencies: number): void {
+function printDependencies(totalDependencies: number, file: string): void {
   if (totalDependencies > 0) {
-    output.printLn(`Adding ${c.emphasize + totalDependencies + c.default} ` +
+    ui.info(`Adding ${totalDependencies} ` +
       (totalDependencies === 1 ? 'dependency' : 'dependencies') +
-      ` to ${c.emphasize}file${c.default}...`);
+      ` to ${file}...`);
   }
 }
 
-function printLibsPacked(libs: string[]): void {
-  output.printLn(`Packing ${c.emphasize + libs.length + c.default} ` +
+function printLibsPacked(libs: string[], file: string): void {
+  ui.info(`Packing ${libs.length} ` +
     (libs.length === 1 ? 'library' : 'libraries') +
-    ` to ${c.emphasize}file${c.default}...`);
+    ` to ${file}...`);
 }
 
 function recursivelyGetDependencies(libraries: string[]): Promise<string[]> {
@@ -111,31 +106,32 @@ function findLibraryInDirectory(libVersion: any, directories: DirectoryData[]): 
   );
 }
 
-function pack(...inputList: string[]): Promise<void> {
-  const input = new Input(inputList);
-  const file = input.getFileName();
-  return input.init(true)
-    .then(() => {
-      const libraries = input.getLibraries();
+export type PackOptions = {
+  recursive?: boolean;
+  file?: string;
+};
 
-      if (!libraries.length) {
-        output.printLn('You must specify libraries');
-        return;
-      }
+export const defaultPackFile = (): string =>
+  process.env.H5P_DEFAULT_PACK || 'libraries.h5p';
 
-      printLibsPacked(libraries);
+async function pack(names: string[], options: PackOptions = {}): Promise<void> {
+  const file = options.file || defaultPackFile();
+  const { libraries } = splitLibrariesAndLanguages(names, fs.readdirSync('.'));
 
-      if (input.hasFlag('-r')) {
-        return recursivelyGetDependencies(libraries)
-          .then(libsToPack => {
-            printDependencies(libsToPack.length - libraries.length);
-            return packLibraries(libsToPack, file);
-          });
-      }
-      else {
-        return packLibraries(libraries, file);
-      }
-    });
+  if (!libraries.length) {
+    ui.warn('You must specify libraries');
+    return;
+  }
+
+  printLibsPacked(libraries, file);
+
+  if (options.recursive) {
+    const libsToPack = await recursivelyGetDependencies(libraries);
+    printDependencies(libsToPack.length - libraries.length, file);
+    return packLibraries(libsToPack, file);
+  }
+
+  return packLibraries(libraries, file);
 }
 
 export default pack;

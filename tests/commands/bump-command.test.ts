@@ -28,7 +28,8 @@ describe('utils bump', () => {
 
   beforeEach(() => {
     printed = '';
-    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: unknown) => {
+    // `ui` writes everything a human reads to stderr; stdout is data only.
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk: unknown) => {
       printed += String(chunk);
       return true;
     });
@@ -48,13 +49,13 @@ describe('utils bump', () => {
   });
 
   it('never changes the process working directory', async () => {
-    await bump(LIB, '--yes');
+    await bump(LIB, { yes: true });
 
     expect(chdir).not.toHaveBeenCalled();
   });
 
   it('scopes every git call to the library folder', async () => {
-    await bump(LIB, '--yes');
+    await bump(LIB, { yes: true });
 
     expect(gitCalls().length).toBeGreaterThan(0);
     for (const call of gitCalls()) {
@@ -63,7 +64,7 @@ describe('utils bump', () => {
   });
 
   it('runs the full commit, tag and push sequence under --yes', async () => {
-    await bump(LIB, '--yes');
+    await bump(LIB, { yes: true });
 
     const commands = gitCalls().map((call) => call.command);
     expect(commands).toContain('git add library.json');
@@ -74,24 +75,21 @@ describe('utils bump', () => {
   });
 
   it('delegates the version bump to increase-patch-version', async () => {
-    await bump(LIB, '--yes');
+    await bump(LIB, { yes: true });
 
     expect(calls()[0].command).toBe(`h5p utils increase-patch-version ${LIB}`);
   });
 
   it('refuses to guess the library from the current folder', async () => {
-    await bump('--yes');
+    await expect(bump('', { yes: true })).rejects.toThrow('No library given.');
 
-    expect(printed).toContain('No library given.');
     expect(calls()).toHaveLength(0);
     expect(chdir).not.toHaveBeenCalled();
   });
 
   it('names the library when it is not a folder in the current directory', async () => {
-    await bump('h5p-nope', '--yes');
+    await expect(bump('h5p-nope', { yes: true })).rejects.toThrow(/No library named.*h5p-nope/);
 
-    expect(printed).toContain('No library named');
-    expect(printed).toContain('h5p-nope');
     expect(calls()).toHaveLength(0);
   });
 
@@ -99,7 +97,7 @@ describe('utils bump', () => {
     vi.mocked(execSync).mockImplementation(((command: string) =>
       String(command).includes('increase-patch-version') ? 'SKIPPED' : '') as never);
 
-    await bump(LIB, '--yes');
+    await bump(LIB, { yes: true });
 
     expect(gitCalls()).toHaveLength(0);
   });

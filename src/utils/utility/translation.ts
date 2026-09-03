@@ -1,5 +1,5 @@
 import { getLibraryData, getLanguageData } from './repository.ts';
-import * as output from './output.ts';
+import { reportResult } from '../../lib/repo-report.ts';
 import path from 'path';
 import { createDefaultLanguage } from '../../lib/semantics-utils.ts';
 import fs from 'fs';
@@ -98,7 +98,7 @@ function getAllLanguagesOfLib(lib: string): Promise<any[]> {
   return Promise.resolve(fs.readdirSync(path.resolve(lib, 'language')) as string[])
     .then((dirs: string[]) => dirs.map(getLanguageCode).map(validateLanguage.bind(null, lib)))
     .catch(() => {
-      output.printResults({
+      reportResult({
         name: lib,
         skipped: true
       });
