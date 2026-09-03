@@ -28,11 +28,11 @@ export function registerCommand(service?: RegisterService): Command {
         adapterRegistry.resolve<IRegisterAdapter>(options.adapter ?? 'register') ?? new RegisterAdapter(),
         config.registry
       );
-      const args = registerArgsSchema.parse({ input });
       try {
+        const args = registerArgsSchema.parse({ input });
         await svc.register(args.input);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

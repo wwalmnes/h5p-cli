@@ -1,6 +1,7 @@
 An h5p toolkit for running, editing and developing h5p content types.  
 
-Make sure you have [git](https://git-scm.com/downloads), [NodeJS](https://nodejs.org/en/download/current) and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (usually included in NodeJS) installed.  
+Make sure you have [git](https://git-scm.com/downloads), [NodeJS](https://nodejs.org/en/download/current) **version 24 or newer** and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (usually included in NodeJS) installed.
+The CLI runs TypeScript sources directly using Node's native type stripping, which is why v24+ is required.
 Some of the commands listed here are Linux & MacOS specific. On Windows it’s recommended that you run them inside [git bash](https://git-scm.com/download/win).  
 
 ## Documentation
@@ -70,7 +71,13 @@ h5p server
 ```
 You can now use your browser to view, edit, delete, import, export and create new content types.  
 > [!IMPORTANT]
-> Remember that the folder where you run the H5P server is where the server will look for the libraries. If you run the setup commands in another folder then the server will not find those libraries.  
+> Remember that the folder where you run the H5P server is where the server will look for the libraries. If you run the setup commands in another folder then the server will not find those libraries.
+>
+> That folder is your **workspace root**: it holds `libraries/`, `content/` and `temp/`, and
+> it is where every top-level `h5p` command runs. The `h5p git` and `h5p utils` subcommands
+> follow the opposite convention — they sweep the checkouts in the current folder, so run
+> them from **inside `libraries/`** (`cd libraries && h5p git status`). Each group tells you
+> if you are in the wrong place.
 
 <video src="https://github.com/h5p/h5p-cli/assets/5208532/b33a12e6-3200-488c-81c6-eae41b13f512"></video>
 

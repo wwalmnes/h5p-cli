@@ -17,12 +17,12 @@ export function exportCommand(adapter?: IExportAdapter): Command {
     .option('--adapter <name>', 'Use a named adapter from an installed plugin')
     .action(async (library: string, folder: string | undefined, options) => {
       const a = adapter ?? adapterRegistry.resolve<IExportAdapter>(options.adapter ?? 'export') ?? new ExportAdapter();
-      const args = exportArgsSchema.parse({ library, folder });
       try {
+        const args = exportArgsSchema.parse({ library, folder });
         const file = await a.export(args.library, args.folder);
         ui.data(file);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

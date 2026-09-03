@@ -23,6 +23,7 @@ export function statusCommand(adapter?: IGitAdapter): Command {
         for (const issue of result.error.issues) {
           ui.error(issue.message);
         }
+        process.exitCode = 1;
         return;
       }
 
@@ -40,7 +41,7 @@ export function statusCommand(adapter?: IGitAdapter): Command {
           .filter(repo => repo.error || repo.changes || args.f)
           .forEach(repo => reportChanges(repo));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

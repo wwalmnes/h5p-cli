@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+// @ts-ignore - no type declarations for adm-zip in this project
 import admZip from 'adm-zip';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../logic.ts';

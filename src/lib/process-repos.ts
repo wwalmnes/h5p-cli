@@ -8,10 +8,15 @@ export type RepoSkipped = RepoOpResult & { skipped: true; msg: string };
 
 export type RepoResult<T> = RepoSkipped | ({ name: string } & T);
 
-/** Find all git repositories in the current working directory. */
-export async function findRepos(dir = '.'): Promise<string[]> {
+/** Find all git repositories in the given directory (defaults to the current one). */
+export function findReposSync(dir = '.'): string[] {
   const entries = fs.readdirSync(dir);
   return entries.filter(entry => fs.existsSync(`${dir === '.' ? '' : dir + '/'}${entry}/.git/config`));
+}
+
+/** Find all git repositories in the current working directory. */
+export async function findRepos(dir = '.'): Promise<string[]> {
+  return findReposSync(dir);
 }
 
 /**

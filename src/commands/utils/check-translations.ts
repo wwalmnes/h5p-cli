@@ -1,5 +1,8 @@
 import { Command } from 'commander';
 import checkTranslations from '../../utils/commands/check-translations.ts';
+import { splitLibrariesAndLanguages } from '../../lib/resolve-libraries.ts';
+import { findRepos } from '../../lib/process-repos.ts';
+import { ui } from '../../lib/ui.ts';
 
 export function checkTranslationsCommand(): Command {
   return new Command('check-translations')
@@ -7,16 +10,13 @@ export function checkTranslationsCommand(): Command {
     .argument('[language]', 'Language code')
     .argument('[library]', 'Library name')
     .option('-d, --diff', 'Show differences between translations')
-    .action(async (language: string | undefined, library: string | undefined, options: { diff?: boolean }) => {
-      const inputList: string[] = [];
-      if (options.diff) inputList.push('-diff');
-      if (language) inputList.push(language);
-      if (library) inputList.push(library);
+    .action(async (language: string, library: string, options: { diff?: boolean }) => {
       try {
-        await checkTranslations(...inputList);
-        process.exit(0);
+        const { libraries, languages } = splitLibrariesAndLanguages([language, library], await findRepos());
+
+        await checkTranslations(libraries, languages, { diff: options.diff });
       } catch (error) {
-        process.exit(1);
+        ui.fail(error);
       }
     });
 }

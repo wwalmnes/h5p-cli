@@ -20,11 +20,11 @@ export function createCommand(service?: CreateService): Command {
         adapterRegistry.resolve<ICreateAdapter>(options.adapter ?? 'create') ?? new CreateAdapter(),
         config.folders.libraries
       );
-      const args = createArgsSchema.parse({ name });
       try {
+        const args = createArgsSchema.parse({ name });
         svc.create(args.name);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

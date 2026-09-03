@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { Command } from 'commander';
-import { setupFolders } from './lib/setup-folders.ts';
+import { enforce, requireWorkspaceRoot } from './lib/workspace.ts';
 import { loadPlugins } from './lib/plugin-loader.ts';
 import { ui } from './lib/ui.ts';
 import { exportCommand } from './commands/export.ts';
@@ -61,10 +61,13 @@ program.addCommand(utilsCommand());
 
 await loadPlugins(program);
 
-// Replicate the original guard: skip setupFolders for 'utils', 'git', 'help', 'plugin', no-arg
+// Top-level commands resolve libraries as `libraries/<name>`, so they must run from the
+// workspace root. `core` bootstraps that layout, `plugin` acts on the installed CLI, and
+// `utils`/`git` follow the opposite convention (see src/lib/workspace.ts).
 const subcommandName = process.argv[2];
-if (subcommandName && !['utils', 'git', 'help', '--help', '-h', '--version', '-V', 'plugin'].includes(subcommandName)) {
-  // setupFolders();
+const cwdExempt = ['utils', 'git', 'help', '--help', '-h', '--version', '-V', 'plugin', 'core'];
+if (subcommandName && !cwdExempt.includes(subcommandName)) {
+  enforce(requireWorkspaceRoot);
 }
 
 program.parse(process.argv);

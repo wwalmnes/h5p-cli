@@ -20,7 +20,7 @@ export function checkoutCommand(adapter?: IGitAdapter): Command {
         const repos = libraries.length ? libraries : ['*'];
         reportResults(await processRepos(repos, repo => git.checkout(repo, branch)));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

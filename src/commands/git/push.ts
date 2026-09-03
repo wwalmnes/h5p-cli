@@ -20,7 +20,7 @@ export function pushCommand(adapter?: IGitAdapter): Command {
       try {
         results = await processRepos(repos, repo => git.push(repo, pushOptions));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
         return;
       } finally {
         // Retire the transient row before any permanent line is committed.

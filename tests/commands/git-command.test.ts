@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { MockInstance } from 'vitest';
 import type { Command } from 'commander';
 import type { GitOpResult, IGitAdapter } from '../../src/adapters/git-adapter.ts';
 
@@ -65,8 +66,8 @@ function run(cmd: Command, args: string[]): Promise<unknown> {
   return cmd.parseAsync(args, { from: 'user' });
 }
 
-let stdout: ReturnType<typeof vi.spyOn>;
-let stderr: ReturnType<typeof vi.spyOn>;
+let stdout: MockInstance<typeof process.stdout.write>;
+let stderr: MockInstance<typeof process.stderr.write>;
 /** Everything the command emitted, on either stream. */
 let written: string;
 /** The data channel alone — what a pipeline would receive. */

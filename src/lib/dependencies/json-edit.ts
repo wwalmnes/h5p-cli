@@ -127,6 +127,30 @@ export function findDependencyNumber(
   return undefined;
 }
 
+/**
+ * Offset of every `"machineName"` key belonging to a dependency entry, by name,
+ * in document order.
+ *
+ * The depth filter is what excludes the library's own top-level `machineName`,
+ * which a plain token search cannot tell apart from a dependency naming that
+ * same library — the exact case a library that lists itself runs into.
+ */
+export function dependencyNameOffsets(raw: string): Map<string, number[]> {
+  const offsets = new Map<string, number[]>();
+
+  for (const token of scanKeys(raw)) {
+    if (token.key !== 'machineName' || token.depth < 2) continue;
+    if (raw[token.valueStart] !== '"') continue;
+
+    const name = raw.slice(token.valueStart + 1, endOfString(raw, token.valueStart));
+    const found = offsets.get(name);
+    if (found) found.push(token.keyStart);
+    else offsets.set(name, [token.keyStart]);
+  }
+
+  return offsets;
+}
+
 export function replaceSpan(raw: string, start: number, end: number, text: string): string {
   return raw.slice(0, start) + text + raw.slice(end);
 }

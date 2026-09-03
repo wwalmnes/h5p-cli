@@ -1,17 +1,19 @@
 import { Command } from 'commander';
 import validate from '../../utils/commands/validate.ts';
+import { ui } from '../../lib/ui.ts';
 
 export function validateCommand(): Command {
   return new Command('validate')
     .description('Validate H5P libraries')
     .argument('<libraries...>', 'Library names')
     .action(async (libraries: string[]) => {
-      const result = await validate(...libraries);
-      const notValid = result.some((item: any) => item.status !== 'ok');
-      if (notValid) {
-        process.exit(1);
-      } else {
-        process.exit(0);
+      try {
+        const result = await validate(libraries);
+        if (result.some((item: any) => item.status !== 'ok')) {
+          process.exitCode = 1;
+        }
+      } catch (error) {
+        ui.fail(error);
       }
     });
 }

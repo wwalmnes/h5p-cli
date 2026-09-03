@@ -1,37 +1,34 @@
-import Input from '../utility/input.ts';
-import * as output from '../utility/output.ts';
+import { reportResult } from '../../lib/repo-report.ts';
+import { splitLibrariesAndLanguages } from '../../lib/resolve-libraries.ts';
+import { findRepos } from '../../lib/process-repos.ts';
 import path from 'path';
 import fs from 'fs';
 import child from 'child_process';
 
-const FLAGS = {
-  ONLY_TEST: ['-t', '-test'],
-  INSTALL: ['-i', '-install']
+export type BuildOptions = {
+  test?: boolean;
+  install?: boolean;
 };
 
-const buildLibraries = function (...inputList: string[]) {
-  const input = new Input(inputList);
-  const testLibraries = input.hasFlag(FLAGS.ONLY_TEST);
-  const installLibraries = input.hasFlag(FLAGS.INSTALL);
-  const options = {
-    testLibraries,
-    installLibraries
+const buildLibraries = async function (names: string[], options: BuildOptions = {}): Promise<void> {
+  const { libraries } = splitLibrariesAndLanguages(names, await findRepos());
+  const settings = {
+    testLibraries: options.test ?? false,
+    installLibraries: options.install ?? false
   };
-  input.init().then(() => {
-    const libraries = input.getLibraries();
-    libraries.forEach(processPackage.bind(null, options));
-  });
+
+  await Promise.all(libraries.map(library => processPackage(settings, library)));
 };
 
-function processPackage(options: any, library: string): void {
-  hasPackage({ options, library: library.toString() })
+function processPackage(options: any, library: string): Promise<void> {
+  return hasPackage({ options, library: library.toString() })
     .then(installDependencies)
     .then(buildPackage)
     .then(testPackage)
     .then(({ library }: any) => {
-      output.printResults({ name: library, msg: 'Build complete' });
+      reportResult({ name: library, msg: 'Build complete' });
     })
-    .catch((repo: any) => output.printResults(repo));
+    .catch((repo: any) => reportResult(repo));
 }
 
 function hasPackage({ options, library }: any): Promise<any> {

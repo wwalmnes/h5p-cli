@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { enforce, requireLibrariesCwd } from '../../lib/workspace.ts';
 import { statusCommand } from './status.ts';
 import { diffCommand } from './diff.ts';
 import { commitCommand } from './commit.ts';
@@ -13,6 +14,11 @@ import { tagCommand } from './tag.ts';
 export function gitCommand(): Command {
   const git = new Command('git');
   git.description('Multi-repo git operations across H5P libraries');
+
+  // These sweep the checkouts in cwd, so they run from inside `libraries/`.
+  git.hook('preAction', (_thisCommand, actionCommand) => {
+    enforce(() => requireLibrariesCwd(`git ${actionCommand.name()}`));
+  });
 
   git.addCommand(statusCommand());
   git.addCommand(diffCommand());

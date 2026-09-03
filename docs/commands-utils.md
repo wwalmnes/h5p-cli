@@ -4,6 +4,27 @@ Quick reference for all `h5p utils` subcommands. Run `h5p utils --help` to print
 
 Multi-repo git operations live under [`h5p git`](./commands-git.md).
 
+## Working directory
+
+**Run these commands from inside `libraries/`**, where each library is a direct subfolder:
+
+```bash
+cd libraries
+h5p utils get H5P.Accordion
+h5p utils validate h5p-accordion
+```
+
+A library argument names a subfolder of the current directory — `<name>`, not
+`libraries/<name>`. This is the opposite of the top-level
+[`h5p` commands](./commands.md), which run from the workspace root. If no git repository is
+found in the current folder, the command stops with a message instead of quietly doing
+nothing.
+
+Exceptions: `list` and `help` touch no files and work from anywhere; `get` and `init`
+*create* the checkouts, so they run in an empty folder too. `dependency-check` takes an
+explicit `--libraries <path>` (also settable via `H5P_LIBRARIES`) if you need to point it
+somewhere other than the current folder.
+
 ---
 
 ## Version Control
@@ -30,7 +51,7 @@ h5p utils tag-version [libraries...]
 
 ## `h5p utils get`
 
-Clone a library and all its dependencies into the `libraries/` folder.
+Clone a library and all its dependencies into the **current** folder — run it from inside `libraries/`.
 
 ```
 h5p utils get [options] <libraries...>
@@ -60,7 +81,7 @@ No arguments.
 
 ## `h5p utils init`
 
-Initialize a new H5P library scaffold in the current directory.
+Initialize a new H5P library scaffold in a subfolder of the current directory.
 
 ```
 h5p utils init <library>
@@ -68,7 +89,9 @@ h5p utils init <library>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library name. |
+| `library` | Yes | Library name. Also the folder it is created in. |
+
+Prompts for title, description, entry point, author and license.
 
 ---
 
@@ -103,15 +126,15 @@ does the same job with a proper dependency graph.
 
 ## `h5p utils bump`
 
-Interactively bump the version of a library.
+Bump the patch version of a library, then commit, tag and push it.
 
 ```
-h5p utils bump [options] [library]
+h5p utils bump [options] <library>
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | No | Library name. Defaults to the library in the current directory. |
+| `library` | Yes | Library folder inside the current directory. |
 
 | Option | Description |
 |--------|-------------|
@@ -426,13 +449,50 @@ h5p utils dependency-check H5P.Accordion --apply
 
 ## `h5p utils find-inconsistencies`
 
-Find version inconsistencies across all libraries in the `libraries/` folder.
+Find libraries that pin the same dependency at two different versions. A library can
+name a dependency in `semantics.json` options and again in any of the dependency
+arrays in `library.json`; when those disagree the library pulls two copies and the
+newer one wins by accident.
+
+A library must name a dependency at the same **major and minor** in both files, so
+`H5P.Accordion 1.0` in `semantics.json` alongside `H5P.Accordion 2.0` in `library.json`
+is a conflict too — the library declares one version to the editor and another to the
+runtime. H5P does ship majors as separate libraries, but that governs where a reference
+points, not whether one library may point two ways at once.
+
+A library must also name **itself** at its own version. Listing itself in
+`editorDependencies` at an older minor than its top-level `majorVersion`/`minorVersion` —
+how a bumped `library.json` leaves a stale self-pin behind — is reported like any other
+conflict, with a `(self)` row pointing at the top-level declaration. A reference that
+merely lags the version *checked out on disk* is a different question, and belongs to
+[`h5p utils dependency-check`](#h5p-utils-dependency-check).
 
 ```
-h5p utils find-inconsistencies
+h5p utils find-inconsistencies [--libraries <path>] [--transitive]
 ```
 
-No arguments.
+| Option | Description |
+|--------|-------------|
+| `--libraries <path>` | Folder of library checkouts to analyse. Defaults to `$H5P_LIBRARIES`, or the current folder |
+| `--transitive` | Also report conflicts reachable through a library's dependencies, and warn about referenced majors that are not checked out |
+
+Each conflicting reference is reported with the file, line, and the field or array
+that declares it. Exits `1` when any inconsistency is found, so it can gate a script.
+
+```
+> scanned 3 libraries — 2 inconsistencies
+H5P.Column             H5P.Accordion          1.0   h5p-column/semantics.json   :2    content
+H5P.Column             H5P.Accordion          1.2   h5p-column/library.json     :9    preloadedDependencies
+H5P.BranchingScenario  H5P.BranchingScenario  1.10  h5p-branching/library.json  :37   editorDependencies
+H5P.BranchingScenario  H5P.BranchingScenario  1.11  h5p-branching/library.json  :4,5  (self)
+> Declared by the library itself:
+  - H5P.Column: H5P.Accordion pinned at 1.0 and 1.2
+  - H5P.BranchingScenario: names itself at 1.10 and 1.11
+```
+
+Unlike the other `utils` commands this one does not need to run from inside
+`libraries/` and does not require git checkouts — point `--libraries` at any folder
+of library directories.
 
 ---
 

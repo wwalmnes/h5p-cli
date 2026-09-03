@@ -1,5 +1,6 @@
 /** Presentation helpers for a bump plan. */
 import type { BumpNode, Plan } from './plan.ts';
+import { SELF_WHERE, type Conflict, type InconsistencyReport } from './inconsistencies.ts';
 import { formatVersion } from './version.ts';
 
 /** How many referenced libraries to name before summarising the rest. */
@@ -99,4 +100,45 @@ export function summary(plan: Plan): string {
   const dependents = plan.order.filter((node) => !node.seed).length;
   if (dependents === 0) return 'No other library needs a minor bump.';
   return `${dependents} other librar${dependents === 1 ? 'y' : 'ies'} need${dependents === 1 ? 's' : ''} a minor bump — bump them in this order:`;
+}
+
+/**
+ * One row per conflicting reference, so the table reads as "this file, this
+ * line, pins this version" — the three things needed to go and fix it.
+ */
+export function conflictRows(conflicts: Conflict[]): string[][] {
+  return conflicts.flatMap((conflict) =>
+    conflict.pins.map((pin) => [
+      conflict.library.machineName,
+      conflict.machineName,
+      formatVersion(pin.version),
+      pin.relFile,
+      pin.lines.length ? `:${pin.lines.join(',')}` : '',
+      pin.where,
+    ])
+  );
+}
+
+export function conflictHead(): string[] {
+  return ['LIBRARY', 'DEPENDENCY', 'PINNED', 'FILE', 'LINE', 'WHERE'];
+}
+
+/** One line per conflict naming the versions in play. */
+export function conflictLines(conflicts: Conflict[]): string[] {
+  return conflicts.map((conflict) => {
+    const versions = conflict.versions.map(formatVersion).join(' and ');
+
+    if (conflict.pins.some((pin) => pin.where === SELF_WHERE)) {
+      return `${conflict.library.machineName}: names itself at ${versions}`;
+    }
+
+    return `${conflict.library.machineName}: ${conflict.machineName} pinned at ${versions}`;
+  });
+}
+
+export function inconsistencySummary(report: InconsistencyReport): string {
+  const total = report.direct.length + report.transitive.length;
+  const libraries = `librar${report.scanned === 1 ? 'y' : 'ies'}`;
+  if (total === 0) return `scanned ${report.scanned} ${libraries} — no version inconsistencies`;
+  return `scanned ${report.scanned} ${libraries} — ${total} inconsisten${total === 1 ? 'cy' : 'cies'}`;
 }

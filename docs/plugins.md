@@ -127,11 +127,18 @@ If you print status messages with `console.log`, they land in `out.txt` and brea
 | `ui.success(message)` | stderr | `> message`, green |
 | `ui.warn(message)` | stderr | `> message`, yellow |
 | `ui.error(error)` | stderr | `> error: message`, red |
+| `ui.fail(error)` | stderr | the same, and sets `process.exitCode = 1` |
 | `ui.debug(message)` | stderr | `>>> message`, dim — only shown when verbose |
 | `ui.list(items, { title, empty })` | stderr | `> title` then `  - item` lines |
 | `ui.table(rows, { head })` | stdout | aligned columns |
 
-`ui.error()` takes `unknown`, not a string: it normalizes an `Error`, a string, or any other thrown value. So the whole error-handling pattern in a command action is:
+`ui.error()` takes `unknown`, not a string: it normalizes an `Error`, a string, or any other thrown value.
+
+Catch with **`ui.fail(error)`**, not `ui.error(error)`. Commander resolves an action
+handler's promise whether or not the body threw, so a command that only reports the
+error exits `0` and `h5p your-command && next` runs `next` after a failure. `ui.fail`
+reports it *and* sets `process.exitCode = 1`. So the whole error-handling pattern in a
+command action is:
 
 ```typescript
 .action(async (library) => {
@@ -139,10 +146,14 @@ If you print status messages with `console.log`, they land in `out.txt` and brea
     const file = await doSomething(library);
     ui.data(file);
   } catch (error) {
-    ui.error(error);
+    ui.fail(error);
   }
 });
 ```
+
+Put any argument validation inside the same `try` so a bad argument takes that path
+too. Reach for bare `ui.error()` only for a line that is not by itself fatal — a
+per-item failure inside a loop that decides the exit code once it finishes.
 
 Colors switch off automatically when stderr is not a terminal, and honour `NO_COLOR` and `FORCE_COLOR`.
 

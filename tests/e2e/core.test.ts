@@ -30,6 +30,7 @@ describe('core — end-to-end', () => {
     vi.mocked(logic.default.clone).mockImplementation(
       (_org: string, _library: string, _branch: string, target: string) => {
         fs.mkdirSync(path.join(fixture.dir, 'libraries', target), { recursive: true });
+        return target;
       }
     );
   });

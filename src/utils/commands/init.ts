@@ -92,15 +92,22 @@ const askQuestion = function(prompt: string): Promise<string> {
 };
 
 /**
- * Initialize H5P library in given directory
+ * Initialize an H5P library skeleton in a subfolder of the current directory.
+ * Like the other `h5p utils` commands, this runs from inside the `libraries/` folder.
  */
-function init() {
+function init(name?: string) {
   const answers: any = {};
 
-  askQuestion(commandPrompts.introduction)
-    .then(response => {
-      process.stdout.write(`
+  const askName = name
+    ? Promise.resolve(name)
+    : askQuestion(commandPrompts.introduction).then(response => {
+        process.stdout.write(`
       ${response}`);
+        return response;
+      });
+
+  askName
+    .then(response => {
       answers.name = response;
       return askQuestion(commandPrompts.title)
     })
@@ -135,7 +142,7 @@ function init() {
 
       answers.license = license;
       process.stdout.write('\u000A');
-      return askQuestion(commandPrompts.confirm)
+      return askQuestion(confirmPrompt(answers.name))
     })
     .then(response => {
       const isValidInit =
@@ -170,11 +177,12 @@ const commandPrompts = {
   author: `
   author: `,
   license: `
-  license: (MIT) `,
-  confirm: `
-  About to write to ${path}.
-
-  Is this ok? (yes)`
+  license: (MIT) `
 };
+
+const confirmPrompt = (name: string): string => `
+  About to write to ${path.resolve(name)}.
+
+  Is this ok? (yes)`;
 
 export default init;

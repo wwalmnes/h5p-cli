@@ -12,6 +12,6 @@ export function initCommand(): Command {
     .argument('<library>', 'Library name')
     .action((library: string) => {
       const args = initArgsSchema.parse({ library });
-      init();
+      init(args.library);
     });
 }

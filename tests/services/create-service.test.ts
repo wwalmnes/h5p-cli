@@ -12,6 +12,15 @@ function makeAdapter(overrides: Partial<ICreateAdapter> = {}): ICreateAdapter {
   };
 }
 
+/** Content written to the first file whose path ends with `suffix`. */
+function writtenFile(adapter: ICreateAdapter, suffix: string): string {
+  const call = (adapter.writeFile as ReturnType<typeof vi.fn>).mock.calls.find(
+    (args: unknown[]) => String(args[0]).endsWith(suffix)
+  );
+  if (!call) throw new Error(`no file was written ending in "${suffix}"`);
+  return String(call[1]);
+}
+
 describe('CreateService', () => {
   let logger: { log: ReturnType<typeof vi.fn> };
   const librariesFolder = 'libraries';
@@ -37,10 +46,7 @@ describe('CreateService', () => {
     const adapter = makeAdapter();
     const svc = new CreateService(adapter, librariesFolder, logger);
     svc.create('MyContentType');
-    const call = (adapter.writeFile as ReturnType<typeof vi.fn>).mock.calls.find(
-      ([p]: [string]) => p.endsWith('library.json')
-    );
-    const parsed = JSON.parse(call[1]);
+    const parsed = JSON.parse(writtenFile(adapter, 'library.json'));
     expect(parsed.machineName).toBe('H5P.MyContentType');
     expect(parsed.preloadedJs).toEqual([{ path: 'index.js' }]);
   });
@@ -58,9 +64,6 @@ describe('CreateService', () => {
     const adapter = makeAdapter();
     const svc = new CreateService(adapter, librariesFolder, logger);
     svc.create('MyContentType');
-    const call = (adapter.writeFile as ReturnType<typeof vi.fn>).mock.calls.find(
-      ([p]: [string]) => p.endsWith('index.js')
-    );
-    expect(call[1]).toContain('H5P.MyContentType');
+    expect(writtenFile(adapter, 'index.js')).toContain('H5P.MyContentType');
   });
 });

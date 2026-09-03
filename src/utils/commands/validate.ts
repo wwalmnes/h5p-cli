@@ -1,8 +1,9 @@
 import fs from 'fs';
 import { getLibraryData, isEditorLibrary } from '../utility/repository.ts';
 import { compareEditorLanguageFile, getEditorLanguageDefaults, languageComparison } from '../utility/translation.ts';
-import Input from '../utility/input.ts';
 import parallel from '../utility/parallel.ts';
+import { splitLibrariesAndLanguages } from '../../lib/resolve-libraries.ts';
+import { findRepos } from '../../lib/process-repos.ts';
 import { createDefaultLanguage } from '../../lib/semantics-utils.ts';
 import path from 'path';
 import { ui } from '../../lib/ui.ts';
@@ -25,23 +26,19 @@ const ERROR = 'error';
 const WARNING = 'warning';
 const OK = 'ok';
 
-const validate = function (...inputList: string[]): Promise<any[]> {
-  return new Promise((resolve, reject) => {
-    const input = new Input(inputList);
-    input.init().then(() => {
-      const libraries = input.getLibraries();
-      if (libraries.length === 0) {
-        reject(new Error('no valid libraries found; use \'-f\' to skip validation'));
-      }
-      parallel(libraries, (index, library, done) => {
-        validateLibrary(library, done);
-      }, (error, results) => {
-        outputReport(results);
-        resolve(results);
-      });
-    })
-    .catch((error: any) => {
-      ui.error(error);
+const validate = async function (names: string[]): Promise<any[]> {
+  const { libraries } = splitLibrariesAndLanguages(names, await findRepos());
+
+  if (libraries.length === 0) {
+    throw new Error('no valid libraries found; use \'-f\' to skip validation');
+  }
+
+  return new Promise((resolve) => {
+    parallel(libraries, (index, library, done) => {
+      validateLibrary(library, done);
+    }, (error, results) => {
+      outputReport(results);
+      resolve(results);
     });
   });
 };

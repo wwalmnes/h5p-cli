@@ -17,12 +17,12 @@ export function importCommand(adapter?: IImportAdapter): Command {
     .option('--adapter <name>', 'Use a named adapter from an installed plugin')
     .action((folder: string, archive: string | undefined, options) => {
       const a = adapter ?? adapterRegistry.resolve<IImportAdapter>(options.adapter ?? 'import') ?? new ImportAdapter();
-      const args = importArgsSchema.parse({ folder, archive });
       try {
+        const args = importArgsSchema.parse({ folder, archive });
         const output = a.import(args.folder, args.archive);
         ui.data(`content/${output}`);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { MockInstance } from 'vitest';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
 vi.mock('../../logic', () => ({
@@ -23,7 +24,7 @@ vi.mock('../../logic', () => ({
 describe('deps — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
-  let stderr: ReturnType<typeof vi.spyOn>;
+  let stderr: MockInstance<typeof process.stderr.write>;
 
   beforeEach(() => {
     fixture = createEmptyProject();
@@ -74,7 +75,7 @@ describe('deps — end-to-end', () => {
 describe('missing — end-to-end', () => {
   let fixture: Fixture;
   let originalCwd: string;
-  let stderr: ReturnType<typeof vi.spyOn>;
+  let stderr: MockInstance<typeof process.stderr.write>;
 
   beforeEach(() => {
     fixture = createEmptyProject();

@@ -490,6 +490,20 @@ export const ui = {
     });
   },
 
+  /**
+   * `error()`, plus the exit code that makes a failure visible to a shell.
+   *
+   * Commander resolves an action handler's promise whether or not the body
+   * threw, so a handler that only reports the error still leaves the process
+   * at 0 and `h5p install X && next` runs `next` after a failed install.
+   * Setting `exitCode` rather than calling `process.exit()` lets the event
+   * loop drain, so buffered stderr is not truncated on the way out.
+   */
+  fail(error: unknown): void {
+    ui.error(error);
+    process.exitCode = 1;
+  },
+
   /** The pipe-safe channel: raw value on stdout, no prefix, no color. */
   data(value: string): void {
     emit({ kind: 'data', stream: 'stdout', message: value });

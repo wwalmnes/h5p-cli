@@ -16,11 +16,11 @@ export function missingCommand(service?: MissingService): Command {
     .option('--adapter <name>', 'Use a named adapter from an installed plugin')
     .action(async (library: string, options) => {
       const svc = service ?? new MissingService(adapterRegistry.resolve<IMissingAdapter>(options.adapter ?? 'missing') ?? new MissingAdapter());
-      const args = missingArgsSchema.parse({ library });
       try {
+        const args = missingArgsSchema.parse({ library });
         await svc.missing(args.library);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

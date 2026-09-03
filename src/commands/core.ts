@@ -32,7 +32,7 @@ export function coreCommand(service?: CoreService): Command {
       try {
         await svc.core();
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

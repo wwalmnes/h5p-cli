@@ -30,6 +30,7 @@ export function depsCommand(service?: DepsService): Command {
         for (const issue of result.error.issues) {
           ui.error(issue.message);
         }
+        process.exitCode = 1;
         return;
       }
 
@@ -38,7 +39,7 @@ export function depsCommand(service?: DepsService): Command {
       try {
         await svc.deps(args.library, args.mode, args.version, args.folder);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

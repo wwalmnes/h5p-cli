@@ -493,6 +493,7 @@ describe("naming a library by its directory", () => {
       dirName,
       hasSemantics: false,
       refs: [],
+      selfLines: [],
     });
 
     expect(() =>

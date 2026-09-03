@@ -34,11 +34,11 @@ export function setupCommand(service?: SetupService): Command {
     .argument('[version]', 'Version')
     .argument('[download]', 'Pass 1 to download instead of clone')
     .action(async (library: string, version: string | undefined, download: string | undefined) => {
-      const args = setupArgsSchema.parse({ library, version, download });
       try {
+        const args = setupArgsSchema.parse({ library, version, download });
         await svc.setup(args.library, args.version, args.download);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

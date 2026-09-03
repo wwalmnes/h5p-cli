@@ -1,55 +1,57 @@
-import * as output from '../utility/output.ts';
-import Input from '../utility/input.ts';
+import fs from 'fs';
+import { ui } from '../../lib/ui.ts';
+import { splitLibrariesAndLanguages } from '../../lib/resolve-libraries.ts';
 import { getLibraryData } from '../utility/repository.ts';
 import { execSync } from 'child_process';
-import path from 'path';
 import readline from 'readline';
 
-const c = output.color;
+export type BumpOptions = {
+  yes?: boolean;
+};
 
-async function bump(...inputList: string[]) {
-  const autoYes = inputList.includes('--yes') || inputList.includes('-y');
-  inputList = inputList.filter(arg => arg !== '--yes' && arg !== '-y');
+async function bump(library: string, options: BumpOptions = {}) {
+  const autoYes = options.yes ?? false;
 
-  const input = new Input(inputList);
-  await input.init(true);
-
-  const lib = detectLibrary(input);
-  if (!lib) {
-    return;
-  }
+  const lib = detectLibrary(library);
 
   if (!runH5pBump(lib)) {
     return;
   }
 
-  process.chdir(lib);
-  output.printLn(`${c.blue}Changed directory back to: ${c.emphasize}${lib}${c.default}`);
-
-  const version = getVersion();
+  // Like the other utils sweeps, this runs from inside `libraries/`, so the library is a
+  // direct subfolder of cwd. Every git call below is scoped with `cwd` rather than by
+  // chdir'ing the process.
+  const version = getVersion(lib);
   if (!version) return;
 
-  if (!stageChanges(autoYes)) return;
-  if (!commitChanges(version)) return;
+  if (!stageChanges(lib, autoYes)) return;
+  if (!commitChanges(lib, version)) return;
 
   if (autoYes) {
-    tagAndPush(version, true, true);
+    tagAndPush(lib, version, true, true);
   }
   else {
-    promptTagAndPush(version);
+    promptTagAndPush(lib, version);
   }
 }
 
-function detectLibrary(input: Input): string | null {
-  let libraries = input.getLibraries();
+function detectLibrary(requested: string): string {
+  // Only names matching a folder in cwd count, so an unmatched name means the
+  // library is not here, most often because cwd is not the libraries folder.
+  const names = requested ? [requested] : [];
+  const { libraries } = splitLibrariesAndLanguages(names, fs.readdirSync('.'));
+
   if (!libraries.length) {
-    const cwd = process.cwd();
-    const libName = path.basename(cwd);
-    libraries = [libName];
-    process.chdir(path.dirname(cwd));
-    output.printLn(`${c.blue}Defaulting to current folder: ${c.emphasize}${libName}${c.default}`);
+    const message = requested
+      ? `No library named ${requested} in this folder.`
+      : 'No library given.';
+    throw new Error(
+      `${message} Run this from inside the libraries folder and name the library to bump, ` +
+      'e.g. h5p utils bump h5p-accordion.'
+    );
   }
-  output.printLn(`${c.blue}Bumping patch version of: ${c.emphasize}${libraries[0]}${c.default}`);
+
+  ui.info(`Bumping patch version of: ${libraries[0]}`);
   return libraries[0];
 }
 
@@ -57,14 +59,14 @@ function runH5pBump(lib: string): boolean {
   let bumpOutput = '';
   try {
     bumpOutput = execSync(`h5p utils increase-patch-version ${lib}`, { encoding: 'utf8' });
-    output.printLn(bumpOutput.trim());
+    ui.info(bumpOutput.trim());
   }
   catch {
-    output.printLn(`${c.red}Failed to bump version using h5p utils.${c.default}`);
+    ui.error('Failed to bump version using h5p utils.');
     return false;
   }
   if (bumpOutput.includes('SKIPPED')) {
-    output.printLn(`${c.yellow}Nothing to bump — skipping further steps.${c.default}`);
+    ui.warn('Nothing to bump — skipping further steps.');
     return false;
   }
   return true;
@@ -74,96 +76,96 @@ function isValidSemver(...args: any[]): boolean {
   return args.every(n => typeof n === 'number');
 }
 
-function getVersion(): string | null {
-  const libData = getLibraryData('.');
+function getVersion(lib: string): string | null {
+  const libData = getLibraryData(lib);
   const { majorVersion, minorVersion, patchVersion } = libData;
   if (!isValidSemver(majorVersion, minorVersion, patchVersion)) {
-    output.printLn(`${c.red}Failed to read version from library.json.${c.default}`);
+    ui.error('Failed to read version from library.json.');
     return null;
   }
   const version = `${majorVersion}.${minorVersion}.${patchVersion}`;
-  output.printLn(`${c.green}New version: ${version}${c.default}`);
+  ui.success(`New version: ${version}`);
   return version;
 }
 
-function stageChanges(autoYes: boolean): boolean {
+function stageChanges(lib: string, autoYes: boolean): boolean {
   try {
-    execSync(`git restore --staged library.json`, { stdio: 'inherit' });
+    execSync(`git restore --staged library.json`, { stdio: 'inherit', cwd: lib });
     if (autoYes) {
-      output.printLn(`${c.yellow}Staging version bump automatically…${c.default}`);
-      execSync(`git add library.json`, { stdio: 'inherit' });
+      ui.warn('Staging version bump automatically…');
+      execSync(`git add library.json`, { stdio: 'inherit', cwd: lib });
     }
     else {
-      output.printLn(`${c.yellow}Staging version bump interactively…${c.default}`);
-      execSync(`git add -p library.json`, { stdio: 'inherit' });
+      ui.warn('Staging version bump interactively…');
+      execSync(`git add -p library.json`, { stdio: 'inherit', cwd: lib });
     }
   }
   catch {
-    output.printLn(`${c.red}Git staging failed.${c.default}`);
+    ui.error('Git staging failed.');
     return false;
   }
 
-  const gitStatus = execSync(`git status --porcelain library.json`, { encoding: 'utf8' }).trim();
+  const gitStatus = execSync(`git status --porcelain library.json`, { encoding: 'utf8', cwd: lib }).trim();
   if (!gitStatus) {
-    output.printLn(`${c.yellow}No changes detected in library.json — nothing to commit.${c.default}`);
+    ui.warn('No changes detected in library.json — nothing to commit.');
     return false;
   }
 
   return true;
 }
 
-function commitChanges(version: string): boolean {
+function commitChanges(lib: string, version: string): boolean {
   try {
-    execSync(`git commit -m "Bump to ${version}"`, { stdio: 'inherit' });
-    output.printLn(`${c.green}Committed version bump to ${version}.${c.default}`);
+    execSync(`git commit -m "Bump to ${version}"`, { stdio: 'inherit', cwd: lib });
+    ui.success(`Committed version bump to ${version}.`);
   }
   catch {
-    output.printLn(`${c.red}Git commit failed.${c.default}`);
+    ui.error('Git commit failed.');
     return false;
   }
   return true;
 }
 
-function tagAndPush(version: string, doTag: boolean, doPush: boolean): void {
+function tagAndPush(lib: string, version: string, doTag: boolean, doPush: boolean): void {
   let tagHandled = true;
 
   if (doTag) {
     try {
-      execSync(`git tag -a ${version} -m "${version}"`, { stdio: 'inherit' });
-      output.printLn(`${c.green}Tag ${version} created.${c.default}`);
+      execSync(`git tag -a ${version} -m "${version}"`, { stdio: 'inherit', cwd: lib });
+      ui.success(`Tag ${version} created.`);
     }
     catch {
-      output.printLn(`${c.red}Git tag creation failed.${c.default}`);
+      ui.error('Git tag creation failed.');
       tagHandled = false;
     }
   }
   else {
-    output.printLn(`${c.yellow}Tag creation skipped.${c.default}`);
+    ui.warn('Tag creation skipped.');
   }
 
   if (doPush && tagHandled) {
     try {
-      output.printLn(`${c.blue}Pushing commits…${c.default}`);
-      execSync(`git push`, { stdio: 'inherit' });
+      ui.info('Pushing commits…');
+      execSync(`git push`, { stdio: 'inherit', cwd: lib });
       if (doTag) {
-        output.printLn(`${c.blue}Pushing tag ${version}…${c.default}`);
-        execSync(`git push origin ${version}`, { stdio: 'inherit' });
+        ui.info(`Pushing tag ${version}…`);
+        execSync(`git push origin ${version}`, { stdio: 'inherit', cwd: lib });
       }
-      output.printLn(`${c.green}Changes pushed successfully.${c.default}`);
+      ui.success('Changes pushed successfully.');
     }
     catch {
-      output.printLn(`${c.red}Git push failed.${c.default}`);
+      ui.error('Git push failed.');
     }
   }
   else if (doPush) {
-    output.printLn(`${c.red}Skipping push due to tag failure.${c.default}`);
+    ui.error('Skipping push due to tag failure.');
   }
   else {
-    output.printLn(`${c.yellow}Push aborted.${c.default}`);
+    ui.warn('Push aborted.');
   }
 }
 
-function promptTagAndPush(version: string): void {
+function promptTagAndPush(lib: string, version: string): void {
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout
@@ -174,7 +176,7 @@ function promptTagAndPush(version: string): void {
 
     rl.question(`Do you want to push the changes? (y/n): `, pushAnswer => {
       const doPush = pushAnswer.trim().toLowerCase() === 'y';
-      tagAndPush(version, doTag, doPush);
+      tagAndPush(lib, version, doTag, doPush);
       rl.close();
     });
   });
