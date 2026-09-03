@@ -15,12 +15,12 @@ export function verifyCommand(adapter?: IVerifyAdapter): Command {
     .option('--adapter <name>', 'Use a named adapter from an installed plugin')
     .action(async (library: string, options) => {
       const a = adapter ?? adapterRegistry.resolve<IVerifyAdapter>(options.adapter ?? 'verify') ?? new VerifyAdapter();
-      const args = verifyArgsSchema.parse({ library });
       try {
+        const args = verifyArgsSchema.parse({ library });
         const result = await a.verifySetup(args.library);
         ui.data(JSON.stringify(result, null, 2));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

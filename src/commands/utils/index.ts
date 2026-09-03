@@ -30,7 +30,9 @@ export function utilsCommand(): Command {
 
   // Most utils sweep the checkouts in cwd, so they run from inside `libraries/`. `list` and
   // `help` touch no files, and `get`/`init` create the checkouts, so cwd may still be empty.
-  const cwdExempt = ['list', 'help', 'get', 'init'];
+  // `find-inconsistencies` scans a folder of checkouts given by `--libraries` and never
+  // shells out to git, so requiring a git repo in cwd would only get in its way.
+  const cwdExempt = ['list', 'help', 'get', 'init', 'find-inconsistencies'];
   utils.hook('preAction', (_thisCommand, actionCommand) => {
     const name = actionCommand.name();
     if (!cwdExempt.includes(name)) {

@@ -61,7 +61,7 @@ describe('logic.computeDependencies', () => {
     vi.restoreAllMocks();
   });
 
-  function setupRegistry(data = REGISTRY_DATA) {
+  function setupRegistry(data: Partial<typeof REGISTRY_DATA> = REGISTRY_DATA) {
     fs.writeFileSync('libraryRegistry.json', JSON.stringify(data));
   }
 

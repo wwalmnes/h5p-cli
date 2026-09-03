@@ -1,6 +1,7 @@
 An h5p toolkit for running, editing and developing h5p content types.  
 
-Make sure you have [git](https://git-scm.com/downloads), [NodeJS](https://nodejs.org/en/download/current) and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (usually included in NodeJS) installed.  
+Make sure you have [git](https://git-scm.com/downloads), [NodeJS](https://nodejs.org/en/download/current) **version 24 or newer** and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (usually included in NodeJS) installed.
+The CLI runs TypeScript sources directly using Node's native type stripping, which is why v24+ is required.
 Some of the commands listed here are Linux & MacOS specific. On Windows it’s recommended that you run them inside [git bash](https://git-scm.com/download/win).  
 
 ## Documentation

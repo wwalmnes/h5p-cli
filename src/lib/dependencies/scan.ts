@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { findTokenOffsets, lineOf } from './json-edit.ts';
+import { dependencyNameOffsets, findTokenOffsets, findTopLevelNumber, lineOf } from './json-edit.ts';
 import { compareVersions, formatVersion, type Version } from './version.ts';
 
 export type RefKind = 'semantics' | 'dependency';
@@ -27,6 +27,8 @@ export type LibraryRecord = {
   dirName: string;
   hasSemantics: boolean;
   refs: LibraryRef[];
+  /** Line(s) declaring the library's own version, for reporting a stale self-reference. */
+  selfLines: number[];
 };
 
 export type ScanResult = {
@@ -100,10 +102,29 @@ const DEPENDENCY_KEYS = [
   'dynamicDependencies',
 ] as const;
 
+/**
+ * Read the three dependency arrays, in the order they appear in the file.
+ *
+ * Document order is what lets each entry claim its own line below: the n-th
+ * entry naming a library is the n-th `"machineName"` key holding that name.
+ */
+function orderedDependencyKeys(raw: string): readonly string[] {
+  const at = (key: string) => {
+    const found = raw.indexOf(`"${key}"`);
+    return found === -1 ? Number.MAX_SAFE_INTEGER : found;
+  };
+  return [...DEPENDENCY_KEYS].sort((a, b) => at(a) - at(b));
+}
+
 function readDependencyRefs(library: Record<string, unknown>, raw: string): LibraryRef[] {
   const refs: LibraryRef[] = [];
+  // One line per entry, rather than every line mentioning the name: a library
+  // listed in two arrays used to report both of their lines on both refs, and a
+  // library that lists itself also picked up its own top-level machineName.
+  const offsets = dependencyNameOffsets(raw);
+  const consumed = new Map<string, number>();
 
-  for (const key of DEPENDENCY_KEYS) {
+  for (const key of orderedDependencyKeys(raw)) {
     const entries = library[key];
     if (!Array.isArray(entries)) continue;
 
@@ -113,6 +134,10 @@ function readDependencyRefs(library: Record<string, unknown>, raw: string): Libr
       const machineName = dependency.machineName;
       if (typeof machineName !== 'string') continue;
 
+      const seen = consumed.get(machineName) ?? 0;
+      consumed.set(machineName, seen + 1);
+      const offset = offsets.get(machineName)?.[seen];
+
       refs.push({
         machineName,
         version: {
@@ -121,12 +146,26 @@ function readDependencyRefs(library: Record<string, unknown>, raw: string): Libr
         },
         kind: 'dependency',
         where: key,
-        lines: findTokenOffsets(raw, `"${machineName}"`).map((offset) => lineOf(raw, offset)),
+        lines: offset === undefined ? [] : [lineOf(raw, offset)],
       });
     }
   }
 
   return refs;
+}
+
+/**
+ * Where the library states its own version.
+ *
+ * A library can name itself in its own dependency arrays, and when it does the
+ * two have to agree — so the top-level declaration needs a line to point at,
+ * the same as any other pin.
+ */
+function versionLines(raw: string): number[] {
+  return (['majorVersion', 'minorVersion'] as const)
+    .map((key) => findTopLevelNumber(raw, key))
+    .filter((found) => found !== undefined)
+    .map((found) => lineOf(raw, found.token.keyStart));
 }
 
 function readSemanticsRefs(dir: string): { refs: LibraryRef[]; hasSemantics: boolean } {
@@ -195,6 +234,7 @@ export function scanLibraries(librariesDir: string): ScanResult {
         dirName: entry.name,
         hasSemantics: semantics.hasSemantics,
         refs: [...semantics.refs, ...readDependencyRefs(library, raw)],
+        selfLines: versionLines(raw),
       });
     } catch (error) {
       problems.push(`${entry.name}: ${(error as Error).message}`);

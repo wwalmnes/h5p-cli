@@ -86,8 +86,7 @@ export function dependencyCheckCommand(service?: DependencyService): Command {
 
         if (result.failures.length > 0) process.exitCode = 1;
       } catch (error) {
-        ui.error(error);
-        process.exitCode = 1;
+        ui.fail(error);
       }
     });
 }

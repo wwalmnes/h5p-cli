@@ -26,6 +26,7 @@ export function cloneCommand(adapter?: IInstallAdapter): Command {
         for (const issue of result.error.issues) {
           ui.error(issue.message);
         }
+        process.exitCode = 1;
         return;
       }
 
@@ -36,7 +37,7 @@ export function cloneCommand(adapter?: IInstallAdapter): Command {
         await a.getWithDependencies('clone', args.library, args.mode);
         ui.success(`done installing ${args.library}`);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

@@ -19,7 +19,7 @@ export function pullCommand(adapter?: IGitAdapter): Command {
       try {
         results = await processRepos(repos, repo => git.pull(repo));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
         return;
       } finally {
         ui.statusDone('git-pull');

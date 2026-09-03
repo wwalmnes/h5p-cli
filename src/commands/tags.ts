@@ -19,15 +19,15 @@ export function tagsCommand(adapter?: ITagsAdapter): Command {
     .option('--adapter <name>', 'Use a named adapter from an installed plugin')
     .action((org: string, library: string, mainBranch: string, options) => {
       const a = adapter ?? adapterRegistry.resolve<ITagsAdapter>(options.adapter ?? 'tags') ?? new TagsAdapter();
-      const args = tagsArgsSchema.parse({ org, library, mainBranch });
       try {
+        const args = tagsArgsSchema.parse({ org, library, mainBranch });
         ui.info('fetching h5p library tags');
         const result = a.tags(args.org, args.library, args.mainBranch);
         for (const tag of result) {
           ui.data(tag);
         }
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

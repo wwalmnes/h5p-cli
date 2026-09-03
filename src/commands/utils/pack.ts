@@ -28,7 +28,7 @@ export function packCommand(): Command {
         }
         pack(...inputList);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

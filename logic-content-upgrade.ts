@@ -8,18 +8,29 @@ export type Version = {
 /** Map of major -> minor -> upgrade function, as declared in a library's upgrades.js */
 export type UpgradeFunctions = Record<string, Record<string, Function>>;
 
-export type UpgradeInput = {
+/**
+ * A library field: the one node shape this file recognises and rewrites.
+ * Everything else in the tree is copied through untouched.
+ */
+export type LibraryField = {
   /** Versioned name, e.g. "H5P.Accordion 1.0" */
   library: string;
   params: any;
   metadata?: any;
 };
 
-export type UpgradeResult = {
-  library: string;
-  params: any;
-  metadata: any;
-};
+/**
+ * Any node in a content parameter tree — an object, an array, or a leaf.
+ *
+ * `upgradeContent` recurses over content produced by arbitrary content types,
+ * so the only shape it can name is `LibraryField`; a caller may hand it the
+ * whole tree, a subtree, or `null`. Narrowing these to `LibraryField` would be
+ * fiction — `logic.upgrade` already casts the result to the shape it wants.
+ */
+export type UpgradeInput = any;
+
+/** The same tree, with every library field upgraded in place. */
+export type UpgradeResult = any;
 
 /**
  * The upgrade functions come from arbitrary content types' `upgrades.js`, so the

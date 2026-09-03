@@ -169,12 +169,6 @@ const _cloneCommand = (
   `git clone ${fromTemplate(config.urls.library.clone, { org, repo })} ${target} --branch ${branch}`;
 
 const logic = {
-  log: function (message: string): void {
-    ui.info(message);
-  },
-  write: function (message: string): void {
-    ui.info(message);
-  },
   // imports content type from zip archive file in the .h5p format
   import: (folder: string, archive?: string): string => {
     const target = `${config.folders.temp}/${folder}`;

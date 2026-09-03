@@ -15,7 +15,7 @@ export function tagCommand(adapter?: IGitAdapter): Command {
         const repos = libraries.length ? libraries : ['*'];
         reportResults(await processRepos(repos, repo => git.tag(repo, tagName)));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

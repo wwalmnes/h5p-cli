@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { dependencyCheckCommand } from '../../src/commands/utils/dependency-check.ts';
+import type { ApplyResult } from '../../src/lib/dependencies/apply.ts';
 import type { Plan } from '../../src/lib/dependencies/plan.ts';
 import { ui } from '../../src/lib/ui.ts';
 
@@ -55,7 +56,7 @@ function samplePlan(overrides: Partial<Plan> = {}): Plan {
   };
 }
 
-function stubService(plan: Plan = samplePlan(), applyResult = { filesWritten: [], failures: [] }) {
+function stubService(plan: Plan = samplePlan(), applyResult: ApplyResult = { filesWritten: [], failures: [] }) {
   return {
     plan: vi.fn().mockReturnValue(plan),
     apply: vi.fn().mockReturnValue(applyResult),

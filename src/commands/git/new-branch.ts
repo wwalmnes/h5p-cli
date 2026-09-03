@@ -35,7 +35,7 @@ export function newBranchCommand(adapter?: IGitAdapter): Command {
           reportResult(pushResult);
         }
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       } finally {
         ui.statusDone('git-new-branch');
       }

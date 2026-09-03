@@ -4,6 +4,21 @@
   "description": "a tool for developing & testing H5P content types",
   "author": "H5P Group",
   "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "files": [
+    "src",
+    "assets",
+    "docs",
+    "logic.ts",
+    "logic-content-upgrade.ts",
+    "configLoader.ts",
+    "h5p.js",
+    "libraryRegistry.json",
+    "favicon.ico",
+    "readme.md"
+  ],
   "repository": {
     "url": "https://github.com/h5p/h5p-cli",
     "type": "git"
@@ -66,8 +81,6 @@
     "he": "^1.2.0",
     "image-size": "^1.0.2",
     "livereload": "^0.9.3",
-    "marked": "^5.1.0",
-    "marked-terminal": "^5.2.0",
     "multer": "^2.0.1",
     "patch-package": "^8.0.0",
     "sanitize-html": "^2.12.1",

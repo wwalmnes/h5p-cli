@@ -32,7 +32,7 @@ export function rmBranchCommand(adapter?: IGitAdapter): Command {
           reportResult(await git.push(repo, ['origin', `:${branch}`]));
         }
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       } finally {
         ui.statusDone('git-rm-branch');
       }

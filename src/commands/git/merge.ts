@@ -20,7 +20,7 @@ export function mergeCommand(adapter?: IGitAdapter): Command {
         const repos = libraries.length ? libraries : ['*'];
         reportResults(await processRepos(repos, repo => git.merge(repo, branch)));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

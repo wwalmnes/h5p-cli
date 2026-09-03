@@ -6,7 +6,7 @@ import {
   pathHasDuplicates,
   parseSemanticLibraries,
   normalizeRegistry,
-} from '../../src/lib/h5p-utils';
+} from '../../src/lib/h5p-utils.ts';
 
 describe('fromTemplate', () => {
   it('substitutes a single key', () => {
@@ -159,8 +159,11 @@ describe('normalizeRegistry', () => {
       'H5P.Test': { id: 'H5P.Test', shortName: 'h5p-test', org: 'h5p', repoName: 'h5p-test', resume: true, fullscreen: 1, xapiVerbs: [] },
     };
     const { regular } = normalizeRegistry(raw);
-    expect(regular['h5p-test'].resume).toBeUndefined();
-    expect(regular['h5p-test'].fullscreen).toBeUndefined();
-    expect(regular['h5p-test'].xapiVerbs).toBeUndefined();
+    // These are stripped, so LibraryEntry does not declare them — read the
+    // entry as a bag to assert their absence.
+    const entry = regular['h5p-test'] as unknown as Record<string, unknown>;
+    expect(entry.resume).toBeUndefined();
+    expect(entry.fullscreen).toBeUndefined();
+    expect(entry.xapiVerbs).toBeUndefined();
   });
 });

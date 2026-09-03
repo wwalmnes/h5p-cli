@@ -98,7 +98,7 @@ export function branchesCommand(): Command {
         }
         fs.writeFileSync(libraryJsonFile, JSON.stringify(libraryJson, null, 2));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

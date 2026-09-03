@@ -28,7 +28,7 @@ export function commitCommand(adapter?: IGitAdapter): Command {
           reportChanges(result);
         }
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

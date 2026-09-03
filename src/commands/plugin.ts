@@ -20,7 +20,7 @@ export function pluginCommand(service?: PluginService): Command {
       try {
         await svc.install(source);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 
@@ -53,7 +53,7 @@ export function pluginCommand(service?: PluginService): Command {
       try {
         svc.uninstall(name);
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 

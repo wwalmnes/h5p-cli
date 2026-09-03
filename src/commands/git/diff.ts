@@ -16,7 +16,7 @@ export function diffCommand(adapter?: IGitAdapter): Command {
         // ui.data appends the newline, so drop the trailing one the diff carries.
         if (combined) ui.data(combined.replace(/\n$/, ''));
       } catch (error) {
-        ui.error(error);
+        ui.fail(error);
       }
     });
 }

@@ -449,13 +449,50 @@ h5p utils dependency-check H5P.Accordion --apply
 
 ## `h5p utils find-inconsistencies`
 
-Find version inconsistencies across all libraries in the `libraries/` folder.
+Find libraries that pin the same dependency at two different versions. A library can
+name a dependency in `semantics.json` options and again in any of the dependency
+arrays in `library.json`; when those disagree the library pulls two copies and the
+newer one wins by accident.
+
+A library must name a dependency at the same **major and minor** in both files, so
+`H5P.Accordion 1.0` in `semantics.json` alongside `H5P.Accordion 2.0` in `library.json`
+is a conflict too — the library declares one version to the editor and another to the
+runtime. H5P does ship majors as separate libraries, but that governs where a reference
+points, not whether one library may point two ways at once.
+
+A library must also name **itself** at its own version. Listing itself in
+`editorDependencies` at an older minor than its top-level `majorVersion`/`minorVersion` —
+how a bumped `library.json` leaves a stale self-pin behind — is reported like any other
+conflict, with a `(self)` row pointing at the top-level declaration. A reference that
+merely lags the version *checked out on disk* is a different question, and belongs to
+[`h5p utils dependency-check`](#h5p-utils-dependency-check).
 
 ```
-h5p utils find-inconsistencies
+h5p utils find-inconsistencies [--libraries <path>] [--transitive]
 ```
 
-No arguments.
+| Option | Description |
+|--------|-------------|
+| `--libraries <path>` | Folder of library checkouts to analyse. Defaults to `$H5P_LIBRARIES`, or the current folder |
+| `--transitive` | Also report conflicts reachable through a library's dependencies, and warn about referenced majors that are not checked out |
+
+Each conflicting reference is reported with the file, line, and the field or array
+that declares it. Exits `1` when any inconsistency is found, so it can gate a script.
+
+```
+> scanned 3 libraries — 2 inconsistencies
+H5P.Column             H5P.Accordion          1.0   h5p-column/semantics.json   :2    content
+H5P.Column             H5P.Accordion          1.2   h5p-column/library.json     :9    preloadedDependencies
+H5P.BranchingScenario  H5P.BranchingScenario  1.10  h5p-branching/library.json  :37   editorDependencies
+H5P.BranchingScenario  H5P.BranchingScenario  1.11  h5p-branching/library.json  :4,5  (self)
+> Declared by the library itself:
+  - H5P.Column: H5P.Accordion pinned at 1.0 and 1.2
+  - H5P.BranchingScenario: names itself at 1.10 and 1.11
+```
+
+Unlike the other `utils` commands this one does not need to run from inside
+`libraries/` and does not require git checkouts — point `--libraries` at any folder
+of library directories.
 
 ---
 
