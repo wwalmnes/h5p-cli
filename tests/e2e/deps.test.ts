@@ -91,7 +91,7 @@ describe('missing — end-to-end', () => {
     vi.clearAllMocks();
   });
 
-  it('calls getRegistry, parseLibraryFolders, and computeDependencies for the library', async () => {
+  it('resolves the library graph once, via getRegistry and parseLibraryFolders', async () => {
     const logic = await import('../../logic.ts');
     const { missingCommand } = await import('../../src/commands/missing.ts');
 
@@ -99,8 +99,10 @@ describe('missing — end-to-end', () => {
 
     expect(logic.default.getRegistry).toHaveBeenCalled();
     expect(logic.default.parseLibraryFolders).toHaveBeenCalled();
+    // one edit resolution, not a view graph plus one edit graph per library in it
+    expect(logic.default.computeDependencies).toHaveBeenCalledTimes(1);
     expect(logic.default.computeDependencies).toHaveBeenCalledWith(
-      'H5P.Blanks', 'view', null, 'H5P.Blanks-1.0'
+      'H5P.Blanks', 'edit', null, 'H5P.Blanks-1.0'
     );
   });
 

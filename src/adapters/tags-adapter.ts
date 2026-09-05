@@ -5,7 +5,7 @@ export interface ITagsAdapter {
 }
 
 export class TagsAdapter implements ITagsAdapter {
-  tags(org: string, library: string, mainBranch: string): any {
-    return logic.tags(org, library, mainBranch);
+  tags(org: string, library: string): any {
+    return logic.tags(org, library);
   }
 }

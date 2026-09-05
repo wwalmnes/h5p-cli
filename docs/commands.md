@@ -221,6 +221,11 @@ h5p missing <library>
 |----------|----------|-------------|
 | `library` | Yes | Library machine name. The library itself must already exist in the local registry. |
 
+Each dependency the registry does not know about is listed with `(required)` or `(optional)`. A
+dependency is optional when it is only reachable through an optional edge — a library offered as a
+choice in `semantics.json`, or anything below one — and required when the chain from the library you
+asked about is made only of `preloadedDependencies` and `editorDependencies` entries.
+
 ---
 
 ## `h5p clone`

@@ -117,6 +117,12 @@ enforced instead of silently producing empty results.
 - **The resolver fetches each dependency wave in parallel** rather than one library at a time. On
   `h5p-interactive-book` (95 libraries) that takes the resolve from ~2N round trips to roughly one per
   wave.
+- **`h5p missing` resolves its dependency graph once instead of once per dependency.** It ran the same
+  N+2 traversals `h5p setup` did — the view graph, an edit graph rooted at every registered library in
+  it, then the root's edit graph — 71 of them for `h5p-column`. Because it resolves against the
+  installed folders, each traversal re-read every `library.json` and `semantics.json` from disk and
+  re-scanned the whole `libraries/` folder, so `h5p missing h5p-column` went from 10.1s to 0.8s. The
+  reported libraries are unchanged.
 - **`h5p tags` reads `git ls-remote`** instead of cloning the repository into `temp/`, unshallowing it,
   checking out and pulling. Dependency resolution calls it once per library whenever a version is given,
   so a versioned setup no longer clones the entire graph just to read version numbers.
@@ -141,6 +147,13 @@ enforced instead of silently producing empty results.
   reported and left alone.
 - **An updated library is rebuilt.** Pulling new commits left the previous build output in place, because
   only the fresh-install path ever ran the build.
+- **`h5p missing` no longer reports an optional dependency as required.** Each per-dependency pass
+  re-rooted the library it started from, and a root has no parent to inherit optionality from, so an
+  unregistered library reachable only underneath an optional one was listed `(required)`. It is now
+  listed `(optional)`.
+- **`h5p missing <unknown>` reports the library instead of a stack trace.** A name the registry does not
+  know produced `Cannot read properties of undefined (reading 'id')`; it now fails with
+  `unregistered <name> library`.
 
 ### Compatibility
 

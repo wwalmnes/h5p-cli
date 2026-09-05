@@ -14,28 +14,16 @@ export class MissingService {
   async missing(library: string): Promise<void> {
     const libraryDirs = await this.adapter.parseLibraryFolders();
     const registry = await this.adapter.getRegistry();
+    const folder = libraryDirs[registry.regular[library]?.id];
+    const result = await this.adapter.computeDependencies(library, 'edit', null, folder);
+
+    // entries without an id are the ones the registry does not know about
     const missing: Record<string, boolean> = {};
-
-    const parseMissing = (result: any, item: string) => {
-      if (!registry.regular[item] && (typeof missing[item] === 'undefined' || missing[item])) {
-        missing[item] = result[item].optional;
-      }
-    };
-
-    let result = await this.adapter.computeDependencies(library, 'view', null, libraryDirs[registry.regular[library].id]);
     for (const item in result) {
-      parseMissing(result, item);
-      if (registry.regular[item]) {
-        const list = await this.adapter.computeDependencies(item, 'edit', null, libraryDirs[registry.regular[item].id]);
-        for (const elem in list) {
-          parseMissing(list, elem);
-        }
+      if (result[item].id) {
+        continue;
       }
-    }
-
-    result = await this.adapter.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
-    for (const item in result) {
-      parseMissing(result, item);
+      missing[item] = result[item].optional ?? false;
     }
 
     if (!Object.keys(missing).length) {
