@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fs from 'fs';
 import { execSync, spawnSync } from 'child_process';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../logic.ts';
@@ -11,6 +10,10 @@ vi.mock('child_process', () => ({
 
 // logic._exec routes through spawnSync so git's stderr cannot bypass ui
 const spawnResult = (stdout: string) => ({ status: 0, stdout, stderr: '', error: undefined });
+
+/* What `git ls-remote --tags --refs` prints: a sha, a tab, then the full ref. */
+const lsRemote = (...tags: string[]) =>
+  tags.map((tag, i) => `${String(i).repeat(40)}\trefs/tags/${tag}`).join('\n') + '\n';
 
 describe('logic.tags', () => {
   let fixture: Fixture;
@@ -24,15 +27,8 @@ describe('logic.tags', () => {
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
     vi.mocked(execSync).mockReturnValue(Buffer.from(''));
-    vi.mocked(spawnSync).mockImplementation((cmd: any) =>
-      spawnResult(cmd === 'git tag' ? '1.14.1\n1.14.0\n1.15.0\n1.13.5\n' : '') as any
-    );
-
-    // Pre-create temp dir so getRepoFile skips git clone
-    fs.mkdirSync('temp/h5p-blanks_master', { recursive: true });
-    fs.writeFileSync(
-      'temp/h5p-blanks_master/library.json',
-      JSON.stringify({ machineName: 'H5P.Blanks', title: 'Fill in the Blanks' }),
+    vi.mocked(spawnSync).mockImplementation(() =>
+      spawnResult(lsRemote('1.14.1', '1.14.0', '1.15.0', '1.13.5')) as any
     );
   });
 
@@ -48,12 +44,23 @@ describe('logic.tags', () => {
     expect(tags).toEqual(['1.15.0', '1.14.1', '1.14.0', '1.13.5']);
   });
 
-  it('filters out empty strings from git tag output', () => {
-    vi.mocked(spawnSync).mockImplementation((cmd: any) =>
-      spawnResult(cmd === 'git tag' ? '\n1.0.0\n\n2.0.0\n' : '') as any
+  it('filters out blank lines in the ls-remote output', () => {
+    vi.mocked(spawnSync).mockImplementation(() =>
+      spawnResult(`\n${lsRemote('1.0.0', '2.0.0')}\n`) as any
     );
     const tags = logic.tags('h5p', 'h5p-blanks');
     expect(tags).not.toContain('');
     expect(tags).toEqual(['2.0.0', '1.0.0']);
+  });
+
+  /* The point of the rewrite: reading tags used to clone the repo into temp/,
+  unshallow it, checkout and pull — once per dependency, for every dependency,
+  whenever setup was given a version. */
+  it('reads the remote directly and never clones or writes to temp/', () => {
+    logic.tags('h5p', 'h5p-blanks');
+
+    const commands = vi.mocked(spawnSync).mock.calls.map(([cmd]) => String(cmd));
+    expect(commands).toEqual(['git ls-remote --tags --refs https://github.com/h5p/h5p-blanks.git']);
+    expect(vi.mocked(execSync)).not.toHaveBeenCalled();
   });
 });

@@ -11,15 +11,16 @@ const setupArgsSchema = z.object({
   library: z.string(),
   version: z.string().optional(),
   download: z.string().optional(),
+  concurrency: z.coerce.number().int().positive().optional(),
 });
 
-export async function runSetup(library: string, version?: string, download?: string): Promise<void> {
+export async function runSetup(library: string, version?: string, download?: string, concurrency?: number): Promise<void> {
   const svc = new SetupService(
     new SetupAdapter(),
     new RegisterService(new RegisterAdapter(), config.registry),
     config.folders.libraries
   );
-  await svc.setup(library, version, download);
+  await svc.setup(library, version, download, concurrency);
 }
 
 export function setupCommand(service?: SetupService): Command {
@@ -33,10 +34,11 @@ export function setupCommand(service?: SetupService): Command {
     .argument('<library>', 'Library name or URL')
     .argument('[version]', 'Version')
     .argument('[download]', 'Pass 1 to download instead of clone')
-    .action(async (library: string, version: string | undefined, download: string | undefined) => {
+    .option('-c, --concurrency <n>', 'How many libraries to install at once (default 4)')
+    .action(async (library: string, version: string | undefined, download: string | undefined, options: { concurrency?: string }) => {
       try {
-        const args = setupArgsSchema.parse({ library, version, download });
-        await svc.setup(args.library, args.version, args.download);
+        const args = setupArgsSchema.parse({ library, version, download, concurrency: options?.concurrency });
+        await svc.setup(args.library, args.version, args.download, args.concurrency);
       } catch (error) {
         ui.fail(error);
       }

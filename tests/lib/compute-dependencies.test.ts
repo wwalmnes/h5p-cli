@@ -209,4 +209,118 @@ describe('computeDependencies', () => {
     expect(result['h5p-joubel-ui']).toBeDefined();
     expect(result['h5p-joubel-ui'].optional).toBe(true);
   });
+
+  /* Tags were matched with a bare prefix test, so version 1.1 also accepted
+  1.11.0 — and because getTags returns tags newest first, that wrong tag won and
+  a library on 1.1.9 resolved to 1.1.0. */
+  it('does not resolve a 1.1 dependency off a 1.11 tag', async () => {
+    const parent = {
+      machineName: 'H5P.Blanks',
+      title: 'Fill in the Blanks',
+      majorVersion: 1,
+      minorVersion: 14,
+      patchVersion: 0,
+      preloadedDependencies: [{ machineName: 'H5P.JoubelUI', majorVersion: 1, minorVersion: 1 }],
+      editorDependencies: [],
+    };
+    const child = { ...JOUBEL_LIBRARY_JSON, majorVersion: 1, minorVersion: 1, patchVersion: 9 };
+    const getLibraryJson = vi.fn().mockImplementation(async (_folder, _org, repoName: string) =>
+      structuredClone(repoName === 'h5p-blanks' ? parent : child));
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ blanks: BLANKS_ENTRY, joubel: JOUBEL_ENTRY })),
+      getLibraryJson,
+      // as logic.tags returns them: descending, so 1.11.0 is seen before 1.1.9
+      getTags: vi.fn().mockReturnValue(['1.11.0', '1.1.9', '1.1.0']),
+    });
+
+    await computeDependencies('h5p-blanks', 'view', '1.14.0', undefined, port);
+
+    const versions = getLibraryJson.mock.calls
+      .filter(([, , repoName]) => repoName === 'h5p-joubel-ui')
+      .map(([, , , version]) => version);
+    expect(versions).toContain('1.1.9');
+    expect(versions).not.toContain('1.1.0');
+  });
+
+  /* `h5p setup <lib> 1.1` is the documented way to ask for a version, but a
+  bare major.minor is not a ref: the resolver passed it straight through, the
+  raw host 404'd and the clone fallback died on "Remote branch 1.1 not found",
+  so the versioned path never worked at all. */
+  it('resolves the root library major.minor to a real tag', async () => {
+    const getLibraryJson = vi.fn().mockResolvedValue(structuredClone(JOUBEL_LIBRARY_JSON));
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ joubel: JOUBEL_ENTRY })),
+      getLibraryJson,
+      getTags: vi.fn().mockReturnValue(['3.3.9', '3.3.1']),
+    });
+
+    await computeDependencies('h5p-joubel-ui', 'view', '3.3', undefined, port);
+
+    expect(getLibraryJson).toHaveBeenCalledWith(undefined, 'h5p', 'h5p-joubel-ui', '3.3.9');
+  });
+
+  it('leaves a fully-qualified root version alone', async () => {
+    const getLibraryJson = vi.fn().mockResolvedValue(structuredClone(JOUBEL_LIBRARY_JSON));
+    const getTags = vi.fn().mockReturnValue(['3.3.9']);
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ joubel: JOUBEL_ENTRY })),
+      getLibraryJson,
+      getTags,
+    });
+
+    await computeDependencies('h5p-joubel-ui', 'view', '3.3.1', undefined, port);
+
+    expect(getLibraryJson).toHaveBeenCalledWith(undefined, 'h5p', 'h5p-joubel-ui', '3.3.1');
+    expect(getTags).not.toHaveBeenCalled();
+  });
+
+  /* The resolve used to be a strict chain of round trips: two reads per
+  library, one library at a time. Siblings in a wave are now fetched together. */
+  it('fetches the libraries in one wave concurrently', async () => {
+    const parent = {
+      machineName: 'H5P.Blanks',
+      title: 'Fill in the Blanks',
+      majorVersion: 1,
+      minorVersion: 14,
+      patchVersion: 0,
+      preloadedDependencies: [
+        { machineName: 'H5P.JoubelUI', majorVersion: 3, minorVersion: 3 },
+        { machineName: 'H5PEditor.Blanks', majorVersion: 1, minorVersion: 14 },
+      ],
+      editorDependencies: [],
+    };
+    let inFlight = 0;
+    let peak = 0;
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(
+        makeRegistry({ blanks: BLANKS_ENTRY, joubel: JOUBEL_ENTRY, editor: EDITOR_ENTRY })),
+      getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) => {
+        inFlight++;
+        peak = Math.max(peak, inFlight);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        inFlight--;
+        if (repoName === 'h5p-blanks') return structuredClone(parent);
+        if (repoName === 'h5p-editor-blanks') return structuredClone(EDITOR_LIBRARY_JSON);
+        return structuredClone(JOUBEL_LIBRARY_JSON);
+      }),
+    });
+
+    const result = await computeDependencies('h5p-blanks', 'view', null, undefined, port);
+
+    // both children sit in the same wave, so both reads are open at once
+    expect(peak).toBe(2);
+    expect(Object.keys(result).sort()).toEqual(['h5p-blanks', 'h5p-editor-blanks', 'h5p-joubel-ui']);
+  });
+
+  /* Prefetch is best-effort warming; a failure there must not change how or
+  where the resolve reports the problem. */
+  it('still reports a missing library.json when the prefetch fails', async () => {
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ joubel: JOUBEL_ENTRY })),
+      getLibraryJson: vi.fn().mockResolvedValue({}),
+    });
+
+    await expect(computeDependencies('h5p-joubel-ui', 'view', null, undefined, port))
+      .rejects.toThrow('missing library.json for h5p-joubel-ui');
+  });
 });

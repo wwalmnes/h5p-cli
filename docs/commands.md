@@ -46,7 +46,7 @@ h5p setup <library|repoUrl> [version] [download]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `library\|repoUrl` | Yes | Library machine name (e.g. `H5P.Accordion`) or a GitHub repo URL (e.g. `git@github.com:h5p/h5p-accordion.git`). Passing a URL also updates the local registry entry. |
-| `version` | No | Specific version tag to install. Defaults to `master`. Use `h5p tags` to list available versions. |
+| `version` | No | Version to install. Defaults to `master`. Either a full tag (`1.14.3`) or a `major.minor` pair (`1.14`), which resolves to the highest patch released for it. Use `h5p tags` to list available versions. |
 | `download` | No | Pass `1` to download libraries instead of cloning them as git repos. |
 
 **Environment variables**
@@ -54,10 +54,12 @@ h5p setup <library|repoUrl> [version] [download]
 | Variable | Effect |
 |----------|--------|
 | `H5P_NO_UPDATES=1` | Skip updating existing libraries (faster). |
+| `H5P_CONCURRENCY=<n>` | How many libraries to install at once. Same as `--concurrency`, default 4. |
+| `H5P_NO_RAW=1` | Read library metadata by cloning rather than over HTTP. |
 | `H5P_SSH_CLONE=1` | Use SSH URLs when cloning (useful for private repos or committing from `libraries/<library>`). |
 
 > [!IMPORTANT]
-> If no `[version]` is specified, master branches are used.
+> If no `[version]` is specified, master branches are used — and libraries already present in `libraries/` are refreshed from `master`. One with uncommitted changes, or on a branch other than `master`, is reported and left untouched.
 
 **Example**
 

@@ -23,7 +23,7 @@ const config = {
       list: 'https://raw.githubusercontent.com/{org}/{dep}/{version}/library.json',
       clone: 'https://github.com/{org}/{repo}.git',
       sshClone: 'git@github.com:{org}/{repo}.git',
-      zip: 'https://github.com/{org}/{repo}/archive/refs/heads/{version}.zip'
+      zip: 'https://github.com/{org}/{repo}/archive/{ref}.zip'
     }
   },
   core: {

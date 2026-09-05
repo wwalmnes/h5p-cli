@@ -27,6 +27,7 @@ function makeSetupAdapter(overrides: Partial<ISetupAdapter> = {}): ISetupAdapter
     machineToShort: vi.fn().mockReturnValue('h5p-blanks'),
     computeDependencies: vi.fn().mockResolvedValue({}),
     getWithDependencies: vi.fn().mockResolvedValue([]),
+    installDependencies: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
@@ -77,14 +78,14 @@ describe('setupCommand', () => {
     const mockSvc = makeMockService();
     const cmd = setupCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined);
+    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, undefined);
   });
 
   it('forwards version and download args to service.setup', async () => {
     const mockSvc = makeMockService();
     const cmd = setupCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '1.14', '1']);
-    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', '1.14', '1');
+    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', '1.14', '1', undefined);
   });
 
   it('logs error when service.setup rejects, no unhandled rejection', async () => {
@@ -100,5 +101,12 @@ describe('setupCommand', () => {
     const mockSvc = makeMockService();
     const cmd = setupCommand(mockSvc);
     expect(cmd.description()).toBeTruthy();
+  });
+
+  it('forwards --concurrency to service.setup as a number', async () => {
+    const mockSvc = makeMockService();
+    const cmd = setupCommand(mockSvc);
+    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '--concurrency', '8']);
+    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, 8);
   });
 });

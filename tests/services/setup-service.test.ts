@@ -9,6 +9,7 @@ function makeSetupAdapter(overrides: Partial<ISetupAdapter> = {}): ISetupAdapter
     machineToShort: vi.fn().mockReturnValue('h5p-blanks'),
     computeDependencies: vi.fn().mockResolvedValue({}),
     getWithDependencies: vi.fn().mockResolvedValue([]),
+    installDependencies: vi.fn().mockResolvedValue([]),
     ...overrides,
   };
 }
@@ -63,7 +64,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks', undefined, '1');
-    expect(setupAdapter.getWithDependencies).toHaveBeenCalledWith('download', expect.any(String), expect.any(String), expect.any(Boolean), expect.any(Array));
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('download', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined);
   });
 
   it('uses action=clone when download is not set', async () => {
@@ -71,7 +72,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks');
-    expect(setupAdapter.getWithDependencies).toHaveBeenCalledWith('clone', expect.any(String), expect.any(String), expect.any(Boolean), expect.any(Array));
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined);
   });
 
   it('passes latest=false when version is provided', async () => {
@@ -79,7 +80,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks', '1.14');
-    expect(setupAdapter.getWithDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), false, expect.any(Array));
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(Object), false, expect.any(Array), undefined);
   });
 
   it('passes latest=true when version is absent', async () => {
@@ -87,7 +88,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks');
-    expect(setupAdapter.getWithDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String), true, expect.any(Array));
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(Object), true, expect.any(Array), undefined);
   });
 
   it('collects optional missing dep in report, does not throw', async () => {
@@ -114,25 +115,24 @@ describe('SetupService', () => {
     await expect(svc.setup('h5p-blanks')).rejects.toThrow('unregistered h5p-required-lib library required by h5p-blanks');
   });
 
-  it('passes accumulated toSkip from view pass to edit pass in pre-check loop', async () => {
-    const viewDeps = {
-      'h5p-core': { id: 1 },
-    };
-    const getWithDepsMock = vi.fn()
-      .mockResolvedValueOnce(['h5p-core']) // pre-check: item 'h5p-core' edit pass
-      .mockResolvedValueOnce(['h5p-core', 'h5p-blanks']) // main: view
-      .mockResolvedValueOnce(['h5p-core', 'h5p-blanks', 'h5p-editor']); // main: edit
+  /* The whole point of the collapse: this used to be N+4 resolutions and two
+  install passes with the skip list reset between them. Equivalence of the
+  resulting graph is pinned in tests/lib/setup-graph-equivalence.test.ts. */
+  it('resolves the graph once, in edit mode, and installs it once', async () => {
+    const graph = { 'h5p-core': { id: 'H5P.Core' }, 'h5p-blanks': { id: 'H5P.Blanks' } };
     const setupAdapter = makeSetupAdapter({
-      computeDependencies: vi.fn().mockResolvedValue(viewDeps),
-      getWithDependencies: getWithDepsMock,
+      computeDependencies: vi.fn().mockResolvedValue(graph),
     });
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
+
     await svc.setup('h5p-blanks');
-    // first call: pre-check item with toSkip=[]
-    expect(getWithDepsMock.mock.calls[0][4]).toEqual([]);
-    // second call: main view with toSkip reset to []
-    expect(getWithDepsMock.mock.calls[1][4]).toEqual([]);
+
+    expect(setupAdapter.computeDependencies).toHaveBeenCalledTimes(1);
+    expect(setupAdapter.computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', undefined);
+    expect(setupAdapter.installDependencies).toHaveBeenCalledTimes(1);
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', graph, true, [], undefined);
+    expect(setupAdapter.getWithDependencies).not.toHaveBeenCalled();
   });
 
   it('logs done message', async () => {
@@ -143,12 +143,11 @@ describe('SetupService', () => {
     expect(logger.log).toHaveBeenCalledWith('> done setting up h5p-blanks');
   });
 
-  it('logs action and folder for view and edit steps', async () => {
+  it('logs action and folder for the install step', async () => {
     const setupAdapter = makeSetupAdapter();
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks');
-    expect(logger.log).toHaveBeenCalledWith(`> clone h5p-blanks library "view" dependencies into "${librariesFolder}" folder`);
-    expect(logger.log).toHaveBeenCalledWith(`> clone h5p-blanks library "edit" dependencies into "${librariesFolder}" folder`);
+    expect(logger.log).toHaveBeenCalledWith(`> clone h5p-blanks library dependencies into "${librariesFolder}" folder`);
   });
 });

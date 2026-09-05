@@ -63,20 +63,21 @@ export async function computeDependencies(
     cache[dep].optionals = parseSemanticLibraries(cache[dep].semantics);
     return cache[dep].optionals;
   }
+
   const latestPatch = (org: string, repo: string, version: string) => {
     const tags = io.getTags(org, repo);
     let patch = -1;
-    for (let item of tags) {
-      if (item.indexOf(version) != 0) {
+    for (const item of tags) {
+      if (!item.startsWith(`${version}.`)) {
         continue;
       }
       const numbers = item.split('.');
       if (numbers.length < 3) {
         continue;
       }
-      if (parseInt(numbers[2]) > patch) {
-        patch = parseInt(numbers[2]);
-        break;
+      const candidate = parseInt(numbers[2]);
+      if (Number.isFinite(candidate) && candidate > patch) {
+        patch = candidate;
       }
     }
     return patch > -1 ? `${version}.${patch}` : version;
@@ -114,6 +115,48 @@ export async function computeDependencies(
       return false;
     }
     return true;
+  }
+  /* Warm `cache` for a whole frontier at once.
+
+  `compute` below mutates shared state — done/toDo/weights and the requiredBy
+  paths on the registry entries — so it has to keep running one library at a
+  time. Its two network reads do not: resolving a content type reads
+  library.json and semantics.json for dozens of repos, and doing that strictly
+  in series made the resolve a chain of ~2N round trips. Fetching the frontier
+  together turns each wave into roughly one.
+
+  Deliberately best-effort. Anything that goes wrong here is swallowed and the
+  entry left uncached, so `compute` makes the same call itself and fails in the
+  exact place it always did — error messages, and the order they arrive in, are
+  unchanged. It may also prefetch a library that `compute` then prunes as a
+  repeat path; that costs a cache fill, not correctness. */
+  const prefetch = async (deps: string[]): Promise<void> => {
+    await Promise.all(deps.map(async dep => {
+      if (cache[dep] || !registry.regular[dep]) {
+        return;
+      }
+      const entry = registry.regular[dep];
+      const { repoName } = entry.repo?.url ? parseGitUrl(entry.repo.url) as ParsedGitUrl : { repoName: dep };
+      const dir = toDo[dep].folder;
+      const version = toDo[dep].version;
+      try {
+        const list = await io.getLibraryJson(dir, entry.org, repoName, version);
+        // leave the "missing library.json" throw to compute(), which words it
+        if (!list?.title) {
+          return;
+        }
+        cache[dep] = list;
+        // same version string compute() derives before it asks for semantics
+        const ver = version == 'master'
+          ? version
+          : `${list.majorVersion}.${list.minorVersion}.${list.patchVersion}`;
+        cache[dep].semantics = await io.getSemanticsJson(dir, entry.org, repoName, ver);
+        cache[dep].optionals = parseSemanticLibraries(cache[dep].semantics);
+      }
+      catch {
+        delete cache[dep];
+      }
+    }));
   }
   const compute = async (org: string, dep: string, version: string) => {
     const parent = toDo[dep].parent ? `/${toDo[dep].parent}` : '';
@@ -189,12 +232,29 @@ export async function computeDependencies(
   if (!folder && !registry.regular[library]) {
     throw new Error(`unregistered ${library} library`);
   }
+  /* The root's version arrives as the user typed it, and `h5p setup <lib> 1.1`
+  is the documented way to ask for a version. A bare major.minor is not a ref —
+  h5p-blanks publishes 1.1.5 and 1.1.1, never 1.1 — so it has to go through the
+  same patch lookup handleDepListEntry already applies to every child. Without
+  it the very first metadata fetch asks for a ref that does not exist, the raw
+  host 404s, the clone fallback reports "Remote branch 1.1 not found" and the
+  whole versioned path is unreachable. */
+  if (!folder && /^\d+\.\d+$/.test(toDo[library].version)) {
+    toDo[library].version = latestPatch(registry.regular[library].org, library, toDo[library].version);
+  }
   let output: DependencyMap = {};
   try {
     while (Object.keys(toDo).length) {
       level++;
       ui.status(statusId, `on level ${level}`);
       done[level] = {};
+      /* Snapshot only for the prefetch list. The for...in below keeps its
+      original semantics, so anything compute() enqueues mid-sweep behaves
+      exactly as before — it just misses this wave's warm-up and fetches
+      itself. */
+      const frontier = Object.keys(toDo);
+      ui.debug(`level ${level}: ${frontier.length} librar${frontier.length === 1 ? 'y' : 'ies'}`);
+      await prefetch(frontier);
       for (let item in toDo) {
         await compute(registry.regular[item].org, item, toDo[item].version);
       }

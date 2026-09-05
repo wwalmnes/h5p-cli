@@ -3,11 +3,17 @@
 Running commands listed in [commands.md](commands.md) results in the creation of 4 folders. The folders are created in the current working directory (the folder where you ran the command).  
 - `content` holds actual content types and their assets.  
 - `libraries` holds the libraries that have been set up.  
-- `temp` holds local copies of git repositories that are used when computing dependencies.  
+- `temp` caches the library metadata used when computing dependencies, under `temp/.metadata`. It also holds local copies of git repositories, for the repositories that cannot be read over plain HTTP (private ones, for instance).
 - `uploads` is a temporary location used by the import and export commands.  
 
 > [!IMPORTANT]
-> Make sure to delete the `temp` folder when updating to the latest version of a library that has new or updated dependencies so that fresh git repository copies are cloned.  
+> Make sure to delete the `temp` folder when updating to the latest version of a library that has new or updated dependencies. The metadata cache does not expire, so a stale `temp` resolves the dependency graph as it was the last time you ran a setup.
+
+# Updating libraries that are already installed
+
+`h5p setup <library>` with no version tracks `master`, so it also refreshes the libraries already in your `libraries` folder. It will not disturb one you are working in: a library with uncommitted changes, or one checked out on a branch other than `master`, is reported and left alone. When a pull does bring new commits, the library is rebuilt, so its build output cannot be left behind by the update.
+
+Set `H5P_NO_UPDATES=1` to skip refreshing installed libraries entirely.
 
 # Setup a local library
 

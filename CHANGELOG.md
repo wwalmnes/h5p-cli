@@ -108,6 +108,39 @@ enforced instead of silently producing empty results.
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
 - `.gitignore` now covers `plugins/`, `h5p.plugins.json`, `playwright-report/` and `test-results/`.
+- **`h5p setup` resolves its dependency graph once instead of once per dependency.** It used to run
+  about N+4 traversals of the same graph — 16 for `h5p-blanks`, 73 for `h5p-interactive-book`. A single
+  `edit` resolution covers all of them, because the mode is applied at every node and view edges are a
+  subset of edit edges. The installed set is unchanged. `logic.installDependencies` was split out of
+  `logic.getWithDependencies` so a resolved graph can be installed without being resolved again;
+  `getWithDependencies` remains as the one-shot pairing of the two.
+- **The resolver fetches each dependency wave in parallel** rather than one library at a time. On
+  `h5p-interactive-book` (95 libraries) that takes the resolve from ~2N round trips to roughly one per
+  wave.
+- **`h5p tags` reads `git ls-remote`** instead of cloning the repository into `temp/`, unshallowing it,
+  checking out and pulling. Dependency resolution calls it once per library whenever a version is given,
+  so a versioned setup no longer clones the entire graph just to read version numbers.
+
+### Fixed
+
+- **`h5p setup <library> <version>` now works at all.** A `major.minor` version was passed through to the
+  fetch verbatim, but that is not a ref — `h5p-blanks` publishes `1.1.5` and `1.1.1`, never `1.1` — so the
+  command failed with `Remote branch 1.1 not found in upstream origin`. The root library's version now
+  goes through the same patch lookup its dependencies always did.
+- **A pinned version is no longer ignored when cloning.** `clone` hardcoded `--branch master` while
+  `download` honoured the resolved version, so the same command produced two different trees depending
+  on the `download` flag.
+- **Patch resolution no longer matches across minor versions.** Tags were compared with a bare prefix
+  test, so version `1.1` also accepted `1.11.x`; for `h5p-blanks` that resolved `1.1` to the nonexistent
+  tag `1.1.13`.
+- **Downloaded release tags resolve.** The archive URL hardcoded `refs/heads/`, so every tagged download
+  requested a branch of that name and 404'd; only `master` ever worked.
+- **`h5p setup` no longer disturbs a library you are working in.** It ran `git checkout master` and
+  `git pull` over any installed library; git then refused to overwrite modified files and the failure
+  aborted the whole setup. A library with uncommitted changes, or on a branch other than `master`, is now
+  reported and left alone.
+- **An updated library is rebuilt.** Pulling new commits left the previous build output in place, because
+  only the fresh-install path ever ran the build.
 
 ### Compatibility
 
