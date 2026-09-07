@@ -1,4 +1,4 @@
-import { execSync, spawn, spawnSync } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 // @ts-ignore - no type declarations for superagent v8 in this project
@@ -11,7 +11,7 @@ import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies.ts';
 import type { IComputeDependenciesPort, LibraryEntry, LibraryDependency, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
 import { ui } from './src/lib/ui.ts';
-import { runPool, resolveConcurrency } from './src/lib/pool.ts';
+import { runPool, resolveConcurrency, resolveExecTimeout } from './src/lib/pool.ts';
 import type { ParsedGitUrl } from './src/lib/h5p-utils.ts';
 
 type VerifySetupResult = {
@@ -54,7 +54,10 @@ const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?
   }
   if (!fs.existsSync(target)) {
     const depth = shallow ? ' --depth 1 --single-branch' : '';
-    execSync(`git clone ${gitUrl} ${target} --branch ${branch}${depth}`, { stdio : 'pipe' }).toString();
+    /* same non-interactive contract as _exec: this is the clone transport's
+    fallback, and a private repo whose credentials are not cached would
+    otherwise sit on a prompt the progress area has already painted over. */
+    _execSync(`git clone ${gitUrl} ${target} --branch ${branch}${depth}`);
   }
   if (!fs.existsSync(filePath)) {
     return '';
@@ -216,17 +219,47 @@ const _failed = (command: string, stderr: string): Error => {
   return new Error(`Command failed: ${command}${detail ? `\n${detail}` : ''}`);
 };
 
+/* Any prompt inside a subprocess is a permanent hang, not a question: ssh and
+git write theirs to /dev/tty, which the live progress area repaints over twelve
+times a second, so the user sees a frozen row and never the prompt.
+
+GIT_TERMINAL_PROMPT=0 disables git's own username/password prompt without
+touching credential helpers. BatchMode=yes makes ssh fail instead of asking
+for a passphrase or a host-key confirmation, and leaves ssh-agent alone. Both
+are inherited by grandchildren, which is what reaches that nested clone. */
+const _nonInteractiveEnv = (): NodeJS.ProcessEnv => ({
+  ...process.env,
+  GIT_TERMINAL_PROMPT: '0',
+  GIT_SSH_COMMAND: `${process.env.GIT_SSH_COMMAND ?? 'ssh'} -o BatchMode=yes`,
+});
+
+const _timedOut = (command: string, cwd: string | undefined, ms: number): Error =>
+  new Error(`Command timed out after ${Math.round(ms / 1000)}s: ${command}${cwd ? `\n  in ${cwd}` : ''}`);
+
 /* execSync inherits stderr, so git/npm write straight past ui — which both
 leaks output under --quiet and shreds the live progress frame. spawnSync
 captures both streams so everything reaches the terminal through emit().
 */
 const _execSync = (command: string, cwd?: string): string => {
-  const result = spawnSync(command, { shell: true, cwd, encoding: 'utf-8' });
+  const budget = resolveExecTimeout();
+  const result = spawnSync(command, {
+    shell: true,
+    cwd,
+    encoding: 'utf-8',
+    env: _nonInteractiveEnv(),
+    timeout: budget,
+  });
   if (result.error) {
-    throw result.error;
+    // node reports the timeout as ETIMEDOUT; say what actually happened
+    throw (result.error as NodeJS.ErrnoException).code === 'ETIMEDOUT'
+      ? _timedOut(command, cwd, budget)
+      : result.error;
   }
   _debug(result.stdout ?? '');
   _debug(result.stderr ?? '');
+  if (result.signal) {
+    throw _timedOut(command, cwd, budget);
+  }
   if (result.status !== 0) {
     throw _failed(command, result.stderr ?? '');
   }
@@ -235,19 +268,67 @@ const _execSync = (command: string, cwd?: string): string => {
 
 const _children = new Set<ReturnType<typeof spawn>>();
 
+/* `shell: true` means the direct child is /bin/sh, and for a compound script
+like `a && b && c` sh does not exec - it stays, and the npm/webpack/ssh
+processes below it survive a kill aimed at sh alone. They keep the stdio pipes
+they inherited open, so 'close' never fires and node cannot exit either.
+Spawning detached puts each command in its own process group, and a negative
+pid signals the whole group. */
+const _killGroup = (child: ReturnType<typeof spawn>, signal: NodeJS.Signals = 'SIGTERM'): void => {
+  if (child.pid === undefined) {
+    return;
+  }
+  try {
+    process.kill(-child.pid, signal);
+  }
+  catch {
+    // the group is already gone, which is the outcome we were after
+  }
+};
+
 const _killRunning = (): void => {
   for (const child of _children) {
-    child.kill();
+    _killGroup(child);
   }
   _children.clear();
 };
 
+/* detached children are no longer in the terminal's foreground process group,
+so Ctrl+C reaches the CLI but not them. Reap on the way out instead - including
+the process.exit(130) that ui's own SIGINT handler performs. */
+process.on('exit', _killRunning);
+
 const _exec = (command: string, cwd?: string): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, { shell: true, cwd });
+    /* stdin is 'ignore' so a command that reads it - `patch` asking which file
+    to patch, say - gets EOF and aborts, rather than blocking forever on a pipe
+    nobody will ever write to. */
+    const child = spawn(command, {
+      shell: true,
+      cwd,
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: _nonInteractiveEnv(),
+    });
     _children.add(child);
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
+    const budget = resolveExecTimeout();
+    /* The backstop for a stall no amount of non-interactivity can prevent: a
+    dead network, a build script that watches instead of exiting. Unreffed
+    because the child's stdio pipes already hold the loop open. */
+    const timer = setTimeout(() => {
+      timedOut = true;
+      _killGroup(child);
+      // a process that ignores SIGTERM must not strand the CLI either
+      setTimeout(() => _killGroup(child, 'SIGKILL'), 5000).unref();
+    }, budget);
+    timer.unref();
+    const settle = (): void => {
+      clearTimeout(timer);
+      _children.delete(child);
+    };
     child.stdout?.setEncoding('utf-8');
     child.stderr?.setEncoding('utf-8');
     child.stdout?.on('data', (chunk) => {
@@ -257,13 +338,17 @@ const _exec = (command: string, cwd?: string): Promise<string> => {
       stderr += chunk;
     });
     child.on('error', (error) => {
-      _children.delete(child);
+      settle();
       reject(error);
     });
     child.on('close', (status) => {
-      _children.delete(child);
+      settle();
       _debug(stdout);
       _debug(stderr);
+      if (timedOut) {
+        reject(_timedOut(command, cwd, budget));
+        return;
+      }
       if (status !== 0) {
         reject(_failed(command, stderr));
         return;
@@ -390,10 +475,12 @@ const logic = {
     fs.cpSync(`content/${folder}`, `${target}/content`, { recursive: true });
     fs.renameSync(`${target}/content/h5p.json`, `${target}/h5p.json`);
     fs.rmSync(`${target}/content/sessions`, { recursive: true, force: true });
-    let libs = await logic.computeDependencies(library, 'view', null, libFolder);
-    const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
-    libs = {...libs, ...editLibs};
+    const libs = await logic.computeDependencies(library, 'edit', null, libFolder);
     for (let item in libs) {
+      if (!libs[item].id) {
+        // unregistered dependency: reported by `h5p missing`, nothing on disk to pack
+        continue;
+      }
       const folder = libraryDirs[libs[item].id];
       fs.cpSync(`${config.folders.libraries}/${folder}`, `${target}/${folder}`, { recursive: true });
     }
@@ -473,7 +560,7 @@ const logic = {
   },
   // clone repository using git
   clone: (org: string, repo: string, branch: string, target: string): string => {
-    return execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, { cwd: config.folders.libraries }).toString();
+    return _execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, config.folders.libraries);
   },
   /**
    * Installs an already-resolved dependency map into the libraries folder
@@ -529,7 +616,7 @@ const logic = {
   verifySetup: async (library: string): Promise<VerifySetupResult> => {
     const registry = await logic.getRegistry();
     const libraryDirs = await logic.parseLibraryFolders();
-    const libFolder = libraryDirs[registry.regular[library].id];
+    const libFolder = libraryDirs[registry.regular[library]?.id];
     const output: VerifySetupResult = {
       registry: registry.regular[library] ? true : false,
       libraries: {},
@@ -538,8 +625,7 @@ const logic = {
     if (!output.registry) {
       output.ok = false;
     }
-    let list = await logic.computeDependencies(library, 'view', null, libFolder);
-    list = {...list, ...(await logic.computeDependencies(library, 'edit', null, libFolder))};
+    const list = await logic.computeDependencies(library, 'edit', null, libFolder);
     for (let item in list) {
       if (!list[item]?.id) {
         output.libraries[item] = {
@@ -568,9 +654,7 @@ const logic = {
     const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
     const target = `content/${folder}`;
-    let libs = await logic.computeDependencies(library, 'view', null, libFolder);
-    const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
-    libs = {...libs, ...editLibs};
+    const libs = await logic.computeDependencies(library, 'edit', null, libFolder);
     const map: Record<string, boolean> = {};
     const preloadedDependencies: LibraryDependency[] = [];
     for (let item in libs) {
@@ -751,4 +835,10 @@ const logic = {
   getFile,
   getFileList,
 };
+/* Exported for tests/logic/exec.test.ts. The guarantees these two carry -
+stdin closed, prompts disabled, a hard time budget, a group kill on abort - are
+the entire reason they exist, and no public entry point exercises them without
+a network round trip. Nothing in src/ imports them. */
+export { _exec as execCommand, _execSync as execCommandSync, _killRunning as killRunning };
+
 export default logic;

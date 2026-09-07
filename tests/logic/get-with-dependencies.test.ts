@@ -328,23 +328,28 @@ describe('logic.getWithDependencies', () => {
     expect(state.peak).toBe(0);
   });
 
-  it('kills in-flight installs when one fails, so the process is not left waiting', async () => {
-    const kills: string[] = [];
+  /* The abort has to reach the whole process group, not the /bin/sh wrapper:
+  `npm run build` leaves node and git below it, and those hold the stdio pipes
+  the parent is waiting on, so a kill aimed at sh alone leaves the CLI hanging
+  after it has already reported the error. */
+  it('kills the in-flight process groups when one install fails', async () => {
+    const signalled: number[] = [];
+    const kill = vi.spyOn(process, 'kill').mockImplementation(((pid: number) => {
+      signalled.push(pid);
+      return true;
+    }) as any);
     let spawned = 0;
-    vi.mocked(spawn).mockImplementation(((command: string) => {
+    vi.mocked(spawn).mockImplementation((() => {
       const child: any = new EventEmitter();
       child.stdout = new EventEmitter();
       child.stderr = new EventEmitter();
       (child.stdout as any).setEncoding = () => {};
       (child.stderr as any).setEncoding = () => {};
-      child.kill = () => { kills.push(command); };
       const index = spawned++;
+      child.pid = 4200 + index;
       // the first install fails fast; the second is still running when it does
       if (index === 0) {
         setTimeout(() => child.emit('close', 1), 5);
-      }
-      else {
-        setTimeout(() => child.emit('close', 0), 10_000);
       }
       return child;
     }) as any);
@@ -353,6 +358,9 @@ describe('logic.getWithDependencies', () => {
       logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
     ).rejects.toThrow('Command failed');
 
-    expect(kills.length).toBeGreaterThan(0);
+    kill.mockRestore();
+    // negative pids: the group, not the shell
+    expect(signalled.length).toBeGreaterThan(0);
+    expect(signalled.every(pid => pid < 0)).toBe(true);
   });
 });

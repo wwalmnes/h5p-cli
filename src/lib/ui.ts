@@ -204,6 +204,8 @@ export type ProgressRow = {
   label: string;
   /** undefined means indeterminate — spinner, no bar. */
   percent?: number;
+  /** Epoch ms the row first appeared; set once, kept across updates. */
+  startedAt?: number;
 };
 
 export type RenderOptions = {
@@ -213,12 +215,27 @@ export type RenderOptions = {
   frame: number;
   /** Escape sequences are omitted when false, which keeps tests readable. */
   color?: boolean;
+  /** Epoch ms, injected so this stays pure and the elapsed suffix is testable. */
+  now?: number;
 };
 
 const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const;
 const BAR_WIDTH = 16;
 const BAR_FULL = '█';
 const BAR_EMPTY = '░';
+
+/* A spinner alone cannot tell a fast step from a wedged one, and a step that
+shells out to git or npm can wedge for reasons the CLI never sees. Past this
+much silence the row starts reporting how long it has been there, which is the
+difference between "working" and "stuck" for whoever is watching. */
+const STALL_MS = 20_000;
+
+function elapsed(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const seconds = total % 60;
+  const minutes = Math.floor(total / 60);
+  return minutes ? `${minutes}m${`${seconds}`.padStart(2, '0')}s` : `${seconds}s`;
+}
 
 function clamp(percent: number): number {
   if (!Number.isFinite(percent)) return 0;
@@ -236,6 +253,7 @@ function truncate(line: string, width: number): string {
 export function renderRows(rows: ProgressRow[], options: RenderOptions): string[] {
   const { width, limit, frame } = options;
   const useColor = options.color ?? false;
+  const now = options.now;
   const tint = (text: string, color: ColorName) =>
     useColor ? `${CODES[color]}${text}${RESET}` : text;
 
@@ -243,16 +261,22 @@ export function renderRows(rows: ProgressRow[], options: RenderOptions): string[
   const labelWidth = Math.max(0, ...visible.map((row) => row.label.length));
   const spinner = SPINNER[frame % SPINNER.length];
 
+  const age = (row: ProgressRow): string => {
+    if (now === undefined || row.startedAt === undefined) return '';
+    const ms = now - row.startedAt;
+    return ms < STALL_MS ? '' : `  ${tint(elapsed(ms), 'dim')}`;
+  };
+
   const lines = visible.map((row) => {
     const label = row.label.padEnd(labelWidth);
     if (row.percent === undefined) {
-      return truncate(`${tint(spinner, 'cyan')} ${label}`, width);
+      return truncate(`${tint(spinner, 'cyan')} ${label}${age(row)}`, width);
     }
     const percent = clamp(row.percent);
     const filled = Math.round((percent / 100) * BAR_WIDTH);
     const bar = BAR_FULL.repeat(filled) + BAR_EMPTY.repeat(BAR_WIDTH - filled);
     const value = `${Math.round(percent)}`.padStart(3);
-    return truncate(`${tint(spinner, 'cyan')} ${label}  ${bar}  ${value}%`, width);
+    return truncate(`${tint(spinner, 'cyan')} ${label}  ${bar}  ${value}%${age(row)}`, width);
   });
 
   const hidden = rows.length - visible.length;
@@ -265,7 +289,9 @@ export function renderRows(rows: ProgressRow[], options: RenderOptions): string[
 // --------------------------------------------------------------- live region
 
 const REPAINT_MS = 80;
-const DEFAULT_LIMIT = 3;
+/* Matches pool.ts's DEFAULT_CONCURRENCY: fewer slots than workers and the one
+row that is wedged is as likely as not the one collapsed into "… N more". */
+const DEFAULT_LIMIT = 4;
 
 const rows = new Map<string, ProgressRow>();
 let limit = DEFAULT_LIMIT;
@@ -306,6 +332,7 @@ function paintRegion(): void {
     limit,
     frame,
     color: colorEnabled(),
+    now: Date.now(),
   });
   if (lines.length === 0) return;
 
@@ -569,6 +596,8 @@ export const ui = {
       id,
       label: options.label ?? existing?.label ?? id,
       percent: percent === undefined ? undefined : clamp(percent),
+      // set once: the age reported is the row's, not the last update's
+      startedAt: existing?.startedAt ?? Date.now(),
     });
 
     if (!liveEnabled()) return;

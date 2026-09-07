@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 // @ts-ignore - no type declarations for superagent v8 in this project
 import superAgent from 'superagent';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../logic.ts';
 
 vi.mock('child_process', () => ({
-  execSync: vi.fn(),
   spawnSync: vi.fn(() => ({ status: 0, stdout: '', stderr: '', error: undefined })),
   spawn: vi.fn(),
 }));
@@ -41,8 +40,10 @@ const rawRoutes = (routes: Record<string, [number, string]>) =>
     return respond(status, text);
   });
 
+/* the clone transport goes through logic's _execSync, which is spawnSync - it
+has to, so a prompt is impossible and git's stderr cannot bypass ui */
 const gitCloneCalls = () =>
-  vi.mocked(execSync).mock.calls.filter(c => String(c[0]).startsWith('git clone'));
+  vi.mocked(spawnSync).mock.calls.filter(c => String(c[0]).startsWith('git clone'));
 
 describe('metadata transport', () => {
   let fixture: Fixture;
@@ -60,14 +61,14 @@ describe('metadata transport', () => {
     delete process.env.H5P_NO_RAW;
 
     // a "successful" clone materialises the files getRepoFile then reads
-    vi.mocked(execSync).mockImplementation(((command: string) => {
+    vi.mocked(spawnSync).mockImplementation(((command: string) => {
       const match = /^git clone \S+ (\S+)/.exec(command);
       if (match) {
         fs.mkdirSync(match[1], { recursive: true });
         fs.writeFileSync(`${match[1]}/library.json`, JSON.stringify(LIBRARY_JSON));
         fs.writeFileSync(`${match[1]}/semantics.json`, JSON.stringify([]));
       }
-      return Buffer.from('');
+      return { status: 0, stdout: '', stderr: '', error: undefined };
     }) as any);
   });
 

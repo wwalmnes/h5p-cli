@@ -1,5 +1,11 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { runPool, resolveConcurrency, DEFAULT_CONCURRENCY } from '../../src/lib/pool.ts';
+import {
+  runPool,
+  resolveConcurrency,
+  DEFAULT_CONCURRENCY,
+  resolveExecTimeout,
+  DEFAULT_EXEC_TIMEOUT_MS,
+} from '../../src/lib/pool.ts';
 
 const deferred = () => {
   let resolve!: () => void;
@@ -112,5 +118,35 @@ describe('resolveConcurrency', () => {
   it('ignores a non-positive request', () => {
     expect(resolveConcurrency(0)).toBe(DEFAULT_CONCURRENCY);
     expect(resolveConcurrency(-3)).toBe(DEFAULT_CONCURRENCY);
+  });
+});
+
+describe('resolveExecTimeout', () => {
+  afterEach(() => {
+    delete process.env.H5P_EXEC_TIMEOUT;
+  });
+
+  it('defaults when nothing is set', () => {
+    expect(resolveExecTimeout()).toBe(DEFAULT_EXEC_TIMEOUT_MS);
+  });
+
+  it('prefers the explicit request over the environment', () => {
+    process.env.H5P_EXEC_TIMEOUT = '900';
+    expect(resolveExecTimeout(5_000)).toBe(5_000);
+  });
+
+  it('reads H5P_EXEC_TIMEOUT as seconds', () => {
+    process.env.H5P_EXEC_TIMEOUT = '30';
+    expect(resolveExecTimeout()).toBe(30_000);
+  });
+
+  it('ignores a nonsense environment value', () => {
+    process.env.H5P_EXEC_TIMEOUT = 'ages';
+    expect(resolveExecTimeout()).toBe(DEFAULT_EXEC_TIMEOUT_MS);
+  });
+
+  it('ignores a non-positive request', () => {
+    expect(resolveExecTimeout(0)).toBe(DEFAULT_EXEC_TIMEOUT_MS);
+    expect(resolveExecTimeout(-3)).toBe(DEFAULT_EXEC_TIMEOUT_MS);
   });
 });

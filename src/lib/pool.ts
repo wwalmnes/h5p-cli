@@ -41,3 +41,15 @@ export const resolveConcurrency = (requested?: number): number => {
   const value = requested ?? (Number.isFinite(fromEnv) ? fromEnv : DEFAULT_CONCURRENCY);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_CONCURRENCY;
 };
+
+// A subprocess may do a prompt (or just hang), so we need a timeout (@todo what is a good default?).
+export const DEFAULT_EXEC_TIMEOUT_MS = 10 * 60 * 1000;
+
+// H5P_EXEC_TIMEOUT is in seconds, the unit a user reaches for.
+export const resolveExecTimeout = (requested?: number): number => {
+  const fromEnv = process.env.H5P_EXEC_TIMEOUT
+    ? parseInt(process.env.H5P_EXEC_TIMEOUT, 10) * 1000
+    : NaN;
+  const value = requested ?? (Number.isFinite(fromEnv) ? fromEnv : DEFAULT_EXEC_TIMEOUT_MS);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_EXEC_TIMEOUT_MS;
+};
