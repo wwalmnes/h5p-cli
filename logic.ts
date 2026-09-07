@@ -293,10 +293,46 @@ const _killRunning = (): void => {
   _children.clear();
 };
 
-/* detached children are no longer in the terminal's foreground process group,
-so Ctrl+C reaches the CLI but not them. Reap on the way out instead - including
-the process.exit(130) that ui's own SIGINT handler performs. */
-process.on('exit', _killRunning);
+/* Folders this process created and has not finished installing into.
+fs.existsSync(folder) is the whole already-installed test in _install, so a
+half-written folder poisons every later run - it is reported as installed and
+never built. Only folders _install created itself are tracked: one that was
+already on disk belongs to the user, or to another library, and is never
+removed. Paths are resolved on the way in, because config.folders.* are
+cwd-relative and the sweep below runs at exit, arbitrarily later. */
+const _incomplete = new Set<string>();
+
+const _discard = (folder: string): void => {
+  _incomplete.delete(folder);
+  try {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
+  catch (error) {
+    // never mask the install failure that brought us here
+    ui.warn(`could not remove ${folder}: ${(error as Error).message}`);
+  }
+};
+
+const _discardIncomplete = (): void => {
+  for (const folder of [..._incomplete]) {
+    _discard(folder);
+  }
+};
+
+process.on('exit', () => {
+  _killRunning();
+  _discardIncomplete();
+});
+
+/* A signal with no listener terminates node outright - the exit hook above
+never runs, and an interrupted setup keeps every half-written folder it had
+open. ui installs a SIGINT handler, but only when the live area is on, so a
+piped run or a cancelled CI job has none. Exit through process.exit instead,
+with the shell's own 128+signal code. Signal listeners do not hold the event
+loop open, so this cannot delay a normal exit. */
+for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]] as const) {
+  process.once(signal, () => process.exit(code));
+}
 
 const _exec = (command: string, cwd?: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -439,6 +475,8 @@ const _install = async (
   }
   ui.step(`+ installing ${entry.repoName} ${listVersion}`);
   ui.progress(label, 0, { label: `${entry.repoName} ${listVersion}` });
+  const claim = path.resolve(folder);
+  _incomplete.add(claim);
   try {
     if (action == 'download') {
       await logic.download(entry.org, entry.repoName, version, folder);
@@ -448,7 +486,14 @@ const _install = async (
     }
     ui.progress(label, 60);
     await _build(folder, label);
-  } finally {
+    _incomplete.delete(claim);
+  }
+  catch (error) {
+    ui.warn(`removing incomplete ${folder}`);
+    _discard(claim);
+    throw error;
+  }
+  finally {
     // runs on the early returns above too, so no row is ever stranded
     ui.progressDone(label);
   }
@@ -551,12 +596,17 @@ const logic = {
     const zipFile = `${work}.zip`;
     fs.rmSync(work, { recursive: true, force: true });
     fs.mkdirSync(work, { recursive: true });
-    fs.writeFileSync(zipFile, blob);
-    new admZip(zipFile).extractAllTo(work);
-    fs.rmSync(zipFile, { force: true });
-    const [root] = fs.readdirSync(work);
-    fs.renameSync(`${work}/${root}`, target);
-    fs.rmSync(work, { recursive: true, force: true });
+    try {
+      fs.writeFileSync(zipFile, blob);
+      new admZip(zipFile).extractAllTo(work);
+      fs.rmSync(zipFile, { force: true });
+      const [root] = fs.readdirSync(work);
+      fs.renameSync(`${work}/${root}`, target);
+    }
+    finally {
+      fs.rmSync(zipFile, { force: true });
+      fs.rmSync(work, { recursive: true, force: true });
+    }
   },
   // clone repository using git
   clone: (org: string, repo: string, branch: string, target: string): string => {
@@ -835,10 +885,19 @@ const logic = {
   getFile,
   getFileList,
 };
-/* Exported for tests/logic/exec.test.ts. The guarantees these two carry -
-stdin closed, prompts disabled, a hard time budget, a group kill on abort - are
-the entire reason they exist, and no public entry point exercises them without
-a network round trip. Nothing in src/ imports them. */
-export { _exec as execCommand, _execSync as execCommandSync, _killRunning as killRunning };
+/* Exported for tests only. The guarantees _exec and _execSync carry - stdin
+closed, prompts disabled, a hard time budget, a group kill on abort - are the
+entire reason they exist, and no public entry point exercises them without a
+network round trip (tests/logic/exec.test.ts). The incomplete-install set and
+its sweep are reachable no other way either, because the sweep only ever runs
+from the exit hook (tests/logic/get-with-dependencies.test.ts). Nothing in src/
+imports any of them. */
+export {
+  _exec as execCommand,
+  _execSync as execCommandSync,
+  _killRunning as killRunning,
+  _incomplete as incompleteInstalls,
+  _discardIncomplete as discardIncompleteInstalls,
+};
 
 export default logic;
