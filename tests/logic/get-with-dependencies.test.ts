@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { execSync, spawnSync, spawn } from 'child_process';
+import * as path from 'path';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
-import logic from '../../logic.ts';
+import logic, { incompleteInstalls, discardIncompleteInstalls } from '../../logic.ts';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
@@ -430,5 +431,160 @@ describe('logic.getWithDependencies', () => {
 
     expect(download).toHaveBeenCalledWith('h5p', 'h5p-joubel-ui', '3.3.0', 'libraries/H5P.JoubelUI-3.3');
     expect(download.mock.calls.some(args => args[1] === 'h5p-blanks')).toBe(false);
+  /* fs.existsSync(folder) is the whole already-installed test in _install, so a
+  folder a failed install left behind is reported as installed for good: a
+  pinned run prints `~ skipping updates` and a latest run pulls, finds HEAD
+  unmoved and never builds. Whatever this call created has to go with it. */
+  describe('cleanup after a failed install', () => {
+    const blanks = 'libraries/H5P.Blanks-1.14';
+    const joubel = 'libraries/H5P.JoubelUI-3.3';
+
+    beforeEach(() => {
+      // module-level state: a rejected install in an earlier test may still hold a claim
+      incompleteInstalls.clear();
+    });
+
+    /* the mocked spawn does no work, so stand in for git: create the folder the
+    clone would have, and give only h5p-blanks a build script to fail on */
+    const cloningSpawn = (options: { cloneStatus?: number; buildStatus?: number } = {}) => {
+      vi.mocked(spawn).mockImplementation(((cmd: string, opts: any) => {
+        const child: any = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        child.stdout.setEncoding = () => {};
+        child.stderr.setEncoding = () => {};
+        let status = 0;
+        const command = String(cmd);
+        if (command.startsWith('git clone')) {
+          // git clone <url> <target> --branch <ref>, run from libraries/
+          const target = `${opts.cwd}/${command.split(' ')[3]}`;
+          fs.mkdirSync(target, { recursive: true });
+          if (target.endsWith('H5P.Blanks-1.14')) {
+            fs.writeFileSync(`${target}/package.json`, JSON.stringify({ scripts: { build: 'rollup -c' } }));
+            status = options.cloneStatus ?? 0;
+          }
+        }
+        else if (command === 'npm run build' && String(opts.cwd).endsWith('H5P.Blanks-1.14')) {
+          status = options.buildStatus ?? 0;
+        }
+        process.nextTick(() => child.emit('close', status));
+        return child;
+      }) as any);
+    };
+
+    it('removes the folder when the build fails', async () => {
+      cloningSpawn({ buildStatus: 1 });
+
+      await expect(
+        logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+      ).rejects.toThrow('Command failed');
+
+      expect(fs.existsSync(blanks)).toBe(false);
+      expect(stderr).toContain(`removing incomplete ${blanks}`);
+      // the sibling completed, so it stays
+      expect(fs.existsSync(joubel)).toBe(true);
+    });
+
+    /* a clone killed part-way - which is what _killRunning does to every
+    sibling as soon as one install fails - leaves a folder with no library.json */
+    it('removes the partial folder when the clone fails', async () => {
+      cloningSpawn({ cloneStatus: 1 });
+
+      await expect(
+        logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+      ).rejects.toThrow('Command failed');
+
+      expect(fs.existsSync(blanks)).toBe(false);
+    });
+
+    /* the folder may be somebody's working copy, or a library another one
+    depends on; only a folder this install created is ever removed */
+    it('never removes a folder that was already on disk', async () => {
+      fs.mkdirSync(blanks, { recursive: true });
+      fs.mkdirSync(joubel, { recursive: true });
+      fs.writeFileSync(`${blanks}/mine.txt`, 'do not delete');
+      fs.writeFileSync(`${blanks}/package.json`, JSON.stringify({ scripts: { build: 'rollup -c' } }));
+      // clean master whose pull moves HEAD, so _update rebuilds - and that build fails
+      let head = 'before';
+      vi.mocked(spawn).mockImplementation(((cmd: string, opts: any) => {
+        const child: any = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        child.stdout.setEncoding = () => {};
+        child.stderr.setEncoding = () => {};
+        const command = String(cmd);
+        let status = 0;
+        // only this library's pull moves HEAD; the sibling installs concurrently
+        const moves = String(opts.cwd) === blanks;
+        process.nextTick(() => {
+          if (command === 'git rev-parse HEAD') {
+            child.stdout.emit('data', `${moves ? head : 'fixed'}\n`);
+            if (moves) {
+              head = 'after';
+            }
+          }
+          else if (command === 'git rev-parse --abbrev-ref HEAD') {
+            child.stdout.emit('data', 'master\n');
+          }
+          else if (command === 'npm run build' && String(opts.cwd) === blanks) {
+            status = 1;
+          }
+          child.emit('close', status);
+        });
+        return child;
+      }) as any);
+
+      await expect(
+        logic.getWithDependencies('clone', 'h5p-blanks', 'view', true),
+      ).rejects.toThrow('Command failed');
+
+      expect(fs.existsSync(blanks)).toBe(true);
+      expect(fs.readFileSync(`${blanks}/mine.txt`, 'utf-8')).toBe('do not delete');
+    });
+
+    it('claims nothing once every install has completed', async () => {
+      cloningSpawn();
+
+      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
+
+      expect(incompleteInstalls.size).toBe(0);
+    });
+
+    /* Ctrl+C reaches ui's SIGINT handler, which calls process.exit(130): no
+    async cleanup runs after that, so the exit hook sweeps what is still claimed */
+    it('the exit sweep removes what is still claimed', () => {
+      fs.mkdirSync(blanks, { recursive: true });
+      incompleteInstalls.add(path.resolve(blanks));
+
+      discardIncompleteInstalls();
+
+      expect(fs.existsSync(blanks)).toBe(false);
+      expect(incompleteInstalls.size).toBe(0);
+    });
+
+    /* An unhandled signal terminates node outright and the exit hook never
+    runs, which left four half-cloned folders behind on every piped Ctrl+C.
+    Only a real process can show that, so this one spawns one. */
+    it('an interrupted process sweeps its claims before dying', async () => {
+      const { spawn: realSpawn } = await vi.importActual<typeof import('child_process')>('child_process');
+      const logicPath = new URL('../../logic.ts', import.meta.url).pathname;
+      const target = path.resolve(blanks);
+      const script = `
+        import { incompleteInstalls } from ${JSON.stringify(logicPath)};
+        import fs from 'fs';
+        fs.mkdirSync(${JSON.stringify(target)}, { recursive: true });
+        incompleteInstalls.add(${JSON.stringify(target)});
+        // hold the loop open so the signal, not an empty queue, ends this
+        setTimeout(() => {}, 30000);
+        process.kill(process.pid, 'SIGINT');
+      `;
+      const code = await new Promise<number | null>((resolve) => {
+        const child = realSpawn(process.execPath, ['--input-type=module', '--eval', script], { stdio: 'ignore' });
+        child.on('exit', resolve);
+      });
+
+      expect(code).toBe(130);
+      expect(fs.existsSync(target)).toBe(false);
+    }, 20000);
   });
 });
