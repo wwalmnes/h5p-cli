@@ -32,7 +32,7 @@ export function setupCommand(service?: SetupService): Command {
   return new Command('setup')
     .description('Computes & installs dependencies for h5p library')
     .argument('<library>', 'Library name or URL')
-    .argument('[ref]', 'Git tag or branch for the library under test')
+    .argument('[ref]', 'Git tag or branch for the library')
     .argument('[download]', 'Pass 1 to download instead of clone')
     .option('-c, --concurrency <n>', 'How many libraries to install at once (default 4)')
     .action(async (library: string, ref: string | undefined, download: string | undefined, options: { concurrency?: string }) => {

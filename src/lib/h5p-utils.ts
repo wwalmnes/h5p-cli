@@ -22,7 +22,7 @@ export const isSafeGitRef = (ref: string): boolean => /^[\w./-]+$/.test(ref);
 /** feat/foo must not become a nested path under temp/. */
 export const sanitizeRefForPath = (ref: string): string => String(ref).replace(/[^\w.-]/g, '_');
 
-/** The library under test, cloned at a git branch/tag rather than a release. */
+/** The library itself, cloned at a git branch/tag rather than a release. */
 export type RootRef = { library: string; ref: string };
 
 // builds content from template and input

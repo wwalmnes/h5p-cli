@@ -46,8 +46,8 @@ h5p setup <library|repoUrl> [ref] [download]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `library\|repoUrl` | Yes | Library machine name (e.g. `H5P.Accordion`) or a GitHub repo URL (e.g. `git@github.com:h5p/h5p-accordion.git`). Passing a URL also updates the local registry entry. |
-| `ref` | No | Git tag or branch for the library under test. A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the resulting patch. A branch name clones **this** library at that ref; dependencies are read from that ref's `library.json` and installed at their declared versions (falling back to `master` if a tag is missing). Defaults to `master`. Use `h5p tags` to list available versions. |
-| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. The library under test is still cloned when `[ref]` is a branch. |
+| `ref` | No | Git tag or branch for the library. A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the resulting patch. A branch name clones **this** library at that ref; dependencies are read from that ref's `library.json` and installed at their declared versions (falling back to `master` if a tag is missing). Defaults to `master`. Use `h5p tags` to list available versions. |
+| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. The library is still cloned when `[ref]` is a branch. |
 
 **Options**
 
