@@ -108,6 +108,11 @@ enforced instead of silently producing empty results.
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
 - `.gitignore` now covers `plugins/`, `h5p.plugins.json`, `playwright-report/` and `test-results/`.
+- **`h5p setup <library> [ref]` takes a git tag or branch as one positional**. 
+  A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the
+  resulting patch. A branch name clones only the library under test at that ref; its dependencies
+  are read from that ref's `library.json` and cloned at their declared versions, falling back to
+  `master` if a tag is missing. Branch metadata is not written to the on-disk cache (a branch moves).
 - **`h5p setup` resolves its dependency graph once instead of once per dependency.** It used to run
   about N+4 traversals of the same graph — 16 for `h5p-blanks`, 73 for `h5p-interactive-book`. A single
   `edit` resolution covers all of them, because the mode is applied at every node and view edges are a

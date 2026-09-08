@@ -152,6 +152,18 @@ describe('metadata transport', () => {
     expect(vi.mocked(superAgent.get).mock.calls.length).toBe(afterFirst);
   });
 
+  it('does not persist a git-ref metadata file to disk', async () => {
+    rawRoutes({
+      'library.json': [200, JSON.stringify(LIBRARY_JSON)],
+      'semantics.json': [200, JSON.stringify([])],
+    });
+
+    await logic.computeDependencies('h5p-blanks', 'view', 'feat/my-pr');
+
+    const cached = fs.existsSync('temp/.metadata') ? fs.readdirSync('temp/.metadata') : [];
+    expect(cached.some(name => name.includes('feat'))).toBe(false);
+  });
+
   it('prefers an existing temp clone over the network', async () => {
     fs.mkdirSync('temp/h5p-blanks_master', { recursive: true });
     fs.writeFileSync('temp/h5p-blanks_master/library.json', JSON.stringify(LIBRARY_JSON));

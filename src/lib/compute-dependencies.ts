@@ -146,11 +146,9 @@ export async function computeDependencies(
           return;
         }
         cache[dep] = list;
-        // same version string compute() derives before it asks for semantics
-        const ver = version == 'master'
-          ? version
-          : `${list.majorVersion}.${list.minorVersion}.${list.patchVersion}`;
-        cache[dep].semantics = await io.getSemanticsJson(dir, entry.org, repoName, ver);
+        // Same ref as library.json. Rewriting a branch to major.minor.patch
+        // 404s when that patch is unreleased (H5PT-227).
+        cache[dep].semantics = await io.getSemanticsJson(dir, entry.org, repoName, version);
         cache[dep].optionals = parseSemanticLibraries(cache[dep].semantics);
       }
       catch {
@@ -204,23 +202,22 @@ export async function computeDependencies(
     }
     done[level][dep].requiredBy!.push(requiredByPath);
     done[level][dep].level = level;
-    let ver = version == 'master' ? version : `${done[level][dep].version!.major}.${done[level][dep].version!.minor}.${done[level][dep].version!.patch}`;
-    const optionals = await getOptionals(dep, org, repoName, ver, toDo[dep].folder);
+    const optionals = await getOptionals(dep, org, repoName, version, toDo[dep].folder);
     if (list.preloadedDependencies) {
       for (let item of list.preloadedDependencies) {
-        ver = version == 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
+        const ver = version == 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
         const dir = folder ? libraryDirs[item.machineName] : null;
         handleDepListEntry(item.machineName, dep, ver, dir);
       }
     }
     for (let item in optionals) {
-      ver = version == 'master' ? version : optionals[item].version;
+      const ver = version == 'master' ? version : optionals[item].version;
       const dir = folder ? libraryDirs[item] : null;
       handleDepListEntry(item, dep, ver, dir);
     }
     if (mode == 'edit' && list.editorDependencies) {
       for (let item of list.editorDependencies) {
-        ver = version == 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
+        const ver = version == 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
         const dir = folder ? libraryDirs[item.machineName] : null;
         handleDepListEntry(item.machineName, dep, ver, dir);
       }

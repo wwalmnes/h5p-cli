@@ -40,14 +40,20 @@ No arguments.
 Full one-command setup: registers the library and installs it along with all dependencies.
 
 ```bash
-h5p setup <library|repoUrl> [version] [download]
+h5p setup <library|repoUrl> [ref] [download]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `library\|repoUrl` | Yes | Library machine name (e.g. `H5P.Accordion`) or a GitHub repo URL (e.g. `git@github.com:h5p/h5p-accordion.git`). Passing a URL also updates the local registry entry. |
-| `version` | No | Version to install. Defaults to `master`. Either a full tag (`1.14.3`) or a `major.minor` pair (`1.14`), which resolves to the highest patch released for it. Use `h5p tags` to list available versions. |
-| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. |
+| `ref` | No | Git tag or branch for the library under test. A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the resulting patch. A branch name clones **this** library at that ref; dependencies are read from that ref's `library.json` and installed at their declared versions (falling back to `master` if a tag is missing). Defaults to `master`. Use `h5p tags` to list available versions. |
+| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. The library under test is still cloned when `[ref]` is a branch. |
+
+**Options**
+
+| Option | Effect |
+|--------|--------|
+| `-c, --concurrency <n>` | How many libraries to install at once (default 4). |
 
 **Environment variables**
 
@@ -59,13 +65,14 @@ h5p setup <library|repoUrl> [version] [download]
 | `H5P_SSH_CLONE=1` | Use SSH URLs when cloning (useful for private repos or committing from `libraries/<library>`). |
 
 > [!IMPORTANT]
-> If no `[version]` is specified, master branches are used — and libraries already present in `libraries/` are refreshed from `master`. One with uncommitted changes, or on a branch other than `master`, is reported and left untouched.
+> If no `[ref]` is specified, master branches are used — and libraries already present in `libraries/` are refreshed from `master`. One with uncommitted changes, or on a branch other than `master`, is reported and left untouched.
 
 **Example**
 
 ```bash
 h5p setup git@github.com:h5p/h5p-accordion.git
-h5p setup H5P.Accordion 1.0.0
+h5p setup h5p-accordion 1.0.0
+h5p setup h5p-accordion feat/example
 h5p setup H5P.Accordion master 1   # download instead of clone
 ```
 

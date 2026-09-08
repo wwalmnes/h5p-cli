@@ -323,4 +323,23 @@ describe('computeDependencies', () => {
     await expect(computeDependencies('h5p-joubel-ui', 'view', null, undefined, port))
       .rejects.toThrow('missing library.json for h5p-joubel-ui');
   });
+
+  it('reads semantics at a git ref, not the patch number from library.json', async () => {
+    const getSemanticsJson = vi.fn().mockResolvedValue([]);
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ blanks: BLANKS_ENTRY, joubel: JOUBEL_ENTRY })),
+      getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) =>
+        structuredClone(repoName === 'h5p-blanks' ? BLANKS_LIBRARY_JSON : JOUBEL_LIBRARY_JSON)),
+      getSemanticsJson,
+      getTags: vi.fn().mockReturnValue(['3.3.0']),
+    });
+
+    await computeDependencies('h5p-blanks', 'view', 'feat/my-pr', undefined, port);
+
+    const blanksSemantics = getSemanticsJson.mock.calls
+      .filter(([, , repoName]) => repoName === 'h5p-blanks')
+      .map(([, , , version]) => version);
+    expect(blanksSemantics).toContain('feat/my-pr');
+    expect(blanksSemantics).not.toContain('1.14.0');
+  });
 });

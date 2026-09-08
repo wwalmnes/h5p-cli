@@ -7,12 +7,12 @@ import superAgent from 'superagent';
 import admZip from 'adm-zip';
 import config from './configLoader.ts';
 import { upgradeContent } from './logic-content-upgrade.ts';
-import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './src/lib/h5p-utils.ts';
+import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry, isPinnedRelease, sanitizeRefForPath } from './src/lib/h5p-utils.ts';
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies.ts';
 import type { IComputeDependenciesPort, LibraryEntry, LibraryDependency, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
 import { ui } from './src/lib/ui.ts';
 import { runPool, resolveConcurrency, resolveExecTimeout } from './src/lib/pool.ts';
-import type { ParsedGitUrl } from './src/lib/h5p-utils.ts';
+import type { ParsedGitUrl, RootRef } from './src/lib/h5p-utils.ts';
 
 type VerifySetupResult = {
   registry: boolean;
@@ -47,7 +47,7 @@ const getFile = async (source: string, parseJson?: boolean): Promise<string | ob
 // clone repo and retrieve file
 const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean, shallow?: boolean): string | object => {
   const { repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
-  const target = `${config.folders.temp}/${repoName}_${branch}`;
+  const target = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(branch)}`;
   const filePath = `${target}/${path}`;
   if (cleanStart) {
     fs.rmSync(target, { recursive: true, force: true });
@@ -130,10 +130,15 @@ const _metaCacheDir = (): string => `${config.folders.temp}/.metadata`;
 const _metaCacheFile = (org: string, repoName: string, version: string, file: string): string =>
   `${_metaCacheDir()}/${org}__${repoName}__${version}__${file}`;
 
+const persistMetadata = (version: string): boolean => version === 'master' || isPinnedRelease(version);
+
 const readMetaCache = (org: string, repoName: string, version: string, file: string): any => {
   const key = _metaKey(org, repoName, version, file);
   if (_metaMemo.has(key)) {
     return _metaMemo.get(key);
+  }
+  if (!persistMetadata(version)) {
+    return undefined;
   }
   const cached = _metaCacheFile(org, repoName, version, file);
   if (!fs.existsSync(cached)) {
@@ -153,6 +158,9 @@ const readMetaCache = (org: string, repoName: string, version: string, file: str
 
 const writeMetaCache = (org: string, repoName: string, version: string, file: string, value: any): any => {
   _metaMemo.set(_metaKey(org, repoName, version, file), value);
+  if (!persistMetadata(version)) {
+    return value;
+  }
   try {
     fs.mkdirSync(_metaCacheDir(), { recursive: true });
     fs.writeFileSync(_metaCacheFile(org, repoName, version, file), value === '' ? '' : JSON.stringify(value));
@@ -171,7 +179,7 @@ const getMetadataFile = async (org: string, repoName: string, version: string, f
   const gitUrl = fromTemplate(config.urls.library.clone, { org, repo: repoName });
   /* An existing temp clone is the metadata cache: honor it before any network
   call, so a warm temp/ resolves entirely offline exactly as it does today. */
-  const cloned = `${config.folders.temp}/${repoName}_${version}`;
+  const cloned = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(version)}`;
   if (fs.existsSync(cloned)) {
     return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
   }
@@ -218,6 +226,9 @@ const _failed = (command: string, stderr: string): Error => {
   const detail = stderr.trim();
   return new Error(`Command failed: ${command}${detail ? `\n${detail}` : ''}`);
 };
+
+const _isMissingGitRef = (error: unknown): boolean =>
+  error instanceof Error && /Remote branch .+ not found|couldn't find remote ref/i.test(error.message);
 
 /* Any prompt inside a subprocess is a permanent hang, not a question: ssh and
 git write theirs to /dev/tty, which the live progress area repaints over twelve
@@ -427,24 +438,41 @@ const _install = async (
   version: string,
   folder: string,
   latest?: boolean,
+  isRootRef?: boolean,
 ): Promise<void> => {
+  const shown = version;
   if (fs.existsSync(folder)) {
     if (latest && !process.env.H5P_NO_UPDATES) {
       await _update(entry, label, listVersion, folder);
     }
     else {
-      ui.step(`~ skipping updates for ${entry.repoName} ${listVersion}`);
+      ui.step(`~ skipping updates for ${entry.repoName} ${shown}`);
     }
     return;
   }
-  ui.step(`+ installing ${entry.repoName} ${listVersion}`);
-  ui.progress(label, 0, { label: `${entry.repoName} ${listVersion}` });
+  ui.step(`+ installing ${entry.repoName} ${shown}`);
+  ui.progress(label, 0, { label: `${entry.repoName} ${shown}` });
   try {
-    if (action == 'download') {
+    // download cannot produce a git checkout, and the whole point of a root ref
+    // is having the repo to work in — clone it even when download is requested
+    if (action == 'download' && !isRootRef) {
       await logic.download(entry.org, entry.repoName, version, folder);
     }
     else {
-      await _exec(_cloneCommand(entry.org, entry.repoName, version, label), config.folders.libraries);
+      try {
+        await _exec(_cloneCommand(entry.org, entry.repoName, version, label), config.folders.libraries);
+      }
+      catch (error) {
+        // The root git ref must exist. Deps may name a patch that was never tagged.
+        if (isRootRef || version === 'master' || !_isMissingGitRef(error)) {
+          throw error;
+        }
+        ui.warn(`${entry.repoName} ${version} not found, falling back to master`);
+        if (fs.existsSync(folder)) {
+          fs.rmSync(folder, { recursive: true, force: true });
+        }
+        await _exec(_cloneCommand(entry.org, entry.repoName, 'master', label), config.folders.libraries);
+      }
     }
     ui.progress(label, 60);
     await _build(folder, label);
@@ -547,7 +575,7 @@ const logic = {
   // download & unzip repository
   download: async (org: string, repo: string, version: string, target: string): Promise<void> => {
     const blob = (await superAgent.get(fromTemplate(config.urls.library.zip, { org, repo, ref: _archiveRef(version) })))._body;
-    const work = `${config.folders.temp}/dl_${repo}_${version}`;
+    const work = `${config.folders.temp}/dl_${repo}_${sanitizeRefForPath(version)}`;
     const zipFile = `${work}.zip`;
     fs.rmSync(work, { recursive: true, force: true });
     fs.mkdirSync(work, { recursive: true });
@@ -571,7 +599,7 @@ const logic = {
    * @param concurrency how many workers to run the task of installing
    * @returns 
    */
-  installDependencies: async (action: 'clone' | 'download', list: DependencyMap, latest?: boolean, toSkip: string[] = [], concurrency?: number): Promise<string[]> => {
+  installDependencies: async (action: 'clone' | 'download', list: DependencyMap, latest?: boolean, toSkip: string[] = [], concurrency?: number, rootRef?: RootRef): Promise<string[]> => {
     const tasks: Array<() => Promise<void>> = [];
     for (let item in list) {
       if (toSkip.indexOf(item) != -1) {
@@ -590,9 +618,10 @@ const logic = {
       const entry = list[item];
       const label = `${entry.id}-${entry.version!.major}.${entry.version!.minor}`;
       const listVersion = `${entry.version!.major}.${entry.version!.minor}.${entry.version!.patch}`;
-      const version = latest ? 'master' : listVersion;
+      const useRootRef = Boolean(rootRef && item === rootRef.library);
+      const version = useRootRef ? rootRef!.ref : (latest ? 'master' : listVersion);
       const folder = `${config.folders.libraries}/${label}`;
-      tasks.push(() => _install(action, entry, label, listVersion, version, folder, latest));
+      tasks.push(() => _install(action, entry, label, listVersion, version, folder, latest, useRootRef));
     }
     try {
       await runPool(tasks, resolveConcurrency(concurrency));
@@ -607,8 +636,8 @@ const logic = {
   /* resolves a library's dependencies and installs them; kept as the public
   one-shot entry point, now a thin pairing of the two halves above
   mode - 'view' or 'edit' to fetch non-editor or editor libraries */
-  getWithDependencies: async (action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip: string[] = [], concurrency?: number, version?: string): Promise<string[]> => {
-    const list = await logic.computeDependencies(library, mode ?? 'view', version);
+  getWithDependencies: async (action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip: string[] = [], concurrency?: number): Promise<string[]> => {
+    const list = await logic.computeDependencies(library, mode ?? 'view');
     return logic.installDependencies(action, list, latest, toSkip, concurrency);
   },
   /* checks if dependencies are installed for a given library;
