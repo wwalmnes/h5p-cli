@@ -12,7 +12,7 @@ import { computeDependencies as _computeDependencies } from './src/lib/compute-d
 import type { IComputeDependenciesPort, LibraryEntry, LibraryDependency, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
 import { ui } from './src/lib/ui.ts';
 import { runPool, resolveConcurrency, resolveExecTimeout } from './src/lib/pool.ts';
-import type { ParsedGitUrl, RootRef } from './src/lib/h5p-utils.ts';
+import type { ParsedGitUrl, RootRef, CoreRepo } from './src/lib/h5p-utils.ts';
 
 type VerifySetupResult = {
   registry: boolean;
@@ -464,8 +464,23 @@ const _build = async (folder: string, label: string): Promise<void> => {
   if (!info?.scripts?.build) {
     return;
   }
-  ui.debug('npm install --ignore-scripts --no-audit --no-fund --progress=false');
-  await _exec('npm install --ignore-scripts --no-audit --no-fund --progress=false', folder);
+  /* npm ci first, because npm install rewrites package-lock.json. That single
+  tracked file was enough to make a built library permanently unrefreshable:
+  _update above refuses to pull anything with uncommitted changes, so every
+  library with a build script became dirty on install and was then skipped by
+  every later update. ci installs from the lockfile and never writes it. It
+  needs a lockfile that matches package.json, so fall back where there is none
+  or it has drifted - those libraries keep the old behaviour rather than
+  failing. */
+  const flags = '--ignore-scripts --no-audit --no-fund --progress=false';
+  try {
+    ui.debug(`npm ci ${flags}`);
+    await _exec(`npm ci ${flags}`, folder);
+  }
+  catch {
+    ui.debug(`npm install ${flags}`);
+    await _exec(`npm install ${flags}`, folder);
+  }
   ui.progress(label, 85);
   ui.debug('npm run build');
   await _exec('npm run build', folder);
@@ -475,26 +490,32 @@ const _build = async (folder: string, label: string): Promise<void> => {
   fs.rmSync(`${folder}/node_modules`, { recursive: true, force: true });
 };
 
-// Refresh a library that is already on disk. Skip if it has uncommitted changes.
-const _update = async (entry: LibraryEntry, label: string, listVersion: string, folder: string): Promise<void> => {
+/* Refresh a library that is already on disk. Skip if it has uncommitted changes.
+`org`/`repoName` are passed rather than a LibraryEntry: these are the only two
+fields this path and _install below ever read, and h5p core installs repos that
+have no registry entry to hand one from. */
+const _update = async (repoName: string, label: string, listVersion: string, folder: string, build = true): Promise<void> => {
   const dirty = (await _exec('git status --porcelain', folder)).trim();
   if (dirty) {
-    ui.warn(`skipping update for ${entry.repoName}: uncommitted changes in ${folder}`);
+    ui.warn(`skipping update for ${repoName}: uncommitted changes in ${folder}`);
     return;
   }
   const branch = (await _exec('git rev-parse --abbrev-ref HEAD', folder)).trim();
   if (branch !== 'master') {
-    ui.warn(`skipping update for ${entry.repoName}: checked out on ${branch}, not master`);
+    ui.warn(`skipping update for ${repoName}: checked out on ${branch}, not master`);
     return;
   }
-  ui.step(`~ updating to ${entry.repoName} ${listVersion}`);
+  ui.step(`~ updating to ${repoName} ${listVersion}`);
   const before = (await _exec('git rev-parse HEAD', folder)).trim();
   await _exec('git pull origin', folder);
   if ((await _exec('git rev-parse HEAD', folder)).trim() === before) {
     return;
   }
+  if (!build) {
+    return;
+  }
   // new commits landed, so whatever was built from the old ones is now stale
-  ui.progress(label, 60, { label: `${entry.repoName} ${listVersion}` });
+  ui.progress(label, 60, { label: `${repoName} ${listVersion}` });
   try {
     await _build(folder, label);
   } finally {
@@ -502,54 +523,68 @@ const _update = async (entry: LibraryEntry, label: string, listVersion: string, 
   }
 };
 
+type InstallOptions = {
+  latest?: boolean;
+  isRootRef?: boolean;
+  /* Off for `h5p core`. h5p-editor-php-library's build rewrites tracked files -
+  webpack regenerates styles/css/application.css and npm install rewrites
+  package-lock.json - so building on install leaves the checkout permanently
+  dirty, and _update's dirty check then refuses to ever refresh it again. The
+  repository ships its built CSS committed, which is what the CLI has always
+  served, so there is nothing to gain by regenerating it. */
+  build?: boolean;
+};
+
 const _install = async (
   action: 'clone' | 'download',
-  entry: LibraryEntry,
+  org: string,
+  repoName: string,
   label: string,
   listVersion: string,
   version: string,
   folder: string,
-  latest?: boolean,
-  isRootRef?: boolean,
+  { latest, isRootRef, build = true }: InstallOptions = {},
 ): Promise<void> => {
   const shown = latest ? listVersion : version;
   if (fs.existsSync(folder)) {
     if (latest && !process.env.H5P_NO_UPDATES) {
-      await _update(entry, label, listVersion, folder);
+      await _update(repoName, label, listVersion, folder, build);
     }
     else {
-      ui.step(`~ skipping updates for ${entry.repoName} ${shown}`);
+      ui.step(`~ skipping updates for ${repoName} ${shown}`);
     }
     return;
   }
-  ui.step(`+ installing ${entry.repoName} ${shown}`);
-  ui.progress(label, 0, { label: `${entry.repoName} ${shown}` });
+  ui.step(`+ installing ${repoName} ${shown}`);
+  ui.progress(label, 0, { label: `${repoName} ${shown}` });
   const claim = path.resolve(folder);
   _incomplete.add(claim);
   try {
     // download cannot produce a git checkout, and the whole point of a root ref
     // is having the repo to work in — clone it even when download is requested
     if (action === 'download' && !isRootRef) {
-      await logic.download(entry.org, entry.repoName, version, folder);
+      await logic.download(org, repoName, version, folder);
     }
     else {
       try {
-        await _exec(_cloneCommand(entry.org, entry.repoName, version, label), config.folders.libraries);
+        await _exec(_cloneCommand(org, repoName, version, label), config.folders.libraries);
       }
       catch (error) {
         // The root git ref must exist. Deps may name a patch that was never tagged.
         if (isRootRef || version === 'master' || !_isMissingGitRef(error)) {
           throw error;
         }
-        ui.warn(`${entry.repoName} ${version} not found, falling back to master`);
+        ui.warn(`${repoName} ${version} not found, falling back to master`);
         if (fs.existsSync(folder)) {
           fs.rmSync(folder, { recursive: true, force: true });
         }
-        await _exec(_cloneCommand(entry.org, entry.repoName, 'master', label), config.folders.libraries);
+        await _exec(_cloneCommand(org, repoName, 'master', label), config.folders.libraries);
       }
     }
     ui.progress(label, 60);
-    await _build(folder, label);
+    if (build) {
+      await _build(folder, label);
+    }
     _incomplete.delete(claim);
   }
   catch (error) {
@@ -561,6 +596,78 @@ const _install = async (
     // runs on the early returns above too, so no row is ever stranded
     ui.progressDone(label);
   }
+};
+
+/* Install an H5P library whose folder name we do not know yet.
+
+`h5p core` fetches these without resolving anything, so nothing has told us that
+h5p-math-display lives at H5P.MathDisplay-1.0 - the major.minor half of that name
+is in the repository's own library.json. Reading it means cloning first, so the
+clone is staged under temp/ and moved into place once the name is known.
+
+The already-installed check is a single readdirSync against the machineName
+prefix: no file reads, and deliberately not parseLibraryFolders, which calls
+getRegistry and would put the network round trip we just removed straight back.
+The prefix carries the separator, so H5P.Math- cannot match H5P.MathDisplay-1.0. */
+const _installedLibraryFolder = (machineName: string): string | undefined => {
+  if (!fs.existsSync(config.folders.libraries)) {
+    return undefined;
+  }
+  return fs.readdirSync(config.folders.libraries).find((entry) => entry.startsWith(`${machineName}-`));
+};
+
+const _installLibraryRepo = async (
+  org: string,
+  repo: string,
+  machineName: string,
+  latest?: boolean,
+): Promise<string> => {
+  const installed = _installedLibraryFolder(machineName);
+  if (installed) {
+    const folder = `${config.folders.libraries}/${installed}`;
+    if (latest && !process.env.H5P_NO_UPDATES) {
+      await _update(repo, installed, 'master', folder);
+    }
+    else {
+      ui.step(`~ skipping updates for ${repo} master`);
+    }
+    return installed;
+  }
+  ui.step(`+ installing ${repo} master`);
+  ui.progress(repo, 0, { label: `${repo} master` });
+  const staging = `${config.folders.temp}/${repo}_core`;
+  const stagingClaim = path.resolve(staging);
+  fs.rmSync(stagingClaim, { recursive: true, force: true });
+  _incomplete.add(stagingClaim);
+  let claim = stagingClaim;
+  let label = repo;
+  try {
+    await _exec(_cloneCommand(org, repo, 'master', `${repo}_core`), config.folders.temp);
+    const meta = JSON.parse(fs.readFileSync(`${staging}/library.json`, 'utf-8'));
+    label = `${meta.machineName}-${meta.majorVersion}.${meta.minorVersion}`;
+    const destination = path.resolve(`${config.folders.libraries}/${label}`);
+    /* The claim moves with the folder rather than being released and re-taken:
+    an interrupt between the two would leave whichever one is unclaimed behind. */
+    _incomplete.add(destination);
+    fs.renameSync(stagingClaim, destination);
+    _incomplete.delete(stagingClaim);
+    claim = destination;
+    ui.progress(repo, 60, { label: `${label} master` });
+    await _build(destination, repo);
+    _incomplete.delete(destination);
+  }
+  catch (error) {
+    ui.warn(`removing incomplete ${label}`);
+    _discard(stagingClaim);
+    if (claim !== stagingClaim) {
+      _discard(claim);
+    }
+    throw error;
+  }
+  finally {
+    ui.progressDone(repo);
+  }
+  return label;
 };
 
 const logic = {
@@ -677,6 +784,48 @@ const logic = {
     return _execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, config.folders.libraries);
   },
   /**
+   * Fetches the repositories `h5p core` installs, all in one pool.
+   *
+   * None of them has a dependency graph worth resolving: the PHP core is not an H5P
+   * library at all, and h5p-math-display declares no preloadedDependencies, no
+   * editorDependencies and ships no semantics.json.
+   *
+   * @param items repositories to fetch; see CoreRepo for the two kinds
+   * @param latest if true an existing checkout is refreshed rather than skipped
+   * @param concurrency how many repositories to fetch at once
+   * @returns the folder names now under the libraries folder, in the order requested
+   */
+  installCore: async (items: CoreRepo[], latest?: boolean, concurrency?: number): Promise<string[]> => {
+    const folders: string[] = new Array(items.length);
+    const tasks = items.map((item, index) => async () => {
+      if (item.machineName) {
+        folders[index] = await _installLibraryRepo(item.org, item.repo, item.machineName, latest);
+        return;
+      }
+      const target = item.target!;
+      folders[index] = target;
+      await _install(
+        'clone',
+        item.org,
+        item.repo,
+        target,
+        'master',
+        'master',
+        `${config.folders.libraries}/${target}`,
+        { latest, build: false },
+      );
+    });
+    try {
+      await runPool(tasks, resolveConcurrency(concurrency));
+    }
+    catch (error) {
+      // siblings are still cloning or building; stop them so the CLI can exit
+      _killRunning();
+      throw error;
+    }
+    return folders;
+  },
+  /**
    * Installs an already-resolved dependency map into the libraries folder
    * @param action if dependencies should be installed with git or download
    * @param list a DependencyMap, as returned by computeDependencies
@@ -707,7 +856,7 @@ const logic = {
       const useRootRef = Boolean(rootRef && item === rootRef.library);
       const version = useRootRef ? rootRef!.ref : (latest ? 'master' : listVersion);
       const folder = `${config.folders.libraries}/${label}`;
-      tasks.push(() => _install(action, entry, label, listVersion, version, folder, latest, useRootRef));
+      tasks.push(() => _install(action, entry.org, entry.repoName, label, listVersion, version, folder, { latest, isRootRef: useRootRef }));
     }
     try {
       await runPool(tasks, resolveConcurrency(concurrency));

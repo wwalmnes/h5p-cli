@@ -31,7 +31,34 @@ Install the core H5P libraries required to view and edit content types.
 h5p core
 ```
 
-No arguments.
+No arguments. The set installed comes from `core.clone` and `core.setup` in `config.js`, and all of
+them are fetched at once:
+
+| Config key | What it is | Folder |
+|------------|------------|--------|
+| `core.clone` | A repository that is not an H5P library — `h5p-php-library`, `h5p-editor-php-library`. No `library.json`, so nothing to build. | its own name |
+| `core.setup` | An H5P library, given as `{ repo, machineName }` — `h5p-math-display`. Built after cloning. | `<machineName>-<major>.<minor>`, read from the clone's own `library.json` |
+
+None of them has dependencies, so `h5p core` does not resolve a dependency graph and makes no HTTP
+requests beyond the git clones themselves. Use `h5p setup <library>` for anything that does.
+
+**Options**
+
+| Option | Effect |
+|--------|--------|
+| `-c, --concurrency <n>` | How many libraries to install at once (default 4). |
+
+**Environment variables**
+
+| Variable | Effect |
+|----------|--------|
+| `H5P_NO_UPDATES=1` | Skip updating existing libraries (faster). |
+| `H5P_CONCURRENCY=<n>` | How many libraries to install at once. Same as `--concurrency`, default 4. |
+| `H5P_SSH_CLONE=1` | Use SSH URLs when cloning. |
+
+> [!IMPORTANT]
+> Core libraries already present in `libraries/` are refreshed from `master`. One with uncommitted
+> changes, or on a branch other than `master`, is reported and left untouched.
 
 ---
 

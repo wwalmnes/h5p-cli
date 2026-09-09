@@ -7,6 +7,9 @@ Run `h5p utils help <cmd>` for a detailed help entry for each utility `<cmd>`.
 
 • `h5p core` installs the core H5P libraries.  
 These are required to view and edit H5P content types.  
+They are fetched in parallel and have no dependencies, so nothing is resolved.  
+Ones already installed are refreshed from `master`; set `H5P_NO_UPDATES=1` to skip that.  
+Use `-c <n>` to change how many are installed at once (default 4).  
 
 • `h5p list [machineName] [pullRegistry]` lists the current H5P libraries.  
 Use `1` for `[machineName]` to list the machine name instead of the default repo name.  

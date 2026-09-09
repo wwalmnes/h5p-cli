@@ -131,6 +131,35 @@ enforced instead of silently producing empty results.
 - **`h5p tags` reads `git ls-remote`** instead of cloning the repository into `temp/`, unshallowing it,
   checking out and pulling. Dependency resolution calls it once per library whenever a version is given,
   so a versioned setup no longer clones the entire graph just to read version numbers.
+- **`h5p core` fetches everything it installs at once, and resolves nothing.** It ran in two
+  sequential phases: clone `h5p-php-library` and `h5p-editor-php-library` one after the other through
+  `spawnSync` (which blocks the event loop, so the command printed a line per library and then froze),
+  *then* resolve `h5p-math-display`'s dependency graph and install it. Nothing here has dependencies —
+  the PHP core is not an H5P library at all, and MathDisplay declares no `preloadedDependencies`, no
+  `editorDependencies` and ships no `semantics.json` — so the resolution made three HTTP round trips
+  (the registry, then `library.json` and `semantics.json`) to learn a folder name and an empty
+  dependency list, and, worse, kept MathDisplay from starting its clone until the PHP core had
+  finished. All three now go through one `logic.installCore` pool: **13.9s → 8.2s** cold, bounded by
+  MathDisplay's own `npm`+webpack build rather than the sum of the phases, and with no HTTP beyond the
+  git clones themselves. They also gain the live progress area, the ten-minute command budget, the
+  non-interactive subprocess env and kill-by-process-group on failure. `-c, --concurrency <n>` and
+  `H5P_CONCURRENCY` now apply to `h5p core`. Note that running clones concurrently is not by itself
+  faster when bandwidth is the bottleneck — the two PHP repos alone measured 5.0–5.8s serial against
+  5.3–5.4s parallel, the same pipe split two ways; the win comes from overlapping them with the work
+  that used to wait behind them.
+- **`config.core.setup` entries are now `{ repo, machineName }`** rather than bare library names
+  (breaking, if you override `core` in a workspace `config.js`). The machine name is what lets
+  "is it already installed?" be a single `readdirSync` of `libraries/` instead of a registry lookup.
+  The version half of the folder name is still read from the clone's own `library.json`, so an
+  upstream `1.0` → `1.1` bump lands in the right folder with no config change.
+- **`h5p core` refreshes core libraries that are already installed**, instead of skipping any folder
+  that exists. It takes the same `_update` path as `h5p setup`: pull, rebuild if commits landed, and
+  leave a library alone (with a message) when it has uncommitted changes or is on a branch other than
+  `master`. `H5P_NO_UPDATES=1` skips it, as it does for setup.
+- **The `core` adapter interface is now a single `installCore(items, latest?, concurrency?)`.**
+  `clone` and `existsSync` are gone, and `CoreService` no longer depends on `SetupService`,
+  `RegisterService`, the registry or the metadata transport. A plugin overriding the `core` adapter
+  must be updated.
 
 ### Fixed
 
@@ -164,6 +193,20 @@ enforced instead of silently producing empty results.
   reported and left alone.
 - **An updated library is rebuilt.** Pulling new commits left the previous build output in place, because
   only the fresh-install path ever ran the build.
+- **A failed `h5p core` no longer poisons `libraries/`.** Its clones went through `logic.clone`, which
+  took no part in the incomplete-folder tracking the dependency installs use, so a clone that failed
+  or was interrupted left a half-written folder behind. `fs.existsSync(folder)` is the whole
+  already-installed test, so every later `h5p core` reported that library as installed and skipped
+  it — permanently, until the folder was deleted by hand. The core clones now claim their folder
+  before they start and discard it on failure, like every other install. A library whose folder name
+  is only known after cloning is staged under `temp/` and the claim moves with it, so an interrupt
+  mid-rename cannot strand either copy.
+- **A library with a build script can be updated again.** `_build` ran `npm install`, which rewrites
+  `package-lock.json`; that one tracked file was enough for `_update`'s dirty check to refuse to pull
+  the library ever again. Every library `h5p setup` builds became unrefreshable on first install —
+  for `h5p-math-display` the lockfile was the *only* dirty file, since its `dist/` is gitignored.
+  `_build` now runs `npm ci`, which installs from the lockfile and never writes it, falling back to
+  `npm install` where there is no lockfile or it has drifted.
 - **`h5p missing` no longer reports an optional dependency as required.** Each per-dependency pass
   re-rooted the library it started from, and a root has no parent to inherit optionality from, so an
   unregistered library reachable only underneath an optional one was listed `(required)`. It is now

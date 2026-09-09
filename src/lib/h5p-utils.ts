@@ -25,6 +25,18 @@ export const sanitizeRefForPath = (ref: string): string => String(ref).replace(/
 /** The library itself, cloned at a git branch/tag rather than a release. */
 export type RootRef = { library: string; ref: string };
 
+/* A repository `h5p core` installs by name rather than through the registry.
+Exactly one of `target` and `machineName` is set: `target` is a fixed folder name
+for a repo that is not an H5P library (the PHP core), `machineName` marks an H5P
+library whose folder is <machineName>-<major>.<minor>, read from its own
+library.json after cloning, and which is built in place. */
+export type CoreRepo = {
+  org: string;
+  repo: string;
+  target?: string;
+  machineName?: string;
+};
+
 // builds content from template and input
 export const fromTemplate = (template: string, input: Record<string, string>): string => {
   for (let item in input) {

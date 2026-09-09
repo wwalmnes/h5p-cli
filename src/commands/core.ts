@@ -1,36 +1,30 @@
 import { Command } from 'commander';
+import { z } from 'zod';
 import { CoreAdapter, type ICoreAdapter } from '../adapters/core-adapter.ts';
 import { CoreService } from '../services/core-service.ts';
-import { SetupAdapter, type ISetupAdapter } from '../adapters/setup-adapter.ts';
-import { RegisterAdapter, type IRegisterAdapter } from '../adapters/register-adapter.ts';
-import { RegisterService } from '../services/register-service.ts';
-import { SetupService } from '../services/setup-service.ts';
 import { adapterRegistry } from '../lib/adapter-registry.ts';
 import config from '../../configLoader.ts';
 import { setupFolders } from '../lib/setup-folders.ts';
 import { ui } from '../lib/ui.ts';
 
+const coreArgsSchema = z.object({
+  concurrency: z.coerce.number().int().positive().optional(),
+});
+
 export function coreCommand(service?: CoreService): Command {
   return new Command('core')
     .description('Installs core h5p libraries')
-    .action(async () => {
+    .option('-c, --concurrency <n>', 'How many libraries to install at once (default 4)')
+    .action(async (options: { concurrency?: string }) => {
       setupFolders();
       const svc = service ?? new CoreService(
         adapterRegistry.resolve<ICoreAdapter>('core') ?? new CoreAdapter(),
-        new SetupService(
-          adapterRegistry.resolve<ISetupAdapter>('setup') ?? new SetupAdapter(),
-          new RegisterService(
-            adapterRegistry.resolve<IRegisterAdapter>('register') ?? new RegisterAdapter(),
-            config.registry
-          ),
-          config.folders.libraries
-        ),
         config.core.clone,
-        config.core.setup,
-        config.folders.libraries
+        config.core.setup
       );
       try {
-        await svc.core();
+        const args = coreArgsSchema.parse({ concurrency: options?.concurrency });
+        await svc.core(args.concurrency);
       } catch (error) {
         ui.fail(error);
       }

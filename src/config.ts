@@ -1,3 +1,6 @@
+/** One `core.setup` entry: an H5P library h5p core installs without resolving anything. */
+export type CoreLibrary = { repo: string; machineName: string };
+
 const config = {
   port: 8080,
   mediaTypes: ['images', 'audios', 'videos'],
@@ -28,7 +31,7 @@ const config = {
   },
   core: {
     clone: ['h5p-editor-php-library', 'h5p-php-library'],
-    setup: ['h5p-math-display']
+    setup: [{ repo: 'h5p-math-display', machineName: 'H5P.MathDisplay' }]
   },
   registry: 'libraryRegistry.json',
   saveFreq: 30,
