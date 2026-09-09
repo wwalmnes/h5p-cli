@@ -3,11 +3,11 @@
 Running commands listed in [commands.md](commands.md) results in the creation of 4 folders. The folders are created in the current working directory (the folder where you ran the command).  
 - `content` holds actual content types and their assets.  
 - `libraries` holds the libraries that have been set up.  
-- `temp` caches the library metadata used when computing dependencies, under `temp/.metadata`. It also holds local copies of git repositories, for the repositories that cannot be read over plain HTTP (private ones, for instance).
+- `temp` caches the library metadata used when computing dependencies, under `temp/.metadata`. Only pinned versions are cached there: a release tag cannot change, so it is kept indefinitely. `master` and other branches are never written to disk, so `h5p setup <library>` with no version always resolves against the current state of the branch. `temp` also holds local copies of git repositories, for the repositories that cannot be read over plain HTTP (private ones, for instance); a branch checkout there is fetched forward before it is read.
 - `uploads` is a temporary location used by the import and export commands.  
 
-> [!IMPORTANT]
-> Make sure to delete the `temp` folder when updating to the latest version of a library that has new or updated dependencies. The metadata cache does not expire, so a stale `temp` resolves the dependency graph as it was the last time you ran a setup.
+> [!NOTE]
+> You no longer need to delete `temp` to pick up a library's new or updated dependencies — a setup that tracks `master` never reads a cached graph. Deleting it is still harmless, and reclaims the cached repositories.
 
 # Updating libraries that are already installed
 

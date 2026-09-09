@@ -120,7 +120,6 @@ const _metaUrl = (org: string, repoName: string, version: string, file: string):
     { org, dep: repoName, version },
   );
 
-
 // Cache the parsed metadata, in memory and on disk.
 const _metaMemo = new Map<string, any>();
 
@@ -130,14 +129,12 @@ const _metaCacheDir = (): string => `${config.folders.temp}/.metadata`;
 const _metaCacheFile = (org: string, repoName: string, version: string, file: string): string =>
   `${_metaCacheDir()}/${org}__${repoName}__${version}__${file}`;
 
-const persistMetadata = (version: string): boolean => version === 'master' || isPinnedRelease(version);
-
 const readMetaCache = (org: string, repoName: string, version: string, file: string): any => {
   const key = _metaKey(org, repoName, version, file);
   if (_metaMemo.has(key)) {
     return _metaMemo.get(key);
   }
-  if (!persistMetadata(version)) {
+  if (!isPinnedRelease(version)) {
     return undefined;
   }
   const cached = _metaCacheFile(org, repoName, version, file);
@@ -158,7 +155,7 @@ const readMetaCache = (org: string, repoName: string, version: string, file: str
 
 const writeMetaCache = (org: string, repoName: string, version: string, file: string, value: any): any => {
   _metaMemo.set(_metaKey(org, repoName, version, file), value);
-  if (!persistMetadata(version)) {
+  if (!isPinnedRelease(version)) {
     return value;
   }
   try {
@@ -171,22 +168,61 @@ const writeMetaCache = (org: string, repoName: string, version: string, file: st
   return value;
 };
 
+// Repos whose branch checkout in temp/ this process has already dealt with. 
+const _refreshed = new Set<string>();
+
+const _refreshClone = (repoName: string, version: string): void => {
+  if (isPinnedRelease(version)) {
+    return;
+  }
+  const target = path.resolve(`${config.folders.temp}/${repoName}_${sanitizeRefForPath(version)}`);
+  if (_refreshed.has(target)) {
+    return;
+  }
+  _refreshed.add(target);
+
+  if (!fs.existsSync(`${target}/.git`)) {
+    return;
+  }
+
+  /* The low-speed bound covers the one failure git does not end on its own. A dead
+  resolver or a refused connection exits in seconds; a socket that opens and
+  then stops delivering bytes stays alive, and git waits on it indefinitely.
+  _execSync is spawnSync, so that wait blocks the whole process - the progress
+  area stops repainting and the CLI reads as wedged - until the ten-minute exec
+  budget fires. Ten seconds under a kilobyte a second ends it instead. Tripping
+  the bound on a merely slow fetch costs nothing: the catch below falls back to
+  the checkout already on disk. */
+  const depth = fs.existsSync(`${target}/.git/shallow`) ? ' --depth 1' : '';
+  try {
+    _execSync(`git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --no-tags${depth} origin ${version}`, target);
+    _execSync('git reset --hard FETCH_HEAD', target);
+  }
+  catch (error) {
+    // the fetch failed or the branch is gone: the checkout on disk is still
+    // the best answer available, so say so rather than failing the resolution
+    ui.debug(`could not refresh ${target}: ${(error as Error).message}`);
+  }
+};
+
 const getMetadataFile = async (org: string, repoName: string, version: string, file: string): Promise<any> => {
   const memo = readMetaCache(org, repoName, version, file);
   if (memo !== undefined) {
     return memo;
   }
+
   const gitUrl = fromTemplate(config.urls.library.clone, { org, repo: repoName });
-  /* An existing temp clone is the metadata cache: honor it before any network
-  call, so a warm temp/ resolves entirely offline exactly as it does today. */
   const cloned = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(version)}`;
-  if (fs.existsSync(cloned)) {
+
+  if (isPinnedRelease(version) && fs.existsSync(cloned)) {
     return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
   }
+
   const key = _transportKey(org, repoName);
   if (process.env.H5P_NO_RAW) {
     _transport.set(key, 'clone');
   }
+
   if (_transport.get(key) !== 'clone') {
     const res = await getRemoteFile(_metaUrl(org, repoName, version, file));
     if (res.status === 200) {
@@ -198,6 +234,7 @@ const getMetadataFile = async (org: string, repoName: string, version: string, f
     }
     _transport.set(key, 'clone');
   }
+  _refreshClone(repoName, version);
   return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
 };
 
@@ -405,10 +442,9 @@ const _exec = (command: string, cwd?: string): Promise<string> => {
   });
 };
 
-// A version is either a branch name or a release tag, and GitHub files those
-// under different ref namespaces.
+// GitHub files branches and tags under different ref namespaces.
 const _archiveRef = (version: string): string =>
-  /^\d+\.\d+\.\d+$/.test(version) ? `refs/tags/${version}` : `refs/heads/${version}`;
+  isPinnedRelease(version) ? `refs/tags/${version}` : `refs/heads/${version}`;
 
 const _cloneCommand = (
   org: string,
@@ -476,7 +512,7 @@ const _install = async (
   latest?: boolean,
   isRootRef?: boolean,
 ): Promise<void> => {
-  const shown = version;
+  const shown = latest ? listVersion : version;
   if (fs.existsSync(folder)) {
     if (latest && !process.env.H5P_NO_UPDATES) {
       await _update(entry, label, listVersion, folder);
@@ -892,6 +928,9 @@ const logic = {
     gitUrl: string,
   ): Record<string, LibraryEntry> {
     const { host, org, repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
+    // no raw fallback on this path, and the result is written into the
+    // registry, so a stale checkout here outlives the invocation
+    _refreshClone(repoName, 'master');
     const list = getRepoFile(gitUrl, 'library.json', 'master', true) as any;
     const shortName = machineToShort(list.machineName);
     const type = host.split('.')[0];

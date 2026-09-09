@@ -138,6 +138,18 @@ enforced instead of silently producing empty results.
   fetch verbatim, but that is not a ref — `h5p-blanks` publishes `1.1.5` and `1.1.1`, never `1.1` — so the
   command failed with `Remote branch 1.1 not found in upstream origin`. The root library's version now
   goes through the same patch lookup its dependencies always did.
+- **`h5p setup <library>` with no version no longer replays a stale dependency graph.** The metadata
+  cache under `temp/.metadata` had no expiry and did not distinguish a release tag from a branch, so a
+  setup tracking `master` resolved the graph as it was the first time you ran it — indefinitely, until
+  you deleted `temp` by hand. Mutable refs are now memoised for the invocation and never written to
+  disk, and only `x.y.z` tags are cached across runs. A branch checkout under `temp/` was a second, unbounded stale
+  source: it is now bypassed in favour of the raw host, and fetched forward where it is still the only
+  transport (private repositories, `H5P_NO_RAW=1`). A warm `temp/` still resolves offline. The cost is
+  that a `master` resolve re-reads two small files per library on every invocation — roughly 1–3s for a
+  large content type, in parallel waves — where it previously read them from disk; `h5p deps` and
+  `h5p missing` are where that is visible. Note that libraries mis-installed under a wrong
+  `H5P.Name-major.minor` folder by the old stale graph are left alone, since removing anything from
+  `libraries/` risks destroying work; delete those folders yourself if you have them.
 - **A pinned version is no longer ignored when cloning.** `clone` hardcoded `--branch master` while
   `download` honoured the resolved version, so the same command produced two different trees depending
   on the `download` flag.
