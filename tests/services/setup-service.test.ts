@@ -64,7 +64,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks', undefined, '1');
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('download', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined);
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('download', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined, undefined);
   });
 
   it('uses action=clone when download is not set', async () => {
@@ -72,15 +72,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks');
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined);
-  });
-
-  it('passes latest=false when version is provided', async () => {
-    const setupAdapter = makeSetupAdapter();
-    const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
-    const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
-    await svc.setup('h5p-blanks', '1.14');
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(Object), false, expect.any(Array), undefined);
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined, undefined);
   });
 
   it('passes latest=true when version is absent', async () => {
@@ -88,7 +80,7 @@ describe('SetupService', () => {
     const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks');
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(Object), true, expect.any(Array), undefined);
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(Object), true, expect.any(Array), undefined, undefined);
   });
 
   it('collects optional missing dep in report, does not throw', async () => {
@@ -131,7 +123,7 @@ describe('SetupService', () => {
     expect(setupAdapter.computeDependencies).toHaveBeenCalledTimes(1);
     expect(setupAdapter.computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', undefined);
     expect(setupAdapter.installDependencies).toHaveBeenCalledTimes(1);
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', graph, true, [], undefined);
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', graph, true, [], undefined, undefined);
     expect(setupAdapter.getWithDependencies).not.toHaveBeenCalled();
   });
 
@@ -149,5 +141,42 @@ describe('SetupService', () => {
     const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
     await svc.setup('h5p-blanks');
     expect(logger.log).toHaveBeenCalledWith(`> clone h5p-blanks library dependencies into "${librariesFolder}" folder`);
+  });
+
+  it('resolves and installs from a git ref, without tracking master', async () => {
+    const graph = { 'h5p-blanks': { id: 'H5P.Blanks' } };
+    const setupAdapter = makeSetupAdapter({
+      computeDependencies: vi.fn().mockResolvedValue(graph),
+    });
+    const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
+    const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
+
+    await svc.setup('h5p-blanks', 'feat/my-pr');
+
+    expect(setupAdapter.computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', 'feat/my-pr');
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(
+      'clone', graph, false, [], undefined, { library: 'h5p-blanks', ref: 'feat/my-pr' },
+    );
+  });
+
+  it('does not treat a release pin as a root git ref', async () => {
+    const setupAdapter = makeSetupAdapter();
+    const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
+    const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
+
+    await svc.setup('h5p-blanks', '1.14');
+
+    expect(setupAdapter.computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', '1.14');
+    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(
+      'clone', expect.any(Object), false, [], undefined, undefined,
+    );
+  });
+
+  it('rejects an unsafe ref', async () => {
+    const setupAdapter = makeSetupAdapter();
+    const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
+    const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
+    await expect(svc.setup('h5p-blanks', 'feat/foo;rm'))
+      .rejects.toThrow('invalid ref');
   });
 });

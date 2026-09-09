@@ -365,6 +365,74 @@ describe('logic.getWithDependencies', () => {
     expect(signalled.every(pid => pid < 0)).toBe(true);
   });
 
+  it('clones only the root library at a git ref; deps stay on their tags', async () => {
+    await logic.installDependencies('clone', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+
+    const cloneCalls = vi.mocked(spawn).mock.calls
+      .map(args => String(args[0]))
+      .filter(cmd => cmd.startsWith('git clone'));
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-blanks') && cmd.endsWith('--branch feat/my-pr'))).toBe(true);
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-joubel-ui') && cmd.endsWith('--branch 3.3.0'))).toBe(true);
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-blanks') && cmd.endsWith('--branch 1.14.0'))).toBe(false);
+  });
+
+  it('falls back to master for a missing dep tag, not for the root ref', async () => {
+    vi.mocked(spawn).mockImplementation(((cmd: string) => {
+      const child: any = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.stdout.setEncoding = () => {};
+      child.stderr.setEncoding = () => {};
+      const missing = String(cmd).includes('--branch 3.3.0');
+      process.nextTick(() => {
+        if (missing) {
+          child.stderr.emit('data', 'fatal: Remote branch 3.3.0 not found in upstream origin\n');
+        }
+        child.emit('close', missing ? 1 : 0);
+      });
+      return child;
+    }) as any);
+
+    await logic.installDependencies('clone', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+
+    const cloneCalls = vi.mocked(spawn).mock.calls
+      .map(args => String(args[0]))
+      .filter(cmd => cmd.startsWith('git clone'));
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-joubel-ui') && cmd.endsWith('--branch master'))).toBe(true);
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-blanks') && cmd.endsWith('--branch master'))).toBe(false);
+  });
+
+  it('does not fall back to master when the root git ref is missing', async () => {
+    vi.mocked(spawn).mockImplementation(((cmd: string) => {
+      return fakeChild(String(cmd).includes('--branch feat/my-pr') ? 1 : 0) as any;
+    }) as any);
+
+    await expect(
+      logic.installDependencies('clone', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' }),
+    ).rejects.toThrow('Command failed');
+  });
+
+  it('clones the root at a git ref even when the action is download', async () => {
+    vi.spyOn(logic, 'download').mockResolvedValue(undefined);
+
+    await logic.installDependencies('download', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+
+    const cloneCalls = vi.mocked(spawn).mock.calls
+      .map(args => String(args[0]))
+      .filter(cmd => cmd.startsWith('git clone'));
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-blanks') && cmd.endsWith('--branch feat/my-pr'))).toBe(true);
+    expect(cloneCalls.some(cmd => cmd.includes('h5p-joubel-ui'))).toBe(false);
+  });
+
+  it('downloads dependencies when the action is download', async () => {
+    const download = vi.spyOn(logic, 'download').mockResolvedValue(undefined);
+
+    await logic.installDependencies('download', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+
+    expect(download).toHaveBeenCalledWith('h5p', 'h5p-joubel-ui', '3.3.0', 'libraries/H5P.JoubelUI-3.3');
+    expect(download.mock.calls.some(args => args[1] === 'h5p-blanks')).toBe(false);
+  });
+
   /* fs.existsSync(folder) is the whole already-installed test in _install, so a
   folder a failed install left behind is reported as installed for good: a
   pinned run prints `~ skipping updates` and a latest run pulls, finds HEAD

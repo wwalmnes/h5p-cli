@@ -67,6 +67,10 @@ environment variable) to change how many, and `--concurrency 1` to install them 
 ```
 h5p setup h5p-interactive-book --concurrency 8
 ```
+To test a pull-request branch of **this** library (dependencies still follow that branch's `library.json`):
+```
+h5p setup h5p-true-false feat/my-pr
+```
 Library metadata is read over HTTPS rather than by cloning each repository. A repository that
 the raw host will not serve — a private one, say — is still cloned, so git's credential helper
 keeps working. Set `H5P_NO_RAW=1` to clone for metadata in every case, e.g. behind a mirror

@@ -11,9 +11,16 @@ Running commands listed in [commands.md](commands.md) results in the creation of
 
 # Updating libraries that are already installed
 
-`h5p setup <library>` with no version tracks `master`, so it also refreshes the libraries already in your `libraries` folder. It will not disturb one you are working in: a library with uncommitted changes, or one checked out on a branch other than `master`, is reported and left alone. When a pull does bring new commits, the library is rebuilt, so its build output cannot be left behind by the update.
+`h5p setup <library>` with no ref tracks `master`, so it also refreshes the libraries already in your `libraries` folder. It will not disturb one you are working in: a library with uncommitted changes, or one checked out on a branch other than `master`, is reported and left alone. When a pull does bring new commits, the library is rebuilt, so its build output cannot be left behind by the update.
 
 Set `H5P_NO_UPDATES=1` to skip refreshing installed libraries entirely.
+
+# Setup a library from a git branch
+
+`h5p setup <library> feat/my-pr` clones **that** library at the given branch or tag. Dependencies
+are taken from that ref's `library.json`.
+Use this to test a pull-request branch. A release pin (`1.14` / `1.14.3`) is the other shape of the
+same argument — it is not a separate flag.
 
 # Setup a local library
 

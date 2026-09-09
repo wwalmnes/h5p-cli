@@ -109,4 +109,11 @@ describe('setupCommand', () => {
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '--concurrency', '8']);
     expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, 8);
   });
+
+  it('forwards a git ref positional to service.setup', async () => {
+    const mockSvc = makeMockService();
+    const cmd = setupCommand(mockSvc);
+    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', 'feat/my-pr']);
+    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', 'feat/my-pr', undefined, undefined);
+  });
 });

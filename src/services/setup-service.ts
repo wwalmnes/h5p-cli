@@ -2,6 +2,7 @@ import type { ISetupAdapter } from '../adapters/setup-adapter.ts';
 import { RegisterService } from './register-service.ts';
 import type { Logger } from '../lib/repo-types.ts';
 import { uiLogger } from '../lib/ui-logger.ts';
+import { isReleaseVersion, isSafeGitRef } from '../lib/h5p-utils.ts';
 
 export class SetupService {
   private setupAdapter: ISetupAdapter;
@@ -34,7 +35,7 @@ export class SetupService {
   down. View edges are a subset of edit edges from the same root, so the edit
   graph already contains everything the view pass found and everything the
   per-dependency edit passes were reaching one traversal at a time. */
-  async setup(library: string, version?: string, download?: string, concurrency?: number): Promise<void> {
+  async setup(library: string, ref?: string, download?: string, concurrency?: number): Promise<void> {
     const isUrl = ['http', 'git@'].includes(library.slice(0, 4));
     const missingOptionals: Record<string, any> = {};
 
@@ -43,10 +44,18 @@ export class SetupService {
       library = this.setupAdapter.machineToShort(Object.keys(entry)[0]);
     }
 
-    const action = parseInt(download ?? '0') ? 'download' : 'clone';
-    const latest = version ? false : true;
+    if (ref && !isSafeGitRef(ref)) {
+      throw new Error(`invalid ref "${ref}"`);
+    }
 
-    const result = await this.setupAdapter.computeDependencies(library, 'edit', version);
+    const action = parseInt(download ?? '0') ? 'download' : 'clone';
+    const latest = !ref;
+    // A release pin is resolved through the graph and cloned at the resulting
+    // patch. Anything else is a git branch/tag for the root library only;
+    // deps still follow that ref's library.json.
+    const rootRef = ref && !isReleaseVersion(ref) ? { library, ref } : undefined;
+
+    const result = await this.setupAdapter.computeDependencies(library, 'edit', ref);
     for (const item in result) {
       if (!result[item].id) {
         this.handleMissingOptionals(missingOptionals, result, item);
@@ -54,7 +63,7 @@ export class SetupService {
     }
 
     this.logger.log(`> ${action} ${library} library dependencies into "${this.librariesFolder}" folder`);
-    await this.setupAdapter.installDependencies(action, result, latest, [], concurrency);
+    await this.setupAdapter.installDependencies(action, result, latest, [], concurrency, rootRef);
 
     if (Object.keys(missingOptionals).length) {
       this.logger.log('!!! missing optional libraries');

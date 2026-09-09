@@ -10,6 +10,21 @@ export type SemanticLibraryEntry = {
   version: string;
 };
 
+/** 1.14 or 1.14.3 — a release, not a git branch. */
+export const isReleaseVersion = (version: string): boolean => /^\d+\.\d+(\.\d+)?$/.test(version);
+
+/** 1.14.3 — immutable on disk; 1.14 is rewritten to a patch before fetch. */
+export const isPinnedRelease = (version: string): boolean => /^\d+\.\d+\.\d+$/.test(version);
+
+/** Safe to interpolate into git clone --branch. */
+export const isSafeGitRef = (ref: string): boolean => /^[\w./-]+$/.test(ref);
+
+/** feat/foo must not become a nested path under temp/. */
+export const sanitizeRefForPath = (ref: string): string => String(ref).replace(/[^\w.-]/g, '_');
+
+/** The library itself, cloned at a git branch/tag rather than a release. */
+export type RootRef = { library: string; ref: string };
+
 // builds content from template and input
 export const fromTemplate = (template: string, input: Record<string, string>): string => {
   for (let item in input) {
