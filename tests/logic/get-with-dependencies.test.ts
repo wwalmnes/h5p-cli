@@ -431,6 +431,8 @@ describe('logic.getWithDependencies', () => {
 
     expect(download).toHaveBeenCalledWith('h5p', 'h5p-joubel-ui', '3.3.0', 'libraries/H5P.JoubelUI-3.3');
     expect(download.mock.calls.some(args => args[1] === 'h5p-blanks')).toBe(false);
+  });
+
   /* fs.existsSync(folder) is the whole already-installed test in _install, so a
   folder a failed install left behind is reported as installed for good: a
   pinned run prints `~ skipping updates` and a latest run pulls, finds HEAD

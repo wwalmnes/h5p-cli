@@ -95,7 +95,7 @@ export async function computeDependencies(
       ui.warn(`${optional ? 'optional' : 'required'} library ${machineName} ${ver} not found in registry; required by ${parent} (${parentVersion})`);
       return;
     }
-    const version = ver == 'master' ? ver : latestPatch(lib.org, entry, ver);
+    const version = ver === 'master' ? ver : latestPatch(lib.org, entry, ver);
     if (!done[level][entry]?.id && !toDo[entry]?.parent) {
       toDo[entry] = { parent, version, folder: dir ?? undefined };
     }
@@ -147,7 +147,7 @@ export async function computeDependencies(
         }
         cache[dep] = list;
         // Same ref as library.json. Rewriting a branch to major.minor.patch
-        // 404s when that patch is unreleased (H5PT-227).
+        // 404s when that patch is unreleased.
         cache[dep].semantics = await io.getSemanticsJson(dir, entry.org, repoName, version);
         cache[dep].optionals = parseSemanticLibraries(cache[dep].semantics);
       }
@@ -205,19 +205,19 @@ export async function computeDependencies(
     const optionals = await getOptionals(dep, org, repoName, version, toDo[dep].folder);
     if (list.preloadedDependencies) {
       for (let item of list.preloadedDependencies) {
-        const ver = version == 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
+        const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
         const dir = folder ? libraryDirs[item.machineName] : null;
         handleDepListEntry(item.machineName, dep, ver, dir);
       }
     }
     for (let item in optionals) {
-      const ver = version == 'master' ? version : optionals[item].version;
+      const ver = version === 'master' ? version : optionals[item].version;
       const dir = folder ? libraryDirs[item] : null;
       handleDepListEntry(item, dep, ver, dir);
     }
-    if (mode == 'edit' && list.editorDependencies) {
+    if (mode === 'edit' && list.editorDependencies) {
       for (let item of list.editorDependencies) {
-        const ver = version == 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
+        const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
         const dir = folder ? libraryDirs[item.machineName] : null;
         handleDepListEntry(item.machineName, dep, ver, dir);
       }

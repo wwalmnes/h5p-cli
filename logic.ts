@@ -486,14 +486,14 @@ const _install = async (
     }
     return;
   }
-  ui.step(`+ installing ${entry.repoName} ${listVersion}`);
-  ui.progress(label, 0, { label: `${entry.repoName} ${listVersion}` });
+  ui.step(`+ installing ${entry.repoName} ${shown}`);
+  ui.progress(label, 0, { label: `${entry.repoName} ${shown}` });
   const claim = path.resolve(folder);
   _incomplete.add(claim);
   try {
     // download cannot produce a git checkout, and the whole point of a root ref
     // is having the repo to work in — clone it even when download is requested
-    if (action == 'download' && !isRootRef) {
+    if (action === 'download' && !isRootRef) {
       await logic.download(entry.org, entry.repoName, version, folder);
     }
     else {
