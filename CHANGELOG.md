@@ -19,10 +19,9 @@ enforced instead of silently producing empty results.
 
 - **Node v24 or newer is required** (`engines: { node: ">=24" }`). The CLI runs its TypeScript sources
   directly using Node's native type stripping.
-- **No build step, anywhere.** There is no `dist/`, no bundler and no `build` script — the package
-  `exports` point straight at `.ts` sources. This applies to plugins too.
 - **The package is now ESM** (`"type": "module"`). Code that did `require('h5p-cli/logic')` must switch
-  to `import`.
+  to `import`. The package also gains an `exports` map, and every subpath in it resolves to a `.ts`
+  source that Node runs as-is — there is nothing to build, in the CLI or in a plugin.
 - **Git subcommands moved from `h5p utils` to `h5p git`.** `checkout`, `new-branch`, `rm-branch`,
   `merge`, `status`, `diff`, `commit`, `pull`, `push` and `tag` are now `h5p git <command>`. `h5p utils`
   keeps the repo, versioning, translation, packaging and consistency commands.
@@ -107,18 +106,26 @@ enforced instead of silently producing empty results.
   `versioning-service`, `dependency-analysis-service`, and others).
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
-- `.gitignore` now covers `plugins/`, `h5p.plugins.json`, `playwright-report/` and `test-results/`.
-- **`h5p setup <library> [ref]` takes a git tag or branch as one positional**. 
-  A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the
-  resulting patch. A branch name clones only the library at that ref; its dependencies
-  are read from that ref's `library.json` and cloned at their declared versions, falling back to
-  `master` if a tag is missing. Branch metadata is not written to the on-disk cache (a branch moves).
+- `.gitignore` now also covers `plugins/`, `h5p.plugins.json`, `playwright-report/` and `test-results/`.
+- **`h5p setup <library> [ref]` accepts a branch name, not just a release.** The second positional took
+  a version and nothing else; it now takes any git ref. A release (`1.14` / `1.14.3`) resolves through
+  the graph and clones everyone at the resulting patch. A branch name clones only the library at that
+  ref; its dependencies are read from that ref's `library.json` and cloned at their declared versions,
+  falling back to `master` if a tag is missing. Branch metadata is not written to the on-disk cache
+  (a branch moves).
 - **`h5p setup` resolves its dependency graph once instead of once per dependency.** It used to run
   about N+4 traversals of the same graph — 16 for `h5p-blanks`, 73 for `h5p-interactive-book`. A single
   `edit` resolution covers all of them, because the mode is applied at every node and view edges are a
   subset of edit edges. The installed set is unchanged. `logic.installDependencies` was split out of
   `logic.getWithDependencies` so a resolved graph can be installed without being resolved again;
   `getWithDependencies` remains as the one-shot pairing of the two.
+- **Dependency installs run through a bounded pool** rather than one library at a time in a serial
+  loop. `logic.installDependencies` hands its work to `runPool` (`src/lib/pool.ts`), four at a time by
+  default, set with `-c, --concurrency <n>` on `h5p setup` or `H5P_CONCURRENCY`. Every library is
+  reserved before any task starts, because the skip list is the only guard against installing one
+  twice; a consequence is that a required unregistered library now aborts *before* anything installs,
+  where the serial loop threw midway. On failure the pool stops scheduling and kills the children still
+  running, so the CLI exits when it reports the error rather than after the surviving builds drain.
 - **The resolver fetches each dependency wave in parallel** rather than one library at a time. On
   `h5p-interactive-book` (95 libraries) that takes the resolve from ~2N round trips to roughly one per
   wave.
@@ -156,10 +163,25 @@ enforced instead of silently producing empty results.
   that exists. It takes the same `_update` path as `h5p setup`: pull, rebuild if commits landed, and
   leave a library alone (with a message) when it has uncommitted changes or is on a branch other than
   `master`. `H5P_NO_UPDATES=1` skips it, as it does for setup.
-- **The `core` adapter interface is now a single `installCore(items, latest?, concurrency?)`.**
-  `clone` and `existsSync` are gone, and `CoreService` no longer depends on `SetupService`,
-  `RegisterService`, the registry or the metadata transport. A plugin overriding the `core` adapter
-  must be updated.
+- **A library's build installs with `npm ci`, not `npm install --ignore-scripts`.** `npm install`
+  rewrites `package-lock.json`, and the update path added in this release refuses to pull anything with
+  uncommitted changes — so building a library on install would leave that one tracked file dirty and
+  the library unrefreshable from then on. For `h5p-math-display` the lockfile would be the *only* dirty
+  file, its `dist/` being gitignored. `npm ci` installs from the lockfile and never writes it; it needs
+  one that matches `package.json`, so there is a fallback to `npm install` for libraries with no
+  lockfile or a drifted one.
+- **Subprocesses are spawned non-interactively.** A prompt inside a subprocess is a permanent hang
+  rather than a question: ssh and git write theirs to `/dev/tty`, which the live progress area repaints
+  over, so the user sees a frozen row and never the prompt. Every command now runs with
+  `GIT_TERMINAL_PROMPT=0` and `-o BatchMode=yes` composed onto any existing `GIT_SSH_COMMAND`, and with
+  stdin at EOF. Git's credential helpers are untouched, so the osxkeychain path a private clone needs
+  still works. The env is inherited, which is what reaches a nested clone two levels down inside a
+  library's own `npm run build`.
+- **Every command is time-bounded and killed by process group.** Ten minutes by default,
+  `H5P_EXEC_TIMEOUT` in seconds; on expiry the command is killed and the failure names it and its
+  working directory. Children are spawned `detached` and signalled as `-pid`, because commands run
+  through a shell and the npm/webpack/ssh processes below it survive a kill aimed at the shell alone —
+  keeping the inherited pipes open, so node could never exit.
 
 ### Fixed
 
@@ -167,26 +189,28 @@ enforced instead of silently producing empty results.
   fetch verbatim, but that is not a ref — `h5p-blanks` publishes `1.1.5` and `1.1.1`, never `1.1` — so the
   command failed with `Remote branch 1.1 not found in upstream origin`. The root library's version now
   goes through the same patch lookup its dependencies always did.
-- **`h5p setup <library>` with no version no longer replays a stale dependency graph.** The metadata
-  cache under `temp/.metadata` had no expiry and did not distinguish a release tag from a branch, so a
-  setup tracking `master` resolved the graph as it was the first time you ran it — indefinitely, until
-  you deleted `temp` by hand. Mutable refs are now memoised for the invocation and never written to
-  disk, and only `x.y.z` tags are cached across runs. A branch checkout under `temp/` was a second, unbounded stale
-  source: it is now bypassed in favour of the raw host, and fetched forward where it is still the only
-  transport (private repositories, `H5P_NO_RAW=1`). A warm `temp/` still resolves offline. The cost is
-  that a `master` resolve re-reads two small files per library on every invocation — roughly 1–3s for a
-  large content type, in parallel waves — where it previously read them from disk; `h5p deps` and
-  `h5p missing` are where that is visible. Note that libraries mis-installed under a wrong
-  `H5P.Name-major.minor` folder by the old stale graph are left alone, since removing anything from
-  `libraries/` risks destroying work; delete those folders yourself if you have them.
-- **A pinned version is no longer ignored when cloning.** `clone` hardcoded `--branch master` while
-  `download` honoured the resolved version, so the same command produced two different trees depending
-  on the `download` flag.
+- **`h5p setup <library>` with no version no longer replays a stale dependency graph.** Library metadata
+  was read out of a `temp/<repo>_<branch>` checkout that was cloned the first time it was needed and
+  never fetched forward, so a setup tracking `master` resolved the graph as it was on that first run —
+  indefinitely, until you deleted `temp` by hand. Metadata is now fetched over HTTP instead of by
+  cloning, memoised for the invocation, and written to disk **only for an immutable `x.y.z` tag**; a
+  mutable ref is never cached across runs. The branch checkout is bypassed in favour of the raw host,
+  and fetched forward where it is still the only transport (private repositories, `H5P_NO_RAW=1`). A
+  warm `temp/` still resolves offline. The cost is that a `master` resolve re-reads two small files per
+  library on every invocation — roughly 1–3s for a large content type, in parallel waves — where it
+  previously read them from disk; `h5p deps` and `h5p missing` are where that is visible. Note that
+  libraries mis-installed under a wrong `H5P.Name-major.minor` folder by the old stale graph are left
+  alone, since removing anything from `libraries/` risks destroying work; delete those folders yourself
+  if you have them.
 - **Patch resolution no longer matches across minor versions.** Tags were compared with a bare prefix
   test, so version `1.1` also accepted `1.11.x`; for `h5p-blanks` that resolved `1.1` to the nonexistent
   tag `1.1.13`.
 - **Downloaded release tags resolve.** The archive URL hardcoded `refs/heads/`, so every tagged download
-  requested a branch of that name and 404'd; only `master` ever worked.
+  requested a branch of that name and 404'd, and the unpacked archive root was assumed to be
+  `${repo}-master`, which is wrong for every ref that is not `master`; only `master` ever worked. The
+  ref is now chosen per version and the archive root is read from disk. Each download also gets its own
+  scratch directory rather than sharing one `temp/temp.zip`, which two downloads running at once would
+  clobber.
 - **`h5p setup` no longer disturbs a library you are working in.** It ran `git checkout master` and
   `git pull` over any installed library; git then refused to overwrite modified files and the failure
   aborted the whole setup. A library with uncommitted changes, or on a branch other than `master`, is now
@@ -201,12 +225,6 @@ enforced instead of silently producing empty results.
   before they start and discard it on failure, like every other install. A library whose folder name
   is only known after cloning is staged under `temp/` and the claim moves with it, so an interrupt
   mid-rename cannot strand either copy.
-- **A library with a build script can be updated again.** `_build` ran `npm install`, which rewrites
-  `package-lock.json`; that one tracked file was enough for `_update`'s dirty check to refuse to pull
-  the library ever again. Every library `h5p setup` builds became unrefreshable on first install —
-  for `h5p-math-display` the lockfile was the *only* dirty file, since its `dist/` is gitignored.
-  `_build` now runs `npm ci`, which installs from the lockfile and never writes it, falling back to
-  `npm install` where there is no lockfile or it has drifted.
 - **`h5p missing` no longer reports an optional dependency as required.** Each per-dependency pass
   re-rooted the library it started from, and a root has no parent to inherit optionality from, so an
   unregistered library reachable only underneath an optional one was listed `(required)`. It is now
