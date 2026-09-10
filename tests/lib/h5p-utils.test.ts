@@ -6,6 +6,10 @@ import {
   pathHasDuplicates,
   parseSemanticLibraries,
   normalizeRegistry,
+  isReleaseVersion,
+  isPinnedRelease,
+  isSafeGitRef,
+  sanitizeRefForPath,
 } from '../../src/lib/h5p-utils.ts';
 
 describe('fromTemplate', () => {
@@ -165,5 +169,25 @@ describe('normalizeRegistry', () => {
     expect(entry.resume).toBeUndefined();
     expect(entry.fullscreen).toBeUndefined();
     expect(entry.xapiVerbs).toBeUndefined();
+  });
+});
+
+describe('git ref helpers', () => {
+  it('treats 1.14 and 1.14.3 as release versions, not branches', () => {
+    expect(isReleaseVersion('1.14')).toBe(true);
+    expect(isReleaseVersion('1.14.3')).toBe(true);
+    expect(isReleaseVersion('feat/my-pr')).toBe(false);
+    expect(isPinnedRelease('1.14.3')).toBe(true);
+    expect(isPinnedRelease('1.14')).toBe(false);
+  });
+
+  it('accepts ordinary branch names and rejects shell metacharacters', () => {
+    expect(isSafeGitRef('feat/my-pr')).toBe(true);
+    expect(isSafeGitRef('1.14.3')).toBe(true);
+    expect(isSafeGitRef('feat/foo;rm')).toBe(false);
+  });
+
+  it('flattens slashes so a branch cannot nest under temp/', () => {
+    expect(sanitizeRefForPath('feat/my-pr')).toBe('feat_my-pr');
   });
 });

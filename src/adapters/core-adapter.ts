@@ -1,17 +1,12 @@
-import * as fs from 'fs';
 import logic from '../../logic.ts';
+import type { CoreRepo } from '../lib/h5p-utils.ts';
 
-export interface ICoreAdapter {
-  clone(org: string, library: string, branch: string, target: string): void;
-  existsSync(path: string): boolean;
-}
+export type ICoreAdapter = {
+  installCore(items: CoreRepo[], latest?: boolean, concurrency?: number): Promise<string[]>;
+};
 
 export class CoreAdapter implements ICoreAdapter {
-  clone(org: string, library: string, branch: string, target: string): void {
-    logic.clone(org, library, branch, target);
-  }
-
-  existsSync(path: string): boolean {
-    return fs.existsSync(path);
+  installCore(items: CoreRepo[], latest?: boolean, concurrency?: number): Promise<string[]> {
+    return logic.installCore(items, latest, concurrency);
   }
 }

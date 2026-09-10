@@ -9,7 +9,7 @@ vi.mock('../../configLoader', () => ({
   },
 }));
 vi.mock('../../logic', () => ({
-  default: { clone: vi.fn(), computeDependencies: vi.fn(), getWithDependencies: vi.fn(), getRegistry: vi.fn(), registryEntryFromRepoUrl: vi.fn(), machineToShort: vi.fn() },
+  default: { installCore: vi.fn() },
 }));
 vi.mock('fs', () => ({
   default: { existsSync: vi.fn(), readFileSync: vi.fn(), writeFileSync: vi.fn(), mkdirSync: vi.fn() },
@@ -45,7 +45,23 @@ describe('coreCommand', () => {
     const mockSvc = { core: vi.fn().mockResolvedValue(undefined) } as any;
     const cmd = coreCommand(mockSvc);
     await cmd.parseAsync(['node', 'h5p']);
-    expect(mockSvc.core).toHaveBeenCalled();
+    expect(mockSvc.core).toHaveBeenCalledWith(undefined);
+  });
+
+  it('passes --concurrency through as a number', async () => {
+    const mockSvc = { core: vi.fn().mockResolvedValue(undefined) } as any;
+    const cmd = coreCommand(mockSvc);
+    await cmd.parseAsync(['node', 'h5p', '-c', '8']);
+    expect(mockSvc.core).toHaveBeenCalledWith(8);
+  });
+
+  it('rejects a non-positive --concurrency', async () => {
+    const mockSvc = { core: vi.fn().mockResolvedValue(undefined) } as any;
+    const cmd = coreCommand(mockSvc);
+    await cmd.parseAsync(['node', 'h5p', '-c', '0']);
+    expect(mockSvc.core).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
   });
 
   it('logs error on rejection', async () => {

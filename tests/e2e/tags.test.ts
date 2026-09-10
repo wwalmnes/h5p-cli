@@ -36,13 +36,13 @@ describe('tags — end-to-end', () => {
     vi.clearAllMocks();
   });
 
-  it('calls logic.tags with org, library, and mainBranch', async () => {
+  it('calls logic.tags with org and library', async () => {
     const logic = await import('../../logic.ts');
     const { tagsCommand } = await import('../../src/commands/tags.ts');
 
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
 
-    expect(logic.default.tags).toHaveBeenCalledWith('h5p', 'h5p-blanks', 'master');
+    expect(logic.default.tags).toHaveBeenCalledWith('h5p', 'h5p-blanks');
   });
 
   it('writes each tag returned by logic.tags to stdout as its own line', async () => {

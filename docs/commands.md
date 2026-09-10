@@ -31,7 +31,34 @@ Install the core H5P libraries required to view and edit content types.
 h5p core
 ```
 
-No arguments.
+No arguments. The set installed comes from `core.clone` and `core.setup` in `config.js`, and all of
+them are fetched at once:
+
+| Config key | What it is | Folder |
+|------------|------------|--------|
+| `core.clone` | A repository that is not an H5P library — `h5p-php-library`, `h5p-editor-php-library`. No `library.json`, so nothing to build. | its own name |
+| `core.setup` | An H5P library, given as `{ repo, machineName }` — `h5p-math-display`. Built after cloning. | `<machineName>-<major>.<minor>`, read from the clone's own `library.json` |
+
+None of them has dependencies, so `h5p core` does not resolve a dependency graph and makes no HTTP
+requests beyond the git clones themselves. Use `h5p setup <library>` for anything that does.
+
+**Options**
+
+| Option | Effect |
+|--------|--------|
+| `-c, --concurrency <n>` | How many libraries to install at once (default 4). |
+
+**Environment variables**
+
+| Variable | Effect |
+|----------|--------|
+| `H5P_NO_UPDATES=1` | Skip updating existing libraries (faster). |
+| `H5P_CONCURRENCY=<n>` | How many libraries to install at once. Same as `--concurrency`, default 4. |
+| `H5P_SSH_CLONE=1` | Use SSH URLs when cloning. |
+
+> [!IMPORTANT]
+> Core libraries already present in `libraries/` are refreshed from `master`. One with uncommitted
+> changes, or on a branch other than `master`, is reported and left untouched.
 
 ---
 
@@ -40,30 +67,39 @@ No arguments.
 Full one-command setup: registers the library and installs it along with all dependencies.
 
 ```bash
-h5p setup <library|repoUrl> [version] [download]
+h5p setup <library|repoUrl> [ref] [download]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `library\|repoUrl` | Yes | Library machine name (e.g. `H5P.Accordion`) or a GitHub repo URL (e.g. `git@github.com:h5p/h5p-accordion.git`). Passing a URL also updates the local registry entry. |
-| `version` | No | Specific version tag to install. Defaults to `master`. Use `h5p tags` to list available versions. |
-| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. |
+| `ref` | No | Git tag or branch for the library. A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the resulting patch. A branch name clones **this** library at that ref; dependencies are read from that ref's `library.json` and installed at their declared versions (falling back to `master` if a tag is missing). Defaults to `master`. Use `h5p tags` to list available versions. |
+| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. The library is still cloned when `[ref]` is a branch. |
+
+**Options**
+
+| Option | Effect |
+|--------|--------|
+| `-c, --concurrency <n>` | How many libraries to install at once (default 4). |
 
 **Environment variables**
 
 | Variable | Effect |
 |----------|--------|
 | `H5P_NO_UPDATES=1` | Skip updating existing libraries (faster). |
+| `H5P_CONCURRENCY=<n>` | How many libraries to install at once. Same as `--concurrency`, default 4. |
+| `H5P_NO_RAW=1` | Read library metadata by cloning rather than over HTTP. |
 | `H5P_SSH_CLONE=1` | Use SSH URLs when cloning (useful for private repos or committing from `libraries/<library>`). |
 
 > [!IMPORTANT]
-> If no `[version]` is specified, master branches are used.
+> If no `[ref]` is specified, master branches are used — and libraries already present in `libraries/` are refreshed from `master`. One with uncommitted changes, or on a branch other than `master`, is reported and left untouched.
 
 **Example**
 
 ```bash
 h5p setup git@github.com:h5p/h5p-accordion.git
-h5p setup H5P.Accordion 1.0.0
+h5p setup h5p-accordion 1.0.0
+h5p setup h5p-accordion feat/example
 h5p setup H5P.Accordion master 1   # download instead of clone
 ```
 
@@ -219,6 +255,11 @@ h5p missing <library>
 |----------|----------|-------------|
 | `library` | Yes | Library machine name. The library itself must already exist in the local registry. |
 
+Each dependency the registry does not know about is listed with `(required)` or `(optional)`. A
+dependency is optional when it is only reachable through an optional edge — a library offered as a
+choice in `semantics.json`, or anything below one — and required when the chain from the library you
+asked about is made only of `preloadedDependencies` and `editorDependencies` entries.
+
 ---
 
 ## `h5p clone`
@@ -234,6 +275,10 @@ h5p clone <library> <mode>
 | `library` | Yes | Library machine name. |
 | `mode` | Yes | `view` or `edit`. |
 
+Every library is fetched at the `major.minor.patch` its `library.json` declares. Where that version
+was never tagged, it is fetched from `master` instead and the fallback is reported:
+`h5p-accordion 1.0.47 not found, falling back to master`.
+
 ---
 
 ## `h5p install`
@@ -248,6 +293,9 @@ h5p install <library> <mode>
 |----------|----------|-------------|
 | `library` | Yes | Library machine name. |
 | `mode` | Yes | `view` or `edit`. |
+
+Versions are pinned and fall back to `master` exactly as in `h5p clone` above — an untagged version
+is a 404 on the archive URL rather than a missing git ref, and is treated the same way.
 
 ---
 

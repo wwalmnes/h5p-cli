@@ -3,6 +3,21 @@ import * as fs from 'fs';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../logic.ts';
 
+/* This file resolves against metadata seeded into temp/<repo>_master, and says
+nothing about transports. getMetadataFile only honours a *tag* checkout ahead of
+the network, so without this the raw host would answer for master and these
+fixtures would never be read. An unreachable host is what puts the resolver on
+the clone transport, where getRepoFile finds the seeded folder and clones
+nothing - the same path a real offline run takes. */
+vi.mock('superagent', () => ({
+  default: {
+    get: () => {
+      const chain: any = { set: () => chain, ok: () => Promise.reject(new Error('ENOTFOUND')) };
+      return chain;
+    },
+  },
+}));
+
 // Registry file: keyed by machineName (arbitrary key); what matters are id and shortName fields.
 const REGISTRY_DATA = {
   'H5P.Blanks': {

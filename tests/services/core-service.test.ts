@@ -2,67 +2,71 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CoreService } from '../../src/services/core-service.ts';
 import type { ICoreAdapter } from '../../src/adapters/core-adapter.ts';
 
-function makeSetupService() {
-  return { setup: vi.fn().mockResolvedValue(undefined) } as any;
+const CLONE = ['h5p-editor-php-library', 'h5p-php-library'];
+const SETUP = [{ repo: 'h5p-math-display', machineName: 'H5P.MathDisplay' }];
+
+function makeAdapter(): ICoreAdapter & { installCore: ReturnType<typeof vi.fn> } {
+  return { installCore: vi.fn().mockResolvedValue([]) };
 }
 
 describe('CoreService', () => {
   let logger: { log: ReturnType<typeof vi.fn> };
-  const librariesFolder = 'libraries';
 
   beforeEach(() => {
     logger = { log: vi.fn() };
   });
 
-  it('skips cloning when existsSync returns true', async () => {
-    const adapter: ICoreAdapter = {
-      existsSync: vi.fn().mockReturnValue(true),
-      clone: vi.fn(),
-    };
-    const svc = new CoreService(adapter, makeSetupService(), ['h5p-core'], [], librariesFolder, logger);
-    await svc.core();
-    expect(adapter.clone).not.toHaveBeenCalled();
-    expect(logger.log).toHaveBeenCalledWith('>> ~ skipping h5p-core; it already exists.');
+  /* One call, so one pool. The clone half and the library half used to be two
+  sequential phases, which is what made the command take their sum. */
+  it('hands every repo to the adapter in a single call', async () => {
+    const adapter = makeAdapter();
+    await new CoreService(adapter, CLONE, SETUP, logger).core();
+
+    expect(adapter.installCore).toHaveBeenCalledTimes(1);
+    expect(adapter.installCore.mock.calls[0][0]).toEqual([
+      { org: 'h5p', repo: 'h5p-editor-php-library', target: 'h5p-editor-php-library' },
+      { org: 'h5p', repo: 'h5p-php-library', target: 'h5p-php-library' },
+      { org: 'h5p', repo: 'h5p-math-display', machineName: 'H5P.MathDisplay' },
+    ]);
   });
 
-  it('clones when existsSync returns false', async () => {
-    const adapter: ICoreAdapter = {
-      existsSync: vi.fn().mockReturnValue(false),
-      clone: vi.fn(),
-    };
-    const svc = new CoreService(adapter, makeSetupService(), ['h5p-core'], [], librariesFolder, logger);
-    await svc.core();
-    expect(adapter.clone).toHaveBeenCalledWith('h5p', 'h5p-core', 'master', 'h5p-core');
-    expect(logger.log).toHaveBeenCalledWith('>> + installing h5p-core');
+  /* A library entry carries no target: its folder is <machineName>-<major>.<minor>,
+  and the version is only knowable once the repo is cloned. */
+  it('marks library entries by machineName, not by a fixed folder', async () => {
+    const adapter = makeAdapter();
+    await new CoreService(adapter, [], SETUP, logger).core();
+
+    const [item] = adapter.installCore.mock.calls[0][0];
+    expect(item.machineName).toBe('H5P.MathDisplay');
+    expect(item.target).toBeUndefined();
   });
 
-  it('calls setupService.setup for each item in coreToSetup', async () => {
-    const adapter: ICoreAdapter = { existsSync: vi.fn().mockReturnValue(false), clone: vi.fn() };
-    const setupSvc = makeSetupService();
-    const svc = new CoreService(adapter, setupSvc, [], ['h5p-editor', 'h5p-blanks'], librariesFolder, logger);
-    await svc.core();
-    expect(setupSvc.setup).toHaveBeenCalledWith('h5p-editor');
-    expect(setupSvc.setup).toHaveBeenCalledWith('h5p-blanks');
+  it('asks for a refresh of already-installed repos', async () => {
+    const adapter = makeAdapter();
+    await new CoreService(adapter, CLONE, SETUP, logger).core();
+
+    // latest = true is what reaches _update rather than a bare skip
+    expect(adapter.installCore.mock.calls[0][1]).toBe(true);
+  });
+
+  it('threads concurrency through', async () => {
+    const adapter = makeAdapter();
+    await new CoreService(adapter, CLONE, SETUP, logger).core(8);
+
+    expect(adapter.installCore.mock.calls[0][2]).toBe(8);
   });
 
   it('logs done message', async () => {
-    const adapter: ICoreAdapter = { existsSync: vi.fn().mockReturnValue(false), clone: vi.fn() };
-    const svc = new CoreService(adapter, makeSetupService(), [], [], librariesFolder, logger);
-    await svc.core();
+    await new CoreService(makeAdapter(), [], [], logger).core();
     expect(logger.log).toHaveBeenCalledWith('> done setting up core libraries');
   });
 
-  it('checks correct folder path', async () => {
-    const adapter: ICoreAdapter = { existsSync: vi.fn().mockReturnValue(true), clone: vi.fn() };
-    const svc = new CoreService(adapter, makeSetupService(), ['h5p-core'], [], librariesFolder, logger);
-    await svc.core();
-    expect(adapter.existsSync).toHaveBeenCalledWith('libraries/h5p-core');
-  });
+  it('propagates a failure without reporting success', async () => {
+    const adapter = makeAdapter();
+    adapter.installCore.mockRejectedValue(new Error('clone failed'));
+    const svc = new CoreService(adapter, CLONE, SETUP, logger);
 
-  it('propagates rejection from setup', async () => {
-    const adapter: ICoreAdapter = { existsSync: vi.fn().mockReturnValue(false), clone: vi.fn() };
-    const setupSvc = { setup: vi.fn().mockRejectedValue(new Error('setup failed')) } as any;
-    const svc = new CoreService(adapter, setupSvc, [], ['h5p-editor'], librariesFolder, logger);
-    await expect(svc.core()).rejects.toThrow('setup failed');
+    await expect(svc.core()).rejects.toThrow('clone failed');
+    expect(logger.log).not.toHaveBeenCalledWith('> done setting up core libraries');
   });
 });

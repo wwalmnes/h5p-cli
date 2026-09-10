@@ -7,6 +7,9 @@ Run `h5p utils help <cmd>` for a detailed help entry for each utility `<cmd>`.
 
 • `h5p core` installs the core H5P libraries.  
 These are required to view and edit H5P content types.  
+They are fetched in parallel and have no dependencies, so nothing is resolved.  
+Ones already installed are refreshed from `master`; set `H5P_NO_UPDATES=1` to skip that.  
+Use `-c <n>` to change how many are installed at once (default 4).  
 
 • `h5p list [machineName] [pullRegistry]` lists the current H5P libraries.  
 Use `1` for `[machineName]` to list the machine name instead of the default repo name.  
@@ -50,15 +53,19 @@ Use `view` or `edit` for `<mode>`.
 • `h5p install <library> <mode>` downloads the library and its dependencies in the libraries folder.  
 Use `view` or `edit` for `<mode>`.  
 
-• `h5p setup <library|repoUrl> [version] [download]` sets up a library and its dependencies.  
+Both commands fetch each library at the version its `library.json` declares. A version that was never tagged is fetched from `master` instead, and the fallback is reported.  
+
+• `h5p setup <library|repoUrl> [ref] [download]` sets up a library and its dependencies.  
+`[ref]` is an optional git tag or branch for the library. Dependency versions are read from that ref's `library.json`; only the library itself is cloned at `[ref]` — its dependencies install at their normal versions from that tree.  
+For example, `h5p setup h5p-accordion 1.0.0` installs from tag "1.0.0", and `h5p setup h5p-accordion feat/example` installs from branch "feat/example".  
 `<repoUrl>` is a github repository url. Running the command in this format will also update the library in the local registry. This is useful for unregistered libraries.  
 For example, `h5p setup git@github.com:h5p/h5p-accordion.git` installs the "h5p-accordion" library and its dependencies. It also updates its entry in the local library registry.  
-You can optionally specify a library `[version]`. To view current versions for a library use the `tags` command.
-Using `1` for the `[download]` parameter will download the libraries instead of cloning them as git repos.  
+To view current tags for a library use the `tags` command.
+Using `1` for the `[download]` parameter will download the libraries instead of cloning them as git repos. The library is still cloned when `[ref]` is a branch.  
 Set the `H5P_NO_UPDATES` environment variable to `1` to skip updating libraries and speed up the setup process.  
 Set the `H5P_SSH_CLONE` environment variable to `1` so that ssh urls are used when cloning private repositories. This is useful for cloning private repos and for when you want to commit from the `libraries/<library>` folder.  
 > [!IMPORTANT]
-> If no `[version]` is specified master branches will be used.  
+> If no `[ref]` is specified master branches will be used.  
 
 • `h5p missing <library>` will compute the unregistered dependencies for a library.  
 The library itself has to exist in the local library registry.  

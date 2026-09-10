@@ -461,6 +461,46 @@ describe('ui', () => {
       const [line] = renderRows([{ id: 'a', label: 'A', percent: 0 }], opts);
       expect(line).not.toContain('\x1b[');
     });
+
+    describe('stall indicator', () => {
+      const started = { id: 'a', label: 'A', percent: 0, startedAt: 1_000_000 };
+
+      it('stays quiet while a row is still young', () => {
+        const [line] = renderRows([started], { ...opts, now: started.startedAt + 19_000 });
+        expect(line).toBe('⠋ A  ░░░░░░░░░░░░░░░░    0%');
+      });
+
+      it('reports the age once a row has been silent too long', () => {
+        const [line] = renderRows([started], { ...opts, now: started.startedAt + 25_000 });
+        expect(line).toBe('⠋ A  ░░░░░░░░░░░░░░░░    0%  25s');
+      });
+
+      it('reports minutes and zero-padded seconds past a minute', () => {
+        const [line] = renderRows([started], { ...opts, now: started.startedAt + 252_000 });
+        expect(line.endsWith('4m12s')).toBe(true);
+      });
+
+      it('appends the age to an indeterminate row too', () => {
+        const [line] = renderRows(
+          [{ id: 'a', label: 'A', startedAt: started.startedAt }],
+          { ...opts, now: started.startedAt + 30_000 }
+        );
+        expect(line).toBe('⠋ A  30s');
+      });
+
+      it('says nothing when the caller supplies no clock', () => {
+        const [line] = renderRows([started], opts);
+        expect(line).toBe('⠋ A  ░░░░░░░░░░░░░░░░    0%');
+      });
+
+      it('says nothing for a row that never recorded a start', () => {
+        const [line] = renderRows([{ id: 'a', label: 'A', percent: 0 }], {
+          ...opts,
+          now: 2_000_000,
+        });
+        expect(line).toBe('⠋ A  ░░░░░░░░░░░░░░░░    0%');
+      });
+    });
   });
 
   describe('live progress area', () => {

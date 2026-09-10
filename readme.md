@@ -61,6 +61,21 @@ h5p setup h5p-course-presentation
 This is required for running and editing content types in the "h5p-course-presentation" library.  
 You can install other libraries listed by `h5p list` in the same way.  
 For example, `h5p setup h5p-accordion` installs the "h5p-accordion" library and its dependencies.  
+
+Libraries are installed several at a time. Use `--concurrency <n>` (or the `H5P_CONCURRENCY`
+environment variable) to change how many, and `--concurrency 1` to install them one by one:
+```
+h5p setup h5p-interactive-book --concurrency 8
+```
+To test a pull-request branch of **this** library (dependencies still follow that branch's `library.json`):
+```
+h5p setup h5p-true-false feat/my-pr
+```
+Library metadata is read over HTTPS rather than by cloning each repository. A repository that
+the raw host will not serve — a private one, say — is still cloned, so git's credential helper
+keeps working. Set `H5P_NO_RAW=1` to clone for metadata in every case, e.g. behind a mirror
+that does not expose raw file access.
+
 > [!NOTE]
 > You can [read more on setting up libraries here](assets/docs/setup.md) and you can
 > [read more on tweaking the configuration to your needs here](assets/docs/configuration.md).

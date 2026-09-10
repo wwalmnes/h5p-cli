@@ -1,16 +1,18 @@
-import { execSync, spawn, spawnSync } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import fs from 'fs';
+import path from 'path';
 // @ts-ignore - no type declarations for superagent v8 in this project
 import superAgent from 'superagent';
 // @ts-ignore - no type declarations for adm-zip in this project
 import admZip from 'adm-zip';
 import config from './configLoader.ts';
 import { upgradeContent } from './logic-content-upgrade.ts';
-import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry } from './src/lib/h5p-utils.ts';
+import { fromTemplate, parseGitUrl, machineToShort, normalizeRegistry, isPinnedRelease, sanitizeRefForPath } from './src/lib/h5p-utils.ts';
 import { computeDependencies as _computeDependencies } from './src/lib/compute-dependencies.ts';
 import type { IComputeDependenciesPort, LibraryEntry, LibraryDependency, Registry, DependencyMap } from './src/lib/compute-dependencies.ts';
 import { ui } from './src/lib/ui.ts';
-import type { ParsedGitUrl } from './src/lib/h5p-utils.ts';
+import { runPool, resolveConcurrency, resolveExecTimeout } from './src/lib/pool.ts';
+import type { ParsedGitUrl, RootRef, CoreRepo } from './src/lib/h5p-utils.ts';
 
 type VerifySetupResult = {
   registry: boolean;
@@ -43,15 +45,19 @@ const getFile = async (source: string, parseJson?: boolean): Promise<string | ob
   return output;
 };
 // clone repo and retrieve file
-const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean): string | object => {
+const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean, shallow?: boolean): string | object => {
   const { repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
-  const target = `${config.folders.temp}/${repoName}_${branch}`;
+  const target = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(branch)}`;
   const filePath = `${target}/${path}`;
   if (cleanStart) {
     fs.rmSync(target, { recursive: true, force: true });
   }
   if (!fs.existsSync(target)) {
-    execSync(`git clone ${gitUrl} ${target} --branch ${branch}`, { stdio : 'pipe' }).toString();
+    const depth = shallow ? ' --depth 1 --single-branch' : '';
+    /* same non-interactive contract as _exec: this is the clone transport's
+    fallback, and a private repo whose credentials are not cached would
+    otherwise sit on a prompt the progress area has already painted over. */
+    _execSync(`git clone ${gitUrl} ${target} --branch ${branch}${depth}`);
   }
   if (!fs.existsSync(filePath)) {
     return '';
@@ -85,16 +91,167 @@ const getFileList = (folder: string): string[] => {
   }
   return output;
 };
+/* Fetch a URL without collapsing the status. getFile() maps 404 to '', which is
+also the correct answer for a library that legitimately has no semantics.json —
+the metadata transport below has to tell those two cases apart. */
+type RemoteFile = { status: number; text: string };
+const getRemoteFile = async (url: string): Promise<RemoteFile> => {
+  try {
+    const res = await superAgent.get(url).set('User-Agent', 'h5p-cli').ok(() => true);
+    return { status: res.status, text: res.text ?? '' };
+  }
+  catch {
+    // DNS failure, TLS failure, offline: indistinguishable from "not reachable"
+    return { status: 0, text: '' };
+  }
+};
+
+// Per-repo transport decision, remembered for the life of the process.
+type Transport = 'raw' | 'clone';
+/* Scoped to the workspace for the same reason as the metadata memo: a "this
+repo is reachable" verdict from one workspace must not decide another's. */
+const _transport = new Map<string, Transport>();
+const _transportKey = (org: string, repoName: string): string =>
+  `${path.resolve(config.folders.temp)}|${org}/${repoName}`;
+
+// Cache registry, but as a promise because often multiple fetches are done, so we want
+// to cache the promise so we only do one fetch.
+let _registryMemo: Promise<string | object> | undefined;
+
+const _metaUrl = (org: string, repoName: string, version: string, file: string): string =>
+  fromTemplate(
+    file === 'library.json' ? config.urls.library.list : config.urls.library.semantics,
+    { org, dep: repoName, version },
+  );
+
+// Cache the parsed metadata, in memory and on disk.
+const _metaMemo = new Map<string, any>();
+
+const _metaKey = (org: string, repoName: string, version: string, file: string): string =>
+  `${path.resolve(config.folders.temp)}|${org}/${repoName}@${version}:${file}`;
+const _metaCacheDir = (): string => `${config.folders.temp}/.metadata`;
+const _metaCacheFile = (org: string, repoName: string, version: string, file: string): string =>
+  `${_metaCacheDir()}/${org}__${repoName}__${version}__${file}`;
+
+const readMetaCache = (org: string, repoName: string, version: string, file: string): any => {
+  const key = _metaKey(org, repoName, version, file);
+  if (_metaMemo.has(key)) {
+    return _metaMemo.get(key);
+  }
+  if (!isPinnedRelease(version)) {
+    return undefined;
+  }
+  const cached = _metaCacheFile(org, repoName, version, file);
+  if (!fs.existsSync(cached)) {
+    return undefined;
+  }
+  try {
+    const raw = fs.readFileSync(cached, 'utf-8');
+    const value = raw === '' ? '' : JSON.parse(raw);
+    _metaMemo.set(key, value);
+    return value;
+  }
+  catch {
+    // a truncated or corrupt cache entry must never be fatal; just re-fetch
+    return undefined;
+  }
+};
+
+const writeMetaCache = (org: string, repoName: string, version: string, file: string, value: any): any => {
+  _metaMemo.set(_metaKey(org, repoName, version, file), value);
+  if (!isPinnedRelease(version)) {
+    return value;
+  }
+  try {
+    fs.mkdirSync(_metaCacheDir(), { recursive: true });
+    fs.writeFileSync(_metaCacheFile(org, repoName, version, file), value === '' ? '' : JSON.stringify(value));
+  }
+  catch {
+    // an unwritable temp/ degrades to the in-memory memo, it is not an error
+  }
+  return value;
+};
+
+// Repos whose branch checkout in temp/ this process has already dealt with. 
+const _refreshed = new Set<string>();
+
+const _refreshClone = (repoName: string, version: string): void => {
+  if (isPinnedRelease(version)) {
+    return;
+  }
+  const target = path.resolve(`${config.folders.temp}/${repoName}_${sanitizeRefForPath(version)}`);
+  if (_refreshed.has(target)) {
+    return;
+  }
+  _refreshed.add(target);
+
+  if (!fs.existsSync(`${target}/.git`)) {
+    return;
+  }
+
+  /* The low-speed bound covers the one failure git does not end on its own. A dead
+  resolver or a refused connection exits in seconds; a socket that opens and
+  then stops delivering bytes stays alive, and git waits on it indefinitely.
+  _execSync is spawnSync, so that wait blocks the whole process - the progress
+  area stops repainting and the CLI reads as wedged - until the ten-minute exec
+  budget fires. Ten seconds under a kilobyte a second ends it instead. Tripping
+  the bound on a merely slow fetch costs nothing: the catch below falls back to
+  the checkout already on disk. */
+  const depth = fs.existsSync(`${target}/.git/shallow`) ? ' --depth 1' : '';
+  try {
+    _execSync(`git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --no-tags${depth} origin ${version}`, target);
+    _execSync('git reset --hard FETCH_HEAD', target);
+  }
+  catch (error) {
+    // the fetch failed or the branch is gone: the checkout on disk is still
+    // the best answer available, so say so rather than failing the resolution
+    ui.debug(`could not refresh ${target}: ${(error as Error).message}`);
+  }
+};
+
+const getMetadataFile = async (org: string, repoName: string, version: string, file: string): Promise<any> => {
+  const memo = readMetaCache(org, repoName, version, file);
+  if (memo !== undefined) {
+    return memo;
+  }
+
+  const gitUrl = fromTemplate(config.urls.library.clone, { org, repo: repoName });
+  const cloned = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(version)}`;
+
+  if (isPinnedRelease(version) && fs.existsSync(cloned)) {
+    return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
+  }
+
+  const key = _transportKey(org, repoName);
+  if (process.env.H5P_NO_RAW) {
+    _transport.set(key, 'clone');
+  }
+
+  if (_transport.get(key) !== 'clone') {
+    const res = await getRemoteFile(_metaUrl(org, repoName, version, file));
+    if (res.status === 200) {
+      _transport.set(key, 'raw');
+      return writeMetaCache(org, repoName, version, file, res.text ? JSON.parse(res.text) : '');
+    }
+    if (res.status === 404 && _transport.get(key) === 'raw') {
+      return writeMetaCache(org, repoName, version, file, '');
+    }
+    _transport.set(key, 'clone');
+  }
+  _refreshClone(repoName, version);
+  return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
+};
+
 class DefaultComputeDependenciesPort implements IComputeDependenciesPort {
   getRegistry() { return logic.getRegistry(); }
   parseLibraryFolders() { return logic.parseLibraryFolders(); }
   getLibraryJson(folder: string | null | undefined, org: string, repoName: string, version: string) {
     if (folder) return getFile(`${config.folders.libraries}/${folder}/library.json`, true) as Promise<any>;
-    return Promise.resolve(getRepoFile(fromTemplate(config.urls.library.clone, { org, repo: repoName }), 'library.json', version, true));
+    return getMetadataFile(org, repoName, version, 'library.json');
   }
   getSemanticsJson(folder: string | null | undefined, org: string, repoName: string, version: string) {
     if (folder) return getFile(`${config.folders.libraries}/${folder}/semantics.json`, true) as Promise<any>;
-    return Promise.resolve(getRepoFile(fromTemplate(config.urls.library.clone, { org, repo: repoName }), 'semantics.json', version, true));
+    return getMetadataFile(org, repoName, version, 'semantics.json');
   }
   getTags(org: string, repo: string) { return logic.tags(org, repo); }
 }
@@ -111,34 +268,173 @@ const _failed = (command: string, stderr: string): Error => {
   return new Error(`Command failed: ${command}${detail ? `\n${detail}` : ''}`);
 };
 
+/* superagent's own message for a 404 is the bare "Not Found", with no clue which
+repository or ref was asked for. Keep its status on the error so the caller can
+still tell a missing ref from a genuine failure. */
+const _downloadFailed = (url: string, error: unknown): Error => {
+  const status = (error as { status?: number })?.status;
+  const reason = status ?? (error instanceof Error ? error.message : String(error));
+  const failure = new Error(`cannot download ${url} (${reason})`);
+  (failure as { status?: number }).status = status;
+  return failure;
+};
+
+const _isMissingGitRef = (error: unknown): boolean =>
+  error instanceof Error && /Remote branch .+ not found|couldn't find remote ref/i.test(error.message);
+
+const _isMissingArchive = (error: unknown): boolean =>
+  (error as { status?: number })?.status === 404;
+
+// A ref the remote does not have, whichever transport reported it.
+const _isMissingRef = (error: unknown): boolean =>
+  _isMissingGitRef(error) || _isMissingArchive(error);
+
+/* Any prompt inside a subprocess is a permanent hang, not a question: ssh and
+git write theirs to /dev/tty, which the live progress area repaints over twelve
+times a second, so the user sees a frozen row and never the prompt.
+
+GIT_TERMINAL_PROMPT=0 disables git's own username/password prompt without
+touching credential helpers. BatchMode=yes makes ssh fail instead of asking
+for a passphrase or a host-key confirmation, and leaves ssh-agent alone. Both
+are inherited by grandchildren, which is what reaches that nested clone. */
+const _nonInteractiveEnv = (): NodeJS.ProcessEnv => ({
+  ...process.env,
+  GIT_TERMINAL_PROMPT: '0',
+  GIT_SSH_COMMAND: `${process.env.GIT_SSH_COMMAND ?? 'ssh'} -o BatchMode=yes`,
+});
+
+const _timedOut = (command: string, cwd: string | undefined, ms: number): Error =>
+  new Error(`Command timed out after ${Math.round(ms / 1000)}s: ${command}${cwd ? `\n  in ${cwd}` : ''}`);
+
 /* execSync inherits stderr, so git/npm write straight past ui — which both
 leaks output under --quiet and shreds the live progress frame. spawnSync
 captures both streams so everything reaches the terminal through emit().
-
-Only for callers that cannot be async: logic.tags and logic.clone are reached
-synchronously from computeDependencies via IComputeDependenciesPort.getTags,
-and logic.clone is part of the public h5p-cli/logic surface. */
+*/
 const _execSync = (command: string, cwd?: string): string => {
-  const result = spawnSync(command, { shell: true, cwd, encoding: 'utf-8' });
+  const budget = resolveExecTimeout();
+  const result = spawnSync(command, {
+    shell: true,
+    cwd,
+    encoding: 'utf-8',
+    env: _nonInteractiveEnv(),
+    timeout: budget,
+  });
   if (result.error) {
-    throw result.error;
+    // node reports the timeout as ETIMEDOUT; say what actually happened
+    throw (result.error as NodeJS.ErrnoException).code === 'ETIMEDOUT'
+      ? _timedOut(command, cwd, budget)
+      : result.error;
   }
   _debug(result.stdout ?? '');
   _debug(result.stderr ?? '');
+  if (result.signal) {
+    throw _timedOut(command, cwd, budget);
+  }
   if (result.status !== 0) {
     throw _failed(command, result.stderr ?? '');
   }
   return result.stdout ?? '';
 };
 
-/* Same contract, but yields to the event loop so the live progress area keeps
-animating through git and npm. Awaited in a for-loop, so execution order is
-still strictly sequential — nothing overlaps. */
+const _children = new Set<ReturnType<typeof spawn>>();
+
+/* `shell: true` means the direct child is /bin/sh, and for a compound script
+like `a && b && c` sh does not exec - it stays, and the npm/webpack/ssh
+processes below it survive a kill aimed at sh alone. They keep the stdio pipes
+they inherited open, so 'close' never fires and node cannot exit either.
+Spawning detached puts each command in its own process group, and a negative
+pid signals the whole group. */
+const _killGroup = (child: ReturnType<typeof spawn>, signal: NodeJS.Signals = 'SIGTERM'): void => {
+  if (child.pid === undefined) {
+    return;
+  }
+  try {
+    process.kill(-child.pid, signal);
+  }
+  catch {
+    // the group is already gone, which is the outcome we were after
+  }
+};
+
+const _killRunning = (): void => {
+  for (const child of _children) {
+    _killGroup(child);
+  }
+  _children.clear();
+};
+
+/* Folders this process created and has not finished installing into.
+fs.existsSync(folder) is the whole already-installed test in _install, so a
+half-written folder poisons every later run - it is reported as installed and
+never built. Only folders _install created itself are tracked: one that was
+already on disk belongs to the user, or to another library, and is never
+removed. Paths are resolved on the way in, because config.folders.* are
+cwd-relative and the sweep below runs at exit, arbitrarily later. */
+const _incomplete = new Set<string>();
+
+const _discard = (folder: string): void => {
+  _incomplete.delete(folder);
+  try {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
+  catch (error) {
+    // never mask the install failure that brought us here
+    ui.warn(`could not remove ${folder}: ${(error as Error).message}`);
+  }
+};
+
+const _discardIncomplete = (): void => {
+  for (const folder of [..._incomplete]) {
+    _discard(folder);
+  }
+};
+
+process.on('exit', () => {
+  _killRunning();
+  _discardIncomplete();
+});
+
+/* A signal with no listener terminates node outright - the exit hook above
+never runs, and an interrupted setup keeps every half-written folder it had
+open. ui installs a SIGINT handler, but only when the live area is on, so a
+piped run or a cancelled CI job has none. Exit through process.exit instead,
+with the shell's own 128+signal code. Signal listeners do not hold the event
+loop open, so this cannot delay a normal exit. */
+for (const [signal, code] of [['SIGINT', 130], ['SIGTERM', 143]] as const) {
+  process.once(signal, () => process.exit(code));
+}
+
 const _exec = (command: string, cwd?: string): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, { shell: true, cwd });
+    /* stdin is 'ignore' so a command that reads it - `patch` asking which file
+    to patch, say - gets EOF and aborts, rather than blocking forever on a pipe
+    nobody will ever write to. */
+    const child = spawn(command, {
+      shell: true,
+      cwd,
+      detached: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: _nonInteractiveEnv(),
+    });
+    _children.add(child);
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
+    const budget = resolveExecTimeout();
+    /* The backstop for a stall no amount of non-interactivity can prevent: a
+    dead network, a build script that watches instead of exiting. Unreffed
+    because the child's stdio pipes already hold the loop open. */
+    const timer = setTimeout(() => {
+      timedOut = true;
+      _killGroup(child);
+      // a process that ignores SIGTERM must not strand the CLI either
+      setTimeout(() => _killGroup(child, 'SIGKILL'), 5000).unref();
+    }, budget);
+    timer.unref();
+    const settle = (): void => {
+      clearTimeout(timer);
+      _children.delete(child);
+    };
     child.stdout?.setEncoding('utf-8');
     child.stderr?.setEncoding('utf-8');
     child.stdout?.on('data', (chunk) => {
@@ -147,10 +443,18 @@ const _exec = (command: string, cwd?: string): Promise<string> => {
     child.stderr?.on('data', (chunk) => {
       stderr += chunk;
     });
-    child.on('error', reject);
+    child.on('error', (error) => {
+      settle();
+      reject(error);
+    });
     child.on('close', (status) => {
+      settle();
       _debug(stdout);
       _debug(stderr);
+      if (timedOut) {
+        reject(_timedOut(command, cwd, budget));
+        return;
+      }
       if (status !== 0) {
         reject(_failed(command, stderr));
         return;
@@ -160,6 +464,10 @@ const _exec = (command: string, cwd?: string): Promise<string> => {
   });
 };
 
+// GitHub files branches and tags under different ref namespaces.
+const _archiveRef = (version: string): string =>
+  isPinnedRelease(version) ? `refs/tags/${version}` : `refs/heads/${version}`;
+
 const _cloneCommand = (
   org: string,
   repo: string,
@@ -167,6 +475,224 @@ const _cloneCommand = (
   target: string,
 ): string =>
   `git clone ${fromTemplate(config.urls.library.clone, { org, repo })} ${target} --branch ${branch}`;
+
+// Build a library in place, if it ships a build script.
+const _build = async (folder: string, label: string): Promise<void> => {
+  const packageFile = `${folder}/package.json`;
+  if (!fs.existsSync(packageFile)) {
+    return;
+  }
+  const info = JSON.parse(fs.readFileSync(packageFile, 'utf-8'));
+  if (!info?.scripts?.build) {
+    return;
+  }
+  /* npm ci first, because npm install rewrites package-lock.json. That single
+  tracked file was enough to make a built library permanently unrefreshable:
+  _update above refuses to pull anything with uncommitted changes, so every
+  library with a build script became dirty on install and was then skipped by
+  every later update. ci installs from the lockfile and never writes it. It
+  needs a lockfile that matches package.json, so fall back where there is none
+  or it has drifted - those libraries keep the old behaviour rather than
+  failing. */
+  const flags = '--ignore-scripts --no-audit --no-fund --progress=false';
+  try {
+    ui.debug(`npm ci ${flags}`);
+    await _exec(`npm ci ${flags}`, folder);
+  }
+  catch {
+    ui.debug(`npm install ${flags}`);
+    await _exec(`npm install ${flags}`, folder);
+  }
+  ui.progress(label, 85);
+  ui.debug('npm run build');
+  await _exec('npm run build', folder);
+  ui.progress(label, 100);
+  // @todo: consider if we really want to delete node_modules. I think in most cases/workflows, we generally
+  // want to keep it.
+  fs.rmSync(`${folder}/node_modules`, { recursive: true, force: true });
+};
+
+/* Refresh a library that is already on disk. Skip if it has uncommitted changes.
+`org`/`repoName` are passed rather than a LibraryEntry: these are the only two
+fields this path and _install below ever read, and h5p core installs repos that
+have no registry entry to hand one from. */
+const _update = async (repoName: string, label: string, listVersion: string, folder: string, build = true): Promise<void> => {
+  const dirty = (await _exec('git status --porcelain', folder)).trim();
+  if (dirty) {
+    ui.warn(`skipping update for ${repoName}: uncommitted changes in ${folder}`);
+    return;
+  }
+  const branch = (await _exec('git rev-parse --abbrev-ref HEAD', folder)).trim();
+  if (branch !== 'master') {
+    ui.warn(`skipping update for ${repoName}: checked out on ${branch}, not master`);
+    return;
+  }
+  ui.step(`~ updating to ${repoName} ${listVersion}`);
+  const before = (await _exec('git rev-parse HEAD', folder)).trim();
+  await _exec('git pull origin', folder);
+  if ((await _exec('git rev-parse HEAD', folder)).trim() === before) {
+    return;
+  }
+  if (!build) {
+    return;
+  }
+  // new commits landed, so whatever was built from the old ones is now stale
+  ui.progress(label, 60, { label: `${repoName} ${listVersion}` });
+  try {
+    await _build(folder, label);
+  } finally {
+    ui.progressDone(label);
+  }
+};
+
+type InstallOptions = {
+  latest?: boolean;
+  isRootRef?: boolean;
+  /* Off for `h5p core`. h5p-editor-php-library's build rewrites tracked files -
+  webpack regenerates styles/css/application.css and npm install rewrites
+  package-lock.json - so building on install leaves the checkout permanently
+  dirty, and _update's dirty check then refuses to ever refresh it again. The
+  repository ships its built CSS committed, which is what the CLI has always
+  served, so there is nothing to gain by regenerating it. */
+  build?: boolean;
+};
+
+const _install = async (
+  action: 'clone' | 'download',
+  org: string,
+  repoName: string,
+  label: string,
+  listVersion: string,
+  version: string,
+  folder: string,
+  { latest, isRootRef, build = true }: InstallOptions = {},
+): Promise<void> => {
+  const shown = latest ? listVersion : version;
+  if (fs.existsSync(folder)) {
+    if (latest && !process.env.H5P_NO_UPDATES) {
+      await _update(repoName, label, listVersion, folder, build);
+    }
+    else {
+      ui.step(`~ skipping updates for ${repoName} ${shown}`);
+    }
+    return;
+  }
+  ui.step(`+ installing ${repoName} ${shown}`);
+  ui.progress(label, 0, { label: `${repoName} ${shown}` });
+  const claim = path.resolve(folder);
+  _incomplete.add(claim);
+  try {
+    // download cannot produce a git checkout, and the whole point of a root ref
+    // is having the repo to work in — clone it even when download is requested
+    const fetchAt = (ref: string): Promise<unknown> =>
+      action === 'download' && !isRootRef
+        ? logic.download(org, repoName, ref, folder)
+        : _exec(_cloneCommand(org, repoName, ref, label), config.folders.libraries);
+    try {
+      await fetchAt(version);
+    }
+    catch (error) {
+      /* The root ref must exist. Deps may name a patch that was never tagged -
+      H5P largely stopped tagging releases, so most of them do. Both transports
+      hit this: a missing tag is a failed clone over git and a 404 on the
+      archive URL over http. */
+      if (isRootRef || version === 'master' || !_isMissingRef(error)) {
+        throw error;
+      }
+      ui.warn(`${repoName} ${version} not found, falling back to master`);
+      if (fs.existsSync(folder)) {
+        fs.rmSync(folder, { recursive: true, force: true });
+      }
+      await fetchAt('master');
+    }
+    ui.progress(label, 60);
+    if (build) {
+      await _build(folder, label);
+    }
+    _incomplete.delete(claim);
+  }
+  catch (error) {
+    ui.warn(`removing incomplete ${folder}`);
+    _discard(claim);
+    throw error;
+  }
+  finally {
+    // runs on the early returns above too, so no row is ever stranded
+    ui.progressDone(label);
+  }
+};
+
+/* Install an H5P library whose folder name we do not know yet.
+
+`h5p core` fetches these without resolving anything, so nothing has told us that
+h5p-math-display lives at H5P.MathDisplay-1.0 - the major.minor half of that name
+is in the repository's own library.json. Reading it means cloning first, so the
+clone is staged under temp/ and moved into place once the name is known.
+
+The already-installed check is a single readdirSync against the machineName
+prefix: no file reads, and deliberately not parseLibraryFolders, which calls
+getRegistry and would put the network round trip we just removed straight back.
+The prefix carries the separator, so H5P.Math- cannot match H5P.MathDisplay-1.0. */
+const _installedLibraryFolder = (machineName: string): string | undefined => {
+  if (!fs.existsSync(config.folders.libraries)) {
+    return undefined;
+  }
+  return fs.readdirSync(config.folders.libraries).find((entry) => entry.startsWith(`${machineName}-`));
+};
+
+const _installLibraryRepo = async (
+  org: string,
+  repo: string,
+  machineName: string,
+  latest?: boolean,
+): Promise<string> => {
+  const installed = _installedLibraryFolder(machineName);
+  if (installed) {
+    const folder = `${config.folders.libraries}/${installed}`;
+    if (latest && !process.env.H5P_NO_UPDATES) {
+      await _update(repo, installed, 'master', folder);
+    }
+    else {
+      ui.step(`~ skipping updates for ${repo} master`);
+    }
+    return installed;
+  }
+  ui.step(`+ installing ${repo} master`);
+  ui.progress(repo, 0, { label: `${repo} master` });
+  const staging = `${config.folders.temp}/${repo}_core`;
+  const stagingClaim = path.resolve(staging);
+  fs.rmSync(stagingClaim, { recursive: true, force: true });
+  _incomplete.add(stagingClaim);
+  let claim = stagingClaim;
+  let label = repo;
+  try {
+    await _exec(_cloneCommand(org, repo, 'master', `${repo}_core`), config.folders.temp);
+    const meta = JSON.parse(fs.readFileSync(`${staging}/library.json`, 'utf-8'));
+    label = `${meta.machineName}-${meta.majorVersion}.${meta.minorVersion}`;
+    const destination = path.resolve(`${config.folders.libraries}/${label}`);
+    /* The claim moves with the folder rather than being released and re-taken:
+    an interrupt between the two would leave whichever one is unclaimed behind. */
+    _incomplete.add(destination);
+    fs.renameSync(stagingClaim, destination);
+    _incomplete.delete(stagingClaim);
+    claim = destination;
+    ui.progress(repo, 60, { label: `${label} master` });
+    await _build(destination, repo);
+    _incomplete.delete(destination);
+  }
+  catch (error) {
+    ui.warn(`removing incomplete ${label}`);
+    _discard(stagingClaim);
+    if (claim !== stagingClaim) {
+      _discard(claim);
+    }
+    throw error;
+  }
+  finally {
+    ui.progressDone(repo);
+  }
+  return label;
+};
 
 const logic = {
   // imports content type from zip archive file in the .h5p format
@@ -189,10 +715,12 @@ const logic = {
     fs.cpSync(`content/${folder}`, `${target}/content`, { recursive: true });
     fs.renameSync(`${target}/content/h5p.json`, `${target}/h5p.json`);
     fs.rmSync(`${target}/content/sessions`, { recursive: true, force: true });
-    let libs = await logic.computeDependencies(library, 'view', null, libFolder);
-    const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
-    libs = {...libs, ...editLibs};
+    const libs = await logic.computeDependencies(library, 'edit', null, libFolder);
     for (let item in libs) {
+      if (!libs[item].id) {
+        // unregistered dependency: reported by `h5p missing`, nothing on disk to pack
+        continue;
+      }
       const folder = libraryDirs[libs[item].id];
       fs.cpSync(`${config.folders.libraries}/${folder}`, `${target}/${folder}`, { recursive: true });
     }
@@ -222,7 +750,9 @@ const logic = {
       list = JSON.parse(fs.readFileSync(config.registry, 'utf-8'));
     }
     else {
-      list = await getFile(config.urls.registry, true);
+      _registryMemo ??= getFile(config.urls.registry, true) as Promise<any>;
+      _registryMemo.catch(() => { _registryMemo = undefined; });
+      list = structuredClone(await _registryMemo);
     }
     const output = normalizeRegistry(list) as Registry;
     if (ignoreFile) {
@@ -237,24 +767,14 @@ const logic = {
   computeDependencies: (library: string, mode?: 'view' | 'edit', version?: string | null, folder?: string): Promise<DependencyMap> => {
     return _computeDependencies(library, mode ?? 'view', version, folder, new DefaultComputeDependenciesPort());
   },
-  // list tags for library using git
-  tags: (org: string, repo: string, mainBranch = 'master'): string[] => {
-    getRepoFile(fromTemplate(config.urls.library.clone, { org, repo }), 'library.json', mainBranch, true);
-    const label = `${repo}_${mainBranch}`;
-    const folder = `${config.folders.temp}/${label}`;
-    if (!fs.existsSync(folder)) {
-      logic.clone(org, repo, mainBranch, label);
-    }
-    execSync(`git checkout ${mainBranch}`, { cwd: folder, stdio: 'pipe' });
-    execSync(`git pull origin ${mainBranch}`, { cwd: folder, stdio: 'pipe' });
-    const tags = _execSync('git tag', folder).split('\n');
-    const output: string[] = [];
-    for (let item of tags) {
-      if (!item) {
-        continue;
-      }
-      output.push(item);
-    }
+  // list tags for library, straight off the remote
+  tags: (org: string, repo: string): string[] => {
+    const url = fromTemplate(config.urls.library.clone, { org, repo });
+    // --refs drops the ^{} peeled duplicates annotated tags would otherwise add
+    const output = _execSync(`git ls-remote --tags --refs ${url}`)
+      .split('\n')
+      .map(line => line.split('refs/tags/')[1]?.trim())
+      .filter((tag): tag is string => Boolean(tag));
     output.sort((a, b) => {
       const aParts = a.split('.');
       const bParts = b.split('.');
@@ -268,23 +788,87 @@ const logic = {
   },
   // download & unzip repository
   download: async (org: string, repo: string, version: string, target: string): Promise<void> => {
-    const blob = (await superAgent.get(fromTemplate(config.urls.library.zip, { org, repo, version })))._body;
-    const zipFile = `${config.folders.temp}/temp.zip`;
-    fs.writeFileSync(zipFile, blob);
-    new admZip(zipFile).extractAllTo(config.folders.libraries);
-    fs.rmSync(zipFile);
-    fs.renameSync(`${config.folders.libraries}/${repo}-master`, target);
+    const url = fromTemplate(config.urls.library.zip, { org, repo, ref: _archiveRef(version) });
+    let blob;
+    try {
+      blob = (await superAgent.get(url))._body;
+    }
+    catch (error) {
+      throw _downloadFailed(url, error);
+    }
+    const work = `${config.folders.temp}/dl_${repo}_${sanitizeRefForPath(version)}`;
+    const zipFile = `${work}.zip`;
+    fs.rmSync(work, { recursive: true, force: true });
+    fs.mkdirSync(work, { recursive: true });
+    try {
+      fs.writeFileSync(zipFile, blob);
+      new admZip(zipFile).extractAllTo(work);
+      fs.rmSync(zipFile, { force: true });
+      const [root] = fs.readdirSync(work);
+      fs.renameSync(`${work}/${root}`, target);
+    }
+    finally {
+      fs.rmSync(zipFile, { force: true });
+      fs.rmSync(work, { recursive: true, force: true });
+    }
   },
   // clone repository using git
   clone: (org: string, repo: string, branch: string, target: string): string => {
-    return execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, { cwd: config.folders.libraries }).toString();
+    return _execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, config.folders.libraries);
   },
-  /* clones/downloads dependencies to libraries folder using git and runs relevant npm commands
-  mode - 'view' or 'edit' to fetch non-editor or editor libraries
-  latest - if true master branch versions of libraries are used
-  toSkip - optional array of libraries to skip; after a library is parsed by the function it's auto-added to the array so it's skipped for efficiency */
-  getWithDependencies: async (action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip: string[] = []): Promise<string[]> => {
-    const list = await logic.computeDependencies(library, mode ?? 'view');
+  /**
+   * Fetches the repositories `h5p core` installs, all in one pool.
+   *
+   * None of them has a dependency graph worth resolving: the PHP core is not an H5P
+   * library at all, and h5p-math-display declares no preloadedDependencies, no
+   * editorDependencies and ships no semantics.json.
+   *
+   * @param items repositories to fetch; see CoreRepo for the two kinds
+   * @param latest if true an existing checkout is refreshed rather than skipped
+   * @param concurrency how many repositories to fetch at once
+   * @returns the folder names now under the libraries folder, in the order requested
+   */
+  installCore: async (items: CoreRepo[], latest?: boolean, concurrency?: number): Promise<string[]> => {
+    const folders: string[] = new Array(items.length);
+    const tasks = items.map((item, index) => async () => {
+      if (item.machineName) {
+        folders[index] = await _installLibraryRepo(item.org, item.repo, item.machineName, latest);
+        return;
+      }
+      const target = item.target!;
+      folders[index] = target;
+      await _install(
+        'clone',
+        item.org,
+        item.repo,
+        target,
+        'master',
+        'master',
+        `${config.folders.libraries}/${target}`,
+        { latest, build: false },
+      );
+    });
+    try {
+      await runPool(tasks, resolveConcurrency(concurrency));
+    }
+    catch (error) {
+      // siblings are still cloning or building; stop them so the CLI can exit
+      _killRunning();
+      throw error;
+    }
+    return folders;
+  },
+  /**
+   * Installs an already-resolved dependency map into the libraries folder
+   * @param action if dependencies should be installed with git or download
+   * @param list a DependencyMap, as returned by computeDependencies
+   * @param latest if true master branch versions of libraries are used
+   * @param toSkip optional array of libraries to skip; after a library is parsed by the function it's auto-added to the array so it's skipped for efficiency 
+   * @param concurrency how many workers to run the task of installing
+   * @returns 
+   */
+  installDependencies: async (action: 'clone' | 'download', list: DependencyMap, latest?: boolean, toSkip: string[] = [], concurrency?: number, rootRef?: RootRef): Promise<string[]> => {
+    const tasks: Array<() => Promise<void>> = [];
     for (let item in list) {
       if (toSkip.indexOf(item) != -1) {
         continue;
@@ -299,66 +883,40 @@ const logic = {
           throw new Error(`unregistered ${item} library`);
         }
       }
-      const label = `${list[item].id}-${list[item].version!.major}.${list[item].version!.minor}`;
-      const listVersion = `${list[item].version!.major}.${list[item].version!.minor}.${list[item].version!.patch}`;
-      const version = latest ? 'master' : listVersion;
+      const entry = list[item];
+      const label = `${entry.id}-${entry.version!.major}.${entry.version!.minor}`;
+      const listVersion = `${entry.version!.major}.${entry.version!.minor}.${entry.version!.patch}`;
+      const useRootRef = Boolean(rootRef && item === rootRef.library);
+      const version = useRootRef ? rootRef!.ref : (latest ? 'master' : listVersion);
       const folder = `${config.folders.libraries}/${label}`;
-      if (fs.existsSync(folder)) {
-        if (latest && !process.env.H5P_NO_UPDATES) {
-          ui.step(`~ updating to ${list[item].repoName} ${listVersion}`);
-          await _exec('git checkout master', folder);
-          await _exec('git pull origin', folder);
-        }
-        else {
-          ui.step(
-            `~ skipping updates for ${list[item].repoName} ${listVersion}`,
-          );
-        }
-        continue;
-      }
-      ui.step(`+ installing ${list[item].repoName} ${listVersion}`);
-      /* the percentages are milestones, not measurements: the zip archives
-      carry no content-length, so there is nothing real to divide by */
-      ui.progress(label, 0, { label: `${list[item].repoName} ${listVersion}` });
-      try {
-        if (action == 'download') {
-          await logic.download(list[item].org, list[item].repoName, version, folder);
-        }
-        else {
-          await _exec(
-            _cloneCommand(list[item].org, list[item].repoName, 'master', label),
-            config.folders.libraries,
-          );
-        }
-        ui.progress(label, 60);
-        const packageFile = `${folder}/package.json`;
-        if (!fs.existsSync(packageFile)) {
-          continue;
-        }
-        const info = JSON.parse(fs.readFileSync(packageFile, 'utf-8'));
-        if (!info?.scripts?.build) {
-          continue;
-        }
-        ui.debug('npm install --ignore-scripts');
-        await _exec('npm install --ignore-scripts', folder);
-        ui.progress(label, 85);
-        ui.debug('npm run build');
-        await _exec('npm run build', folder);
-        ui.progress(label, 100);
-        fs.rmSync(`${folder}/node_modules`, { recursive: true, force: true });
-      } finally {
-        // runs on the `continue`s above too, so no row is ever stranded
-        ui.progressDone(label);
-      }
+      tasks.push(() => _install(action, entry.org, entry.repoName, label, listVersion, version, folder, { latest, isRootRef: useRootRef }));
+    }
+    try {
+      await runPool(tasks, resolveConcurrency(concurrency));
+    }
+    catch (error) {
+      // siblings are still cloning or building; stop them so the CLI can exit
+      _killRunning();
+      throw error;
     }
     return toSkip;
   },
+  /* resolves a library's dependencies and installs them; kept as the public
+  one-shot entry point, now a thin pairing of the two halves above
+  mode - 'view' or 'edit' to fetch non-editor or editor libraries */
+  getWithDependencies: async (action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip: string[] = [], concurrency?: number): Promise<string[]> => {
+    const list = await logic.computeDependencies(library, mode ?? 'view');
+    return logic.installDependencies(action, list, latest, toSkip, concurrency);
+  },
   /* checks if dependencies are installed for a given library;
-  returns a report with boolean statuses; the overall status is reflected under the "ok" attribute;*/
-  verifySetup: async (library: string): Promise<VerifySetupResult> => {
+  returns a report with boolean statuses; the overall status is reflected under the "ok" attribute;
+  resolved - an already-computed edit graph for this library, to avoid resolving
+  it twice; the dev server checks setup on a page whose handler has just built
+  the very same graph */
+  verifySetup: async (library: string, resolved?: DependencyMap): Promise<VerifySetupResult> => {
     const registry = await logic.getRegistry();
     const libraryDirs = await logic.parseLibraryFolders();
-    const libFolder = libraryDirs[registry.regular[library].id];
+    const libFolder = libraryDirs[registry.regular[library]?.id];
     const output: VerifySetupResult = {
       registry: registry.regular[library] ? true : false,
       libraries: {},
@@ -367,8 +925,7 @@ const logic = {
     if (!output.registry) {
       output.ok = false;
     }
-    let list = await logic.computeDependencies(library, 'view', null, libFolder);
-    list = {...list, ...(await logic.computeDependencies(library, 'edit', null, libFolder))};
+    const list = resolved ?? await logic.computeDependencies(library, 'edit', null, libFolder);
     for (let item in list) {
       if (!list[item]?.id) {
         output.libraries[item] = {
@@ -397,9 +954,7 @@ const logic = {
     const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library].id];
     const target = `content/${folder}`;
-    let libs = await logic.computeDependencies(library, 'view', null, libFolder);
-    const editLibs = await logic.computeDependencies(library, 'edit', null, libFolder);
-    libs = {...libs, ...editLibs};
+    const libs = await logic.computeDependencies(library, 'edit', null, libFolder);
     const map: Record<string, boolean> = {};
     const preloadedDependencies: LibraryDependency[] = [];
     for (let item in libs) {
@@ -558,6 +1113,9 @@ const logic = {
     gitUrl: string,
   ): Record<string, LibraryEntry> {
     const { host, org, repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
+    // no raw fallback on this path, and the result is written into the
+    // registry, so a stale checkout here outlives the invocation
+    _refreshClone(repoName, 'master');
     const list = getRepoFile(gitUrl, 'library.json', 'master', true) as any;
     const shortName = machineToShort(list.machineName);
     const type = host.split('.')[0];
@@ -580,4 +1138,19 @@ const logic = {
   getFile,
   getFileList,
 };
+/* Exported for tests only. The guarantees _exec and _execSync carry - stdin
+closed, prompts disabled, a hard time budget, a group kill on abort - are the
+entire reason they exist, and no public entry point exercises them without a
+network round trip (tests/logic/exec.test.ts). The incomplete-install set and
+its sweep are reachable no other way either, because the sweep only ever runs
+from the exit hook (tests/logic/get-with-dependencies.test.ts). Nothing in src/
+imports any of them. */
+export {
+  _exec as execCommand,
+  _execSync as execCommandSync,
+  _killRunning as killRunning,
+  _incomplete as incompleteInstalls,
+  _discardIncomplete as discardIncompleteInstalls,
+};
+
 export default logic;
