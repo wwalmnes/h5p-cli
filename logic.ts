@@ -114,6 +114,10 @@ const _transport = new Map<string, Transport>();
 const _transportKey = (org: string, repoName: string): string =>
   `${path.resolve(config.folders.temp)}|${org}/${repoName}`;
 
+// Cache registry, but as a promise because often multiple fetches are done, so we want
+// to cache the promise so we only do one fetch.
+let _registryMemo: Promise<string | object> | undefined;
+
 const _metaUrl = (org: string, repoName: string, version: string, file: string): string =>
   fromTemplate(
     file === 'library.json' ? config.urls.library.list : config.urls.library.semantics,
@@ -746,7 +750,9 @@ const logic = {
       list = JSON.parse(fs.readFileSync(config.registry, 'utf-8'));
     }
     else {
-      list = await getFile(config.urls.registry, true);
+      _registryMemo ??= getFile(config.urls.registry, true) as Promise<any>;
+      _registryMemo.catch(() => { _registryMemo = undefined; });
+      list = structuredClone(await _registryMemo);
     }
     const output = normalizeRegistry(list) as Registry;
     if (ignoreFile) {
@@ -903,8 +909,11 @@ const logic = {
     return logic.installDependencies(action, list, latest, toSkip, concurrency);
   },
   /* checks if dependencies are installed for a given library;
-  returns a report with boolean statuses; the overall status is reflected under the "ok" attribute;*/
-  verifySetup: async (library: string): Promise<VerifySetupResult> => {
+  returns a report with boolean statuses; the overall status is reflected under the "ok" attribute;
+  resolved - an already-computed edit graph for this library, to avoid resolving
+  it twice; the dev server checks setup on a page whose handler has just built
+  the very same graph */
+  verifySetup: async (library: string, resolved?: DependencyMap): Promise<VerifySetupResult> => {
     const registry = await logic.getRegistry();
     const libraryDirs = await logic.parseLibraryFolders();
     const libFolder = libraryDirs[registry.regular[library]?.id];
@@ -916,7 +925,7 @@ const logic = {
     if (!output.registry) {
       output.ok = false;
     }
-    const list = await logic.computeDependencies(library, 'edit', null, libFolder);
+    const list = resolved ?? await logic.computeDependencies(library, 'edit', null, libFolder);
     for (let item in list) {
       if (!list[item]?.id) {
         output.libraries[item] = {
