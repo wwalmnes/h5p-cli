@@ -211,6 +211,15 @@ enforced instead of silently producing empty results.
   ref is now chosen per version and the archive root is read from disk. Each download also gets its own
   scratch directory rather than sharing one `temp/temp.zip`, which two downloads running at once would
   clobber.
+- **A library whose declared version was never tagged no longer aborts the install.** `h5p clone` and
+  `h5p install` fetch every library at the `major.minor.patch` its `library.json` declares, but H5P
+  largely stopped tagging releases — `h5p-accordion` declares 1.0.47 and its newest tag is 1.0.33 — so
+  the requested ref usually does not exist. Both commands failed on it, and `h5p install h5p-accordion`
+  reported only superagent's bare `Not Found`, naming neither the library nor the URL. A missing ref is
+  now reported and the library is fetched from `master` instead, over either transport: a failed clone
+  over git and a 404 on the archive URL over http are the same condition. A root library pinned to an
+  explicit branch is exempt, as that ref must exist. Download failures that are not a missing ref name
+  the URL and the status.
 - **`h5p setup` no longer disturbs a library you are working in.** It ran `git checkout master` and
   `git pull` over any installed library; git then refused to overwrite modified files and the failure
   aborted the whole setup. A library with uncommitted changes, or on a branch other than `master`, is now

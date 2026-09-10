@@ -433,6 +433,33 @@ describe('logic.getWithDependencies', () => {
     expect(download.mock.calls.some(args => args[1] === 'h5p-blanks')).toBe(false);
   });
 
+  /* The same missing tag the clone path falls back for, reported the other way:
+  over http there is no git ref to be missing, only a 404 on the archive url.
+  The download call sat outside the fallback, so `h5p install <library>` aborted
+  on any library whose declared patch was never tagged - most of them. */
+  it('falls back to master for a dep tag the archive host does not have', async () => {
+    const download = vi.spyOn(logic, 'download').mockImplementation(async (_org, _repo, version) => {
+      if (version !== 'master') {
+        throw Object.assign(new Error('cannot download … (404)'), { status: 404 });
+      }
+    });
+
+    await logic.installDependencies('download', DEP_MAP, false, [], 1);
+
+    expect(download).toHaveBeenCalledWith('h5p', 'h5p-joubel-ui', 'master', 'libraries/H5P.JoubelUI-3.3');
+    expect(download).toHaveBeenCalledWith('h5p', 'h5p-blanks', 'master', 'libraries/H5P.Blanks-1.14');
+    expect(stderr).toContain('h5p-joubel-ui 3.3.0 not found, falling back to master');
+  });
+
+  it('does not fall back to master when the download fails for any other reason', async () => {
+    vi.spyOn(logic, 'download').mockRejectedValue(
+      Object.assign(new Error('cannot download … (500)'), { status: 500 }),
+    );
+
+    await expect(logic.installDependencies('download', DEP_MAP, false, [], 1))
+      .rejects.toThrow('(500)');
+  });
+
   /* fs.existsSync(folder) is the whole already-installed test in _install, so a
   folder a failed install left behind is reported as installed for good: a
   pinned run prints `~ skipping updates` and a latest run pulls, finds HEAD

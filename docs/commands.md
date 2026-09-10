@@ -275,6 +275,10 @@ h5p clone <library> <mode>
 | `library` | Yes | Library machine name. |
 | `mode` | Yes | `view` or `edit`. |
 
+Every library is fetched at the `major.minor.patch` its `library.json` declares. Where that version
+was never tagged, it is fetched from `master` instead and the fallback is reported:
+`h5p-accordion 1.0.47 not found, falling back to master`.
+
 ---
 
 ## `h5p install`
@@ -289,6 +293,9 @@ h5p install <library> <mode>
 |----------|----------|-------------|
 | `library` | Yes | Library machine name. |
 | `mode` | Yes | `view` or `edit`. |
+
+Versions are pinned and fall back to `master` exactly as in `h5p clone` above — an untagged version
+is a 404 on the archive URL rather than a missing git ref, and is treated the same way.
 
 ---
 

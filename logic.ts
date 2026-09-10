@@ -264,8 +264,26 @@ const _failed = (command: string, stderr: string): Error => {
   return new Error(`Command failed: ${command}${detail ? `\n${detail}` : ''}`);
 };
 
+/* superagent's own message for a 404 is the bare "Not Found", with no clue which
+repository or ref was asked for. Keep its status on the error so the caller can
+still tell a missing ref from a genuine failure. */
+const _downloadFailed = (url: string, error: unknown): Error => {
+  const status = (error as { status?: number })?.status;
+  const reason = status ?? (error instanceof Error ? error.message : String(error));
+  const failure = new Error(`cannot download ${url} (${reason})`);
+  (failure as { status?: number }).status = status;
+  return failure;
+};
+
 const _isMissingGitRef = (error: unknown): boolean =>
   error instanceof Error && /Remote branch .+ not found|couldn't find remote ref/i.test(error.message);
+
+const _isMissingArchive = (error: unknown): boolean =>
+  (error as { status?: number })?.status === 404;
+
+// A ref the remote does not have, whichever transport reported it.
+const _isMissingRef = (error: unknown): boolean =>
+  _isMissingGitRef(error) || _isMissingArchive(error);
 
 /* Any prompt inside a subprocess is a permanent hang, not a question: ssh and
 git write theirs to /dev/tty, which the live progress area repaints over twelve
@@ -562,24 +580,26 @@ const _install = async (
   try {
     // download cannot produce a git checkout, and the whole point of a root ref
     // is having the repo to work in — clone it even when download is requested
-    if (action === 'download' && !isRootRef) {
-      await logic.download(org, repoName, version, folder);
+    const fetchAt = (ref: string): Promise<unknown> =>
+      action === 'download' && !isRootRef
+        ? logic.download(org, repoName, ref, folder)
+        : _exec(_cloneCommand(org, repoName, ref, label), config.folders.libraries);
+    try {
+      await fetchAt(version);
     }
-    else {
-      try {
-        await _exec(_cloneCommand(org, repoName, version, label), config.folders.libraries);
+    catch (error) {
+      /* The root ref must exist. Deps may name a patch that was never tagged -
+      H5P largely stopped tagging releases, so most of them do. Both transports
+      hit this: a missing tag is a failed clone over git and a 404 on the
+      archive URL over http. */
+      if (isRootRef || version === 'master' || !_isMissingRef(error)) {
+        throw error;
       }
-      catch (error) {
-        // The root git ref must exist. Deps may name a patch that was never tagged.
-        if (isRootRef || version === 'master' || !_isMissingGitRef(error)) {
-          throw error;
-        }
-        ui.warn(`${repoName} ${version} not found, falling back to master`);
-        if (fs.existsSync(folder)) {
-          fs.rmSync(folder, { recursive: true, force: true });
-        }
-        await _exec(_cloneCommand(org, repoName, 'master', label), config.folders.libraries);
+      ui.warn(`${repoName} ${version} not found, falling back to master`);
+      if (fs.existsSync(folder)) {
+        fs.rmSync(folder, { recursive: true, force: true });
       }
+      await fetchAt('master');
     }
     ui.progress(label, 60);
     if (build) {
@@ -762,7 +782,14 @@ const logic = {
   },
   // download & unzip repository
   download: async (org: string, repo: string, version: string, target: string): Promise<void> => {
-    const blob = (await superAgent.get(fromTemplate(config.urls.library.zip, { org, repo, ref: _archiveRef(version) })))._body;
+    const url = fromTemplate(config.urls.library.zip, { org, repo, ref: _archiveRef(version) });
+    let blob;
+    try {
+      blob = (await superAgent.get(url))._body;
+    }
+    catch (error) {
+      throw _downloadFailed(url, error);
+    }
     const work = `${config.folders.temp}/dl_${repo}_${sanitizeRefForPath(version)}`;
     const zipFile = `${work}.zip`;
     fs.rmSync(work, { recursive: true, force: true });

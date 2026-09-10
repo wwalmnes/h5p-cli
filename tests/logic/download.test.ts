@@ -94,4 +94,27 @@ describe('logic.download', () => {
     expect(vi.mocked(superAgent.get)).toHaveBeenCalledWith(
       'https://github.com/h5p/h5p-blanks/archive/refs/heads/master.zip');
   });
+
+  /* superagent's own message is the bare "Not Found", which told the user
+  nothing about which library or ref was missing. */
+  it('names the url and the status when the archive is not there', async () => {
+    vi.mocked(superAgent.get).mockImplementation(() =>
+      Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })) as any
+    );
+
+    await expect(logic.download('h5p', 'h5p-blanks', '1.14.37', 'libraries/H5P.Blanks-1.14'))
+      .rejects.toThrow('cannot download https://github.com/h5p/h5p-blanks/archive/refs/tags/1.14.37.zip (404)');
+  });
+
+  it('leaves nothing behind when the archive is not there', async () => {
+    vi.mocked(superAgent.get).mockImplementation(() =>
+      Promise.reject(Object.assign(new Error('Not Found'), { status: 404 })) as any
+    );
+
+    await expect(logic.download('h5p', 'h5p-blanks', '1.14.37', 'libraries/H5P.Blanks-1.14'))
+      .rejects.toThrow();
+
+    expect(fs.readdirSync('libraries')).toEqual([]);
+    expect(fs.readdirSync('temp').filter(e => e.startsWith('dl_'))).toEqual([]);
+  });
 });

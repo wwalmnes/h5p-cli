@@ -53,6 +53,8 @@ Use `view` or `edit` for `<mode>`.
 • `h5p install <library> <mode>` downloads the library and its dependencies in the libraries folder.  
 Use `view` or `edit` for `<mode>`.  
 
+Both commands fetch each library at the version its `library.json` declares. A version that was never tagged is fetched from `master` instead, and the fallback is reported.  
+
 • `h5p setup <library|repoUrl> [ref] [download]` sets up a library and its dependencies.  
 `[ref]` is an optional git tag or branch for the library. Dependency versions are read from that ref's `library.json`; only the library itself is cloned at `[ref]` — its dependencies install at their normal versions from that tree.  
 For example, `h5p setup h5p-accordion 1.0.0` installs from tag "1.0.0", and `h5p setup h5p-accordion feat/example` installs from branch "feat/example".  
