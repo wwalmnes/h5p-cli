@@ -137,8 +137,8 @@ describe('logic.getWithDependencies', () => {
     const folder = 'libraries/H5P.Blanks-1.14';
 
     beforeEach(() => {
-      fs.mkdirSync('libraries/H5P.JoubelUI-3.3', { recursive: true });
-      fs.mkdirSync(folder, { recursive: true });
+      fs.mkdirSync('libraries/H5P.JoubelUI-3.3/.git', { recursive: true });
+      fs.mkdirSync(`${folder}/.git`, { recursive: true });
       // clean, on master, and pulling moves nothing unless a test says so
       gitOutput['git status --porcelain'] = '';
       gitOutput['git rev-parse --abbrev-ref HEAD'] = 'master\n';
@@ -177,6 +177,19 @@ describe('logic.getWithDependencies', () => {
 
       expect(ran()).not.toContain('git pull origin');
       expect(stderr).toContain('uncommitted changes');
+    });
+
+    /* h5p install downloads an archive, so its folders have no .git. Running git
+    in one failed the whole setup and took every in-flight sibling down with it. */
+    it('leaves a library that is not a git checkout alone', async () => {
+      fs.rmSync(`${folder}/.git`, { recursive: true, force: true });
+
+      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+
+      // only H5P.JoubelUI, which is still a checkout, is inspected and pulled
+      expect(ran().filter(cmd => cmd === 'git status --porcelain')).toHaveLength(1);
+      expect(ran().filter(cmd => cmd === 'git pull origin')).toHaveLength(1);
+      expect(stderr).toContain('not a git checkout');
     });
 
     it('leaves a library checked out on another branch alone', async () => {
@@ -529,8 +542,8 @@ describe('logic.getWithDependencies', () => {
     /* the folder may be somebody's working copy, or a library another one
     depends on; only a folder this install created is ever removed */
     it('never removes a folder that was already on disk', async () => {
-      fs.mkdirSync(blanks, { recursive: true });
-      fs.mkdirSync(joubel, { recursive: true });
+      fs.mkdirSync(`${blanks}/.git`, { recursive: true });
+      fs.mkdirSync(`${joubel}/.git`, { recursive: true });
       fs.writeFileSync(`${blanks}/mine.txt`, 'do not delete');
       fs.writeFileSync(`${blanks}/package.json`, JSON.stringify({ scripts: { build: 'rollup -c' } }));
       // clean master whose pull moves HEAD, so _update rebuilds - and that build fails

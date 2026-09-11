@@ -123,7 +123,7 @@ describe('logic.installCore', () => {
 
     beforeEach(() => {
       for (const item of CORE) {
-        fs.mkdirSync(`libraries/${item.target}`, { recursive: true });
+        fs.mkdirSync(`libraries/${item.target}/.git`, { recursive: true });
       }
       gitOutput['git status --porcelain'] = '';
       gitOutput['git rev-parse --abbrev-ref HEAD'] = 'master\n';

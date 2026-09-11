@@ -517,6 +517,12 @@ const _build = async (folder: string, label: string): Promise<void> => {
 fields this path and _install below ever read, and h5p core installs repos that
 have no registry entry to hand one from. */
 const _update = async (repoName: string, label: string, listVersion: string, folder: string, build = true): Promise<void> => {
+  // A folder may have been installed with download and not git. Skip update.
+  // @todo: Should we convert it to git? Not what user expects. What if there are changes in the folder?
+  if (!fs.existsSync(`${folder}/.git`)) {
+    ui.warn(`skipping update for ${repoName}: ${folder} is not a git checkout`);
+    return;
+  }
   const dirty = (await _exec('git status --porcelain', folder)).trim();
   if (dirty) {
     ui.warn(`skipping update for ${repoName}: uncommitted changes in ${folder}`);
