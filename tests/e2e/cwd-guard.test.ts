@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { spawnSync } from 'child_process';
+import * as path from 'path';
 import { createEmptyProject, createSeededProject, type Fixture } from '../helpers/fixture.ts';
 
 // `utils list` is exempt from the guard, so it must reach its adapter. Stub the network.
@@ -64,5 +66,39 @@ describe('working directory guard — end-to-end', () => {
 
     await expect(utilsCommand().parseAsync(['node', 'h5p', 'list'])).resolves.toBeDefined();
     expect(stderr).not.toContain('No git repositories found');
+  });
+});
+
+// `src/index.ts` parses argv at import time, so the top-level guard is exercised through the real binary.
+const H5P = path.resolve(import.meta.dirname, '../../h5p.js');
+
+function h5p(cwd: string, args: string[]) {
+  return spawnSync(process.execPath, [H5P, ...args], { cwd, encoding: 'utf-8' });
+}
+
+describe('top-level guard — help from outside a workspace', () => {
+  let fixture: Fixture;
+
+  beforeEach(() => {
+    fixture = createEmptyProject();
+  });
+
+  afterEach(() => {
+    fixture.cleanup();
+  });
+
+  it.each(['setup --help', 'setup -h', '--verbose setup --help'])('shows help for "h5p %s"', (args) => {
+    const result = h5p(fixture.dir, args.split(' '));
+
+    expect(result.stderr).not.toContain('No "libraries" folder');
+    expect(result.stdout).toContain('Usage: h5p setup');
+    expect(result.status).toBe(0);
+  });
+
+  it('still stops "setup" itself', () => {
+    const result = h5p(fixture.dir, ['setup', 'h5p-foo']);
+
+    expect(result.stderr).toContain('No "libraries" folder here');
+    expect(result.status).toBe(1);
   });
 });

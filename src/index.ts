@@ -63,11 +63,15 @@ await loadPlugins(program);
 
 // Top-level commands resolve libraries as `libraries/<name>`, so they must run from the
 // workspace root. `core` bootstraps that layout, `plugin` acts on the installed CLI, and
-// `utils`/`git` follow the opposite convention (see src/lib/workspace.ts).
-const subcommandName = process.argv[2];
-const cwdExempt = ['utils', 'git', 'help', '--help', '-h', '--version', '-V', 'plugin', 'core'];
-if (subcommandName && !cwdExempt.includes(subcommandName)) {
-  enforce(requireWorkspaceRoot);
-}
+// `utils`/`git` follow the opposite convention (see src/lib/workspace.ts). A preAction hook,
+// not a pre-parse check, so `--help` — which Commander answers before any action — works anywhere.
+const cwdExempt = ['utils', 'git', 'plugin', 'core'];
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  let topLevel = actionCommand;
+  while (topLevel.parent && topLevel.parent !== program) topLevel = topLevel.parent;
+  if (!cwdExempt.includes(topLevel.name())) {
+    enforce(requireWorkspaceRoot);
+  }
+});
 
 program.parse(process.argv);
