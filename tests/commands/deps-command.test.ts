@@ -50,4 +50,12 @@ describe('depsCommand', () => {
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: fail');
   });
+
+  it('rejects an invalid mode without calling the service', async () => {
+    const mockSvc = { deps: vi.fn() } as any;
+    await depsCommand(mockSvc).parseAsync(['node', 'h5p', 'h5p-blanks', 'invalid']);
+    expect(mockSvc.deps).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
 });

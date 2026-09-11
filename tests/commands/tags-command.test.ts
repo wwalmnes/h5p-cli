@@ -9,10 +9,15 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('tagsCommand', () => {
+  let stdout: string;
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stdout = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += chunk;
+      return true;
+    });
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stderr = '';
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
@@ -42,5 +47,11 @@ describe('tagsCommand', () => {
     const cmd = tagsCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
     expect(stderr).toContain('> error: tags failed');
+  });
+
+  it('writes each tag to stdout on its own line', async () => {
+    const mockAdapter = { tags: vi.fn().mockReturnValue(['1.0.0', '1.1.0', '2.0.0']) } as any;
+    await tagsCommand(mockAdapter).parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks', 'master']);
+    expect(stdout).toBe('1.0.0\n1.1.0\n2.0.0\n');
   });
 });

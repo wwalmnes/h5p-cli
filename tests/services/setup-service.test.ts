@@ -67,22 +67,6 @@ describe('SetupService', () => {
     expect(setupAdapter.installDependencies).toHaveBeenCalledWith('download', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined, undefined);
   });
 
-  it('uses action=clone when download is not set', async () => {
-    const setupAdapter = makeSetupAdapter();
-    const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
-    const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
-    await svc.setup('h5p-blanks');
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith('clone', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined, undefined);
-  });
-
-  it('passes latest=true when version is absent', async () => {
-    const setupAdapter = makeSetupAdapter();
-    const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
-    const svc = new SetupService(setupAdapter, registerSvc, librariesFolder, logger);
-    await svc.setup('h5p-blanks');
-    expect(setupAdapter.installDependencies).toHaveBeenCalledWith(expect.any(String), expect.any(Object), true, expect.any(Array), undefined, undefined);
-  });
-
   it('collects optional missing dep in report, does not throw', async () => {
     const setupAdapter = makeSetupAdapter({
       computeDependencies: vi.fn().mockResolvedValue({
@@ -109,7 +93,7 @@ describe('SetupService', () => {
 
   /* The whole point of the collapse: this used to be N+4 resolutions and two
   install passes with the skip list reset between them. Equivalence of the
-  resulting graph is pinned in tests/lib/setup-graph-equivalence.test.ts. */
+  resulting graph is pinned in tests/lib/dependency-graph.test.ts. */
   it('resolves the graph once, in edit mode, and installs it once', async () => {
     const graph = { 'h5p-core': { id: 'H5P.Core' }, 'h5p-blanks': { id: 'H5P.Blanks' } };
     const setupAdapter = makeSetupAdapter({

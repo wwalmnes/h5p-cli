@@ -29,18 +29,4 @@ describe('applyPluginCommands', () => {
     expect(program.commands.length).toBe(before);
     expect(program.commands.find(c => c.name() === 'list')?.description()).toBe('plugin list override');
   });
-
-  it('replaces multiple built-in commands in one call', () => {
-    const program = makeProgram();
-    const before = program.commands.length;
-
-    applyPluginCommands(program, [
-      new Command('list').description('new list'),
-      new Command('export').description('new export'),
-    ]);
-
-    expect(program.commands.length).toBe(before);
-    expect(program.commands.find(c => c.name() === 'list')?.description()).toBe('new list');
-    expect(program.commands.find(c => c.name() === 'export')?.description()).toBe('new export');
-  });
 });

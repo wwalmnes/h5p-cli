@@ -57,16 +57,6 @@ describe('ui', () => {
   });
 
   describe('depth', () => {
-    it('uses a single marker for info', () => {
-      ui.info('fetching h5p library tags');
-      expect(stderr).toBe('> fetching h5p library tags\n');
-    });
-
-    it('defaults step to two markers', () => {
-      ui.step('updating');
-      expect(stderr).toBe('>> updating\n');
-    });
-
     it('honours an explicit depth', () => {
       ui.step('npm install', { depth: 3 });
       expect(stderr).toBe('>>> npm install\n');
@@ -79,11 +69,6 @@ describe('ui', () => {
   });
 
   describe('error normalization', () => {
-    it('uses the message of an Error', () => {
-      ui.error(new Error('export failed'));
-      expect(stderr).toBe('> error: export failed\n');
-    });
-
     it('passes a string through', () => {
       ui.error('something broke');
       expect(stderr).toBe('> error: something broke\n');

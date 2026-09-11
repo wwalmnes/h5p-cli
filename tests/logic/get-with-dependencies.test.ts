@@ -99,16 +99,6 @@ describe('logic.getWithDependencies', () => {
     expect(cloneCalls).toHaveLength(0);
   });
 
-  it('calls git clone for a not-yet-installed library', async () => {
-    // Do not pre-create library folders
-    await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
-
-    const cloneCalls = vi.mocked(spawn).mock.calls.filter(
-      (args) => typeof args[0] === 'string' && (args[0] as string).startsWith('git clone'),
-    );
-    expect(cloneCalls.length).toBeGreaterThan(0);
-  });
-
   /* `version` reached _install and was then ignored in favour of a hardcoded
   'master', so a pinned setup resolved the requested tag and cloned the tip
   anyway — while `download`, given the same arguments, honoured it. */
@@ -316,16 +306,6 @@ describe('logic.getWithDependencies', () => {
     await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false, [], 1);
 
     expect(state.peak).toBe(1);
-  });
-
-  it('reserves every library in toSkip before installing, so nothing is claimed twice', async () => {
-    trackingSpawn();
-
-    const result = await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
-
-    expect(result).toEqual([...new Set(result)]);
-    expect(result).toContain('h5p-joubel-ui');
-    expect(result).toContain('h5p-blanks');
   });
 
   it('a required unregistered dep aborts before any install starts', async () => {

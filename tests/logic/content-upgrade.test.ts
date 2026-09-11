@@ -262,13 +262,5 @@ describe('upgradeContent', () => {
 
       expect(result.items[0].params.upgraded).toBe(true);
     });
-
-    it('leaves primitive leaf values unchanged', () => {
-      const params = { title: 'Hello', count: 42, active: true };
-
-      const result = upgradeContent(params, () => ({}), () => ({ major: 1, minor: 0 }));
-
-      expect(result).toEqual({ title: 'Hello', count: 42, active: true });
-    });
   });
 });

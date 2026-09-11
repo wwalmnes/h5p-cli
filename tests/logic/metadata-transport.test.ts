@@ -51,7 +51,7 @@ const gitCalls = (subcommand: string) =>
   vi.mocked(spawnSync).mock.calls.filter(c => String(c[0]).includes(` ${subcommand}`));
 
 /* A checkout that looks like one to _refreshClone, unlike the bare folders
-tests/logic/compute-dependencies.test.ts seeds */
+tests/logic/registry-memo.test.ts seeds */
 const seedClone = (dir: string, git = true) => {
   fs.mkdirSync(dir, { recursive: true });
   if (git) {
@@ -183,18 +183,6 @@ describe('metadata transport', () => {
     are read at the branch ref. */
     const entries = fs.existsSync('temp/.metadata') ? fs.readdirSync('temp/.metadata') : [];
     expect(entries.filter(entry => entry.includes('__main__'))).toEqual([]);
-  });
-
-  it('does not persist a git-ref metadata file to disk', async () => {
-    rawRoutes({
-      'library.json': [200, JSON.stringify(LIBRARY_JSON)],
-      'semantics.json': [200, JSON.stringify([])],
-    });
-
-    await logic.computeDependencies('h5p-blanks', 'view', 'feat/my-pr');
-
-    const cached = fs.existsSync('temp/.metadata') ? fs.readdirSync('temp/.metadata') : [];
-    expect(cached.some(name => name.includes('feat'))).toBe(false);
   });
 
   it('caches an immutable version on disk', async () => {

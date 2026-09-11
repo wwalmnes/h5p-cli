@@ -9,10 +9,15 @@ vi.mock('../../logic', () => ({
 }));
 
 describe('verifyCommand', () => {
+  let stdout: string;
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    stdout = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += chunk;
+      return true;
+    });
     vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stderr = '';
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
@@ -42,5 +47,12 @@ describe('verifyCommand', () => {
     const cmd = verifyCommand(mockAdapter);
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: fail');
+  });
+
+  it('writes the verification result to stdout as JSON', async () => {
+    const result = { ok: true, libraries: { 'H5P.Blanks': { present: true } } };
+    const mockAdapter = { verifySetup: vi.fn().mockResolvedValue(result) } as any;
+    await verifyCommand(mockAdapter).parseAsync(['node', 'h5p', 'h5p-blanks']);
+    expect(JSON.parse(stdout)).toEqual(result);
   });
 });

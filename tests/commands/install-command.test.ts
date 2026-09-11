@@ -50,4 +50,12 @@ describe('installCommand', () => {
     await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: install failed');
   });
+
+  it('rejects an invalid mode without calling the adapter', async () => {
+    const mockAdapter = { getWithDependencies: vi.fn() } as any;
+    await installCommand(mockAdapter).parseAsync(['node', 'h5p', 'h5p-blanks', 'invalid']);
+    expect(mockAdapter.getWithDependencies).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+  });
 });

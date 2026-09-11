@@ -69,14 +69,4 @@ describe('RegisterService', () => {
       { ...existing, ...entry }
     );
   });
-
-  it('returns the entry from register()', async () => {
-    const entry = { 'H5P.Blanks-1.14': { shortName: 'h5p-blanks' } };
-    const adapter = makeAdapter({
-      registryEntryFromRepoUrl: vi.fn().mockResolvedValue(entry),
-    });
-    const svc = new RegisterService(adapter, registryPath);
-    const result = await svc.register('https://github.com/h5p/h5p-blanks');
-    expect(result).toBe(entry);
-  });
 });

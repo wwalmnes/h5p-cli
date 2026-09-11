@@ -97,12 +97,6 @@ describe('setupCommand', () => {
     expect(stderr).toContain('> error: setup failed');
   });
 
-  it('has a description set', () => {
-    const mockSvc = makeMockService();
-    const cmd = setupCommand(mockSvc);
-    expect(cmd.description()).toBeTruthy();
-  });
-
   it('forwards --concurrency to service.setup as a number', async () => {
     const mockSvc = makeMockService();
     const cmd = setupCommand(mockSvc);

@@ -30,7 +30,7 @@ describe('MissingService', () => {
 
   /* The whole graph is resolved once. It used to take the view graph, an edit
   graph rooted at every registered library in it, and then the root's edit
-  graph - see missing-graph-equivalence.test.ts for why one pass covers them. */
+  graph - see dependency-graph.test.ts for why one pass covers them. */
   it('resolves the graph exactly once, in edit mode, from the local folder', async () => {
     const adapter = makeAdapter();
     const svc = new MissingService(adapter, logger);
