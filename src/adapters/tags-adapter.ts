@@ -1,7 +1,7 @@
 import logic from '../../logic.ts';
 
 export interface ITagsAdapter {
-  tags(org: string, library: string, mainBranch: string): any;
+  tags(org: string, library: string): any;
 }
 
 export class TagsAdapter implements ITagsAdapter {
