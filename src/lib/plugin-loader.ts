@@ -9,9 +9,10 @@ import { ui } from './ui.ts';
 
 const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
-export async function loadPlugins(program: Command): Promise<void> {
+/** Load every installed plugin and return the commands they added to `program`. */
+export async function loadPlugins(program: Command): Promise<Command[]> {
   const filePath = path.join(H5P_CLI_ROOT, 'h5p.plugins.json');
-  if (!fs.existsSync(filePath)) return;
+  if (!fs.existsSync(filePath)) return [];
 
   let config: Partial<PluginsConfig>;
   try {
@@ -19,20 +20,22 @@ export async function loadPlugins(program: Command): Promise<void> {
   } catch (e) {
     ui.warn(`[h5p] Failed to parse h5p.plugins.json`);
     ui.error(e);
-    return;
+    return [];
   }
 
-  if (!Array.isArray(config.plugins)) return;
+  if (!Array.isArray(config.plugins)) return [];
 
+  const commands: Command[] = [];
   for (const entry of config.plugins) {
     try {
       const pluginPackage = JSON.parse(fs.readFileSync(path.resolve(entry.path, 'package.json'), 'utf-8'));
-      await loadPlugin(path.resolve(entry.path, pluginPackage.main), program);
+      commands.push(...await loadPlugin(path.resolve(entry.path, pluginPackage.main), program));
     } catch (e) {
       ui.warn(`[h5p] Failed to read package.json from plugin`);
       ui.error(e);
     }
   }
+  return commands;
 }
 
 export function applyPluginCommands(program: Command, commands: Command[]): void {
@@ -45,7 +48,7 @@ export function applyPluginCommands(program: Command, commands: Command[]): void
   }
 }
 
-async function loadPlugin(ref: string, program: Command): Promise<void> {
+async function loadPlugin(ref: string, program: Command): Promise<Command[]> {
   let plugin: H5PPlugin;
   try {
     // all stored refs are absolute paths
@@ -54,12 +57,12 @@ async function loadPlugin(ref: string, program: Command): Promise<void> {
   } catch (e) {
     ui.warn(`[h5p] Failed to load plugin "${ref}"`);
     ui.error(e);
-    return;
+    return [];
   }
 
   if (!plugin || typeof plugin !== 'object' || !plugin.name) {
     ui.warn(`[h5p] Plugin "${ref}" does not export a valid H5PPlugin object`);
-    return;
+    return [];
   }
 
   if (typeof plugin.adapters === 'function') {
@@ -73,10 +76,14 @@ async function loadPlugin(ref: string, program: Command): Promise<void> {
 
   if (typeof plugin.commands === 'function') {
     try {
-      applyPluginCommands(program, plugin.commands());
+      const commands = plugin.commands();
+      applyPluginCommands(program, commands);
+      return commands;
     } catch (e) {
       ui.warn(`[h5p] Plugin "${plugin.name}" commands() threw`);
       ui.error(e);
     }
   }
+
+  return [];
 }

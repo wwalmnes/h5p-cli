@@ -1,4 +1,5 @@
 import fs from 'fs';
+import type { Command } from 'commander';
 import config from '../../configLoader.ts';
 import { ui } from './ui.ts';
 import { findReposSync } from './process-repos.ts';
@@ -71,4 +72,26 @@ export function enforce(guard: () => void): void {
     ui.error(error);
     process.exit(1);
   }
+}
+
+/**
+ * Hold every top-level command of `program` to `requireWorkspaceRoot`, since they resolve
+ * libraries as `libraries/<name>`. `exemptNames` covers the built-ins that do not: `core`
+ * bootstraps the layout, `plugin` acts on the installed CLI, and `utils`/`git` follow the
+ * opposite convention. `exemptCommands` holds the commands plugins added — plugins own their
+ * working-directory requirements. They are matched by identity rather than name, so a plugin
+ * that replaces a built-in is exempt while the built-in itself stays guarded.
+ *
+ * A preAction hook, not a pre-parse check, so `--help` works anywhere.
+ */
+export function guardTopLevelCommands(program: Command, exemptNames: string[], exemptCommands: Command[]): void {
+  program.hook('preAction', (_thisCommand, actionCommand) => {
+    let topLevel = actionCommand;
+
+    while (topLevel.parent && topLevel.parent !== program) topLevel = topLevel.parent;
+
+    if (!exemptNames.includes(topLevel.name()) && !exemptCommands.includes(topLevel)) {
+      enforce(requireWorkspaceRoot);
+    }
+  });
 }

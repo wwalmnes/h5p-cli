@@ -98,6 +98,8 @@ commands() {
 }
 ```
 
+Built-in top-level commands must run from the workspace root (the folder holding `libraries/`, `content/` and `temp/`). Plugin commands, including ones that replace a built-in, are exempt: the CLI does not check the working directory for them. A plugin that needs the workspace layout must check for it itself.
+
 ## Output and progress
 
 Plugins should print through `h5p-cli/ui` rather than `console.log`. It gives every plugin the same look as the built-in commands, and it is the only way your output participates in `--quiet` / `--verbose` and the live progress area.

@@ -28,8 +28,8 @@ enforced instead of silently producing empty results.
 - **Working directory is enforced.** Top-level commands (`export`, `install`, `setup`, `deps`, …) must
   run from the workspace root — the folder holding `libraries/`, `content/` and `temp/`. `h5p git` and
   `h5p utils` run from *inside* `libraries/`. Both groups previously read bare relative paths, so a wrong
-  directory produced an empty result; now it stops with a message telling you where to go. `h5p core`
-  and `h5p plugin` work from anywhere.
+  directory produced an empty result; now it stops with a message telling you where to go. `h5p core`,
+  `h5p plugin` and commands added by plugins work from anywhere.
 - **Failing commands exit non-zero.** A command that reported an error still exited 0 before, so
   `h5p install X && next` ran `next` after a failed install. Failures now set exit code 1.
 - **`h5p utils list-deps` and `h5p utils recursive-minor-bump` were removed**, replaced by

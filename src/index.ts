@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { Command } from 'commander';
-import { enforce, requireWorkspaceRoot } from './lib/workspace.ts';
+import { guardTopLevelCommands } from './lib/workspace.ts';
 import { loadPlugins } from './lib/plugin-loader.ts';
 import { ui } from './lib/ui.ts';
 import { exportCommand } from './commands/export.ts';
@@ -59,19 +59,9 @@ program.addCommand(pluginCommand());
 program.addCommand(gitCommand());
 program.addCommand(utilsCommand());
 
-await loadPlugins(program);
+const pluginCommands = await loadPlugins(program);
 
-// Top-level commands resolve libraries as `libraries/<name>`, so they must run from the
-// workspace root. `core` bootstraps that layout, `plugin` acts on the installed CLI, and
-// `utils`/`git` follow the opposite convention (see src/lib/workspace.ts). A preAction hook,
-// not a pre-parse check, so `--help` — which Commander answers before any action — works anywhere.
-const cwdExempt = ['utils', 'git', 'plugin', 'core'];
-program.hook('preAction', (_thisCommand, actionCommand) => {
-  let topLevel = actionCommand;
-  while (topLevel.parent && topLevel.parent !== program) topLevel = topLevel.parent;
-  if (!cwdExempt.includes(topLevel.name())) {
-    enforce(requireWorkspaceRoot);
-  }
-});
+// Top-level commands must run from the workspace root; see guardTopLevelCommands.
+guardTopLevelCommands(program, ['utils', 'git', 'plugin', 'core'], pluginCommands);
 
 program.parse(process.argv);

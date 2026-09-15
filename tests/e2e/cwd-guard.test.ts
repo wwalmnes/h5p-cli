@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { spawnSync } from 'child_process';
 import * as path from 'path';
+import { Command } from 'commander';
 import { createEmptyProject, createSeededProject, type Fixture } from '../helpers/fixture.ts';
+import { guardTopLevelCommands } from '../../src/lib/workspace.ts';
+import { applyPluginCommands } from '../../src/lib/plugin-loader.ts';
 
 // `utils list` is exempt from the guard, so it must reach its adapter. Stub the network.
 vi.mock('../../src/adapters/repo-discovery-adapter.ts', () => ({
@@ -66,6 +69,62 @@ describe('working directory guard — end-to-end', () => {
 
     await expect(utilsCommand().parseAsync(['node', 'h5p', 'list'])).resolves.toBeDefined();
     expect(stderr).not.toContain('No git repositories found');
+  });
+});
+
+describe('top-level guard — plugin commands', () => {
+  let fixture: Fixture;
+  let originalCwd: string;
+  let stderr: string;
+
+  // Mirrors src/index.ts: built-ins first, plugin commands applied over them, then the guard.
+  function program(pluginCommands: Command[]): Command {
+    const h5p = new Command('h5p');
+    h5p.addCommand(new Command('setup').action(() => {}));
+    applyPluginCommands(h5p, pluginCommands);
+    guardTopLevelCommands(h5p, ['core'], pluginCommands);
+    return h5p;
+  }
+
+  beforeEach(() => {
+    originalCwd = process.cwd();
+    stderr = '';
+    vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
+      stderr += chunk;
+      return true;
+    });
+    vi.spyOn(process, 'exit').mockImplementation(((code: number) => {
+      throw new Exit(code);
+    }) as never);
+    fixture = createEmptyProject();
+    process.chdir(fixture.dir);
+  });
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+    fixture.cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('lets a plugin command run outside a workspace', async () => {
+    const h5p = program([new Command('greet').action(() => {})]);
+
+    await expect(h5p.parseAsync(['node', 'h5p', 'greet'])).resolves.toBeDefined();
+    expect(stderr).not.toContain('No "libraries" folder');
+  });
+
+  it('lets a plugin command that replaces a built-in run outside a workspace', async () => {
+    const h5p = program([new Command('setup').action(() => {})]);
+
+    await expect(h5p.parseAsync(['node', 'h5p', 'setup'])).resolves.toBeDefined();
+    expect(stderr).not.toContain('No "libraries" folder');
+  });
+
+  it('still stops a built-in command outside a workspace', async () => {
+    const h5p = program([new Command('greet').action(() => {})]);
+
+    await expect(h5p.parseAsync(['node', 'h5p', 'setup'])).rejects.toThrow(Exit);
+    expect(stderr).toContain('No "libraries" folder here');
   });
 });
 
