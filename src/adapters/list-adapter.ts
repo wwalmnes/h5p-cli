@@ -1,4 +1,4 @@
-import logic from '../../logic.ts';
+import { getRegistry } from '../logic/registry.ts';
 import type { Registry } from '../lib/library-types.ts';
 
 export interface IListAdapter {
@@ -7,6 +7,6 @@ export interface IListAdapter {
 
 export class ListAdapter implements IListAdapter {
   getRegistry(ignoreFile?: boolean): Promise<Registry> {
-    return logic.getRegistry(ignoreFile);
+    return getRegistry(ignoreFile);
   }
 }

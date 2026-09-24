@@ -4,7 +4,10 @@ import { EventEmitter } from 'events';
 import { execSync, spawnSync, spawn } from 'child_process';
 import * as path from 'path';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
-import logic, { incompleteInstalls, discardIncompleteInstalls } from '../../logic.ts';
+import logic from '../../logic.ts';
+import * as dependencies from '../../src/logic/dependencies.ts';
+import * as repo from '../../src/logic/repo.ts';
+import { _incomplete as incompleteInstalls, _discardIncomplete as discardIncompleteInstalls } from '../../src/logic/install.ts';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
@@ -72,7 +75,7 @@ describe('logic.getWithDependencies', () => {
     vi.mocked(spawnSync).mockReturnValue({ status: 0, stdout: '', stderr: '' } as any);
     // the install loop's git/npm calls go through the async logic._exec -> spawn
     vi.mocked(spawn).mockImplementation(() => fakeChild() as any);
-    vi.spyOn(logic, 'computeDependencies').mockResolvedValue(DEP_MAP);
+    vi.spyOn(dependencies, 'computeDependencies').mockResolvedValue(DEP_MAP);
     fs.mkdirSync('libraries', { recursive: true });
   });
 
@@ -236,7 +239,7 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('skips optional unregistered dep with a log message and no throw', async () => {
-    vi.spyOn(logic, 'computeDependencies').mockResolvedValue({
+    vi.spyOn(dependencies, 'computeDependencies').mockResolvedValue({
       'H5P.SomeOptional': { id: undefined, optional: true, parent: 'h5p-blanks' } as any,
     });
 
@@ -248,7 +251,7 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('throws for a required unregistered dep', async () => {
-    vi.spyOn(logic, 'computeDependencies').mockResolvedValue({
+    vi.spyOn(dependencies, 'computeDependencies').mockResolvedValue({
       'H5P.Required': { id: undefined, optional: false, parent: 'h5p-blanks' } as any,
     });
 
@@ -310,7 +313,7 @@ describe('logic.getWithDependencies', () => {
 
   it('a required unregistered dep aborts before any install starts', async () => {
     const state = trackingSpawn();
-    vi.spyOn(logic, 'computeDependencies').mockResolvedValue({
+    vi.spyOn(dependencies, 'computeDependencies').mockResolvedValue({
       ...DEP_MAP,
       'H5P.Required': { id: undefined, optional: false, parent: 'h5p-blanks' },
     } as any);
@@ -406,7 +409,7 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('clones the root at a git ref even when the action is download', async () => {
-    vi.spyOn(logic, 'download').mockResolvedValue(undefined);
+    vi.spyOn(repo, 'download').mockResolvedValue(undefined);
 
     await logic.installDependencies('download', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
 
@@ -418,7 +421,7 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('downloads dependencies when the action is download', async () => {
-    const download = vi.spyOn(logic, 'download').mockResolvedValue(undefined);
+    const download = vi.spyOn(repo, 'download').mockResolvedValue(undefined);
 
     await logic.installDependencies('download', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
 
@@ -431,7 +434,7 @@ describe('logic.getWithDependencies', () => {
   The download call sat outside the fallback, so `h5p install <library>` aborted
   on any library whose declared patch was never tagged - most of them. */
   it('falls back to master for a dep tag the archive host does not have', async () => {
-    const download = vi.spyOn(logic, 'download').mockImplementation(async (_org, _repo, version) => {
+    const download = vi.spyOn(repo, 'download').mockImplementation(async (_org, _repo, version) => {
       if (version !== 'master') {
         throw Object.assign(new Error('cannot download … (404)'), { status: 404 });
       }
@@ -445,7 +448,7 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('does not fall back to master when the download fails for any other reason', async () => {
-    vi.spyOn(logic, 'download').mockRejectedValue(
+    vi.spyOn(repo, 'download').mockRejectedValue(
       Object.assign(new Error('cannot download … (500)'), { status: 500 }),
     );
 
@@ -589,10 +592,10 @@ describe('logic.getWithDependencies', () => {
     Only a real process can show that, so this one spawns one. */
     it('an interrupted process sweeps its claims before dying', async () => {
       const { spawn: realSpawn } = await vi.importActual<typeof import('child_process')>('child_process');
-      const logicPath = new URL('../../logic.ts', import.meta.url).pathname;
+      const logicPath = new URL('../../src/logic/install.ts', import.meta.url).pathname;
       const target = path.resolve(blanks);
       const script = `
-        import { incompleteInstalls } from ${JSON.stringify(logicPath)};
+        import { _incomplete as incompleteInstalls } from ${JSON.stringify(logicPath)};
         import fs from 'fs';
         fs.mkdirSync(${JSON.stringify(target)}, { recursive: true });
         incompleteInstalls.add(${JSON.stringify(target)});

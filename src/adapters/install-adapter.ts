@@ -1,4 +1,4 @@
-import logic from '../../logic.ts';
+import { getWithDependencies } from '../logic/install.ts';
 
 export interface IInstallAdapter {
   getWithDependencies(action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip?: string[]): Promise<string[]>;
@@ -6,6 +6,6 @@ export interface IInstallAdapter {
 
 export class InstallAdapter implements IInstallAdapter {
   getWithDependencies(action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip?: string[]): Promise<string[]> {
-    return logic.getWithDependencies(action, library, mode, latest ?? false, toSkip);
+    return getWithDependencies(action, library, mode, latest ?? false, toSkip);
   }
 }

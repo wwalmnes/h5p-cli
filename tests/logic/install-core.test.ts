@@ -3,7 +3,8 @@ import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import { execSync, spawnSync, spawn } from 'child_process';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
-import logic, { incompleteInstalls } from '../../logic.ts';
+import logic from '../../logic.ts';
+import { _incomplete as incompleteInstalls } from '../../src/logic/install.ts';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),

@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import logic from '../../logic.ts';
+import { getRegistry, registryEntryFromRepoUrl } from '../logic/registry.ts';
 import type { Registry } from '../lib/library-types.ts';
 
 export interface IRegisterAdapter {
@@ -11,11 +11,11 @@ export interface IRegisterAdapter {
 
 export class RegisterAdapter implements IRegisterAdapter {
   getRegistry(): Promise<Registry> {
-    return logic.getRegistry();
+    return getRegistry();
   }
 
   registryEntryFromRepoUrl(gitUrl: string): Record<string, any> {
-    return logic.registryEntryFromRepoUrl(gitUrl);
+    return registryEntryFromRepoUrl(gitUrl);
   }
 
   readJsonFile(path: string): Record<string, any> {

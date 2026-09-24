@@ -1,4 +1,4 @@
-import logic from '../../logic.ts';
+import { exportContent } from '../logic/content.ts';
 
 export interface IExportAdapter {
   export(library: string, folder?: string): Promise<string>;
@@ -6,6 +6,6 @@ export interface IExportAdapter {
 
 export class ExportAdapter implements IExportAdapter {
   export(library: string, folder?: string): Promise<string> {
-    return logic.export(library, folder);
+    return exportContent(library, folder);
   }
 }

@@ -3,21 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
-vi.mock('../../logic', () => ({
-  default: {
-    clone: vi.fn(),
-    computeDependencies: vi.fn().mockResolvedValue({}),
-    getWithDependencies: vi.fn().mockResolvedValue([]),
-    getRegistry: vi.fn().mockResolvedValue({ regular: {}, reversed: {} }),
-    registryEntryFromRepoUrl: vi.fn().mockReturnValue({
-      'H5P.ImageHotspots 1 0': { id: 'h5p-image-hotspots', org: 'h5p', repo: 'h5p-image-hotspots' },
-    }),
-    machineToShort: vi.fn(),
-    tags: vi.fn(),
-    export: vi.fn(),
-    import: vi.fn(),
-    verifySetup: vi.fn(),
-  },
+vi.mock('../../src/logic/registry.ts', () => ({
+  getRegistry: vi.fn().mockResolvedValue({ regular: {}, reversed: {} }),
+  registryEntryFromRepoUrl: vi.fn().mockReturnValue({
+    'H5P.ImageHotspots 1 0': { id: 'h5p-image-hotspots', org: 'h5p', repo: 'h5p-image-hotspots' },
+  }),
 }));
 
 describe('register — end-to-end', () => {
@@ -54,12 +44,12 @@ describe('register — end-to-end', () => {
   });
 
   it('calls registryEntryFromRepoUrl when given an http URL', async () => {
-    const logic = await import('../../logic.ts');
+    const registry = await import('../../src/logic/registry.ts');
     const { registerCommand } = await import('../../src/commands/register.ts');
 
     await registerCommand().parseAsync(['node', 'h5p', 'https://github.com/h5p/h5p-image-hotspots']);
 
-    expect(logic.default.registryEntryFromRepoUrl).toHaveBeenCalledWith(
+    expect(registry.registryEntryFromRepoUrl).toHaveBeenCalledWith(
       'https://github.com/h5p/h5p-image-hotspots'
     );
   });
