@@ -51,14 +51,42 @@ export async function loadPlugins(program: Command): Promise<Command[]> {
   const commands: Command[] = [];
   for (const entry of config.plugins) {
     try {
-      const pluginPackage = JSON.parse(fs.readFileSync(path.resolve(entry.path, 'package.json'), 'utf-8'));
-      commands.push(...await loadPlugin(path.resolve(entry.path, pluginPackage.main), program));
+      const file = resolvePluginEntry(entry.path);
+      if (!file) {
+        ui.warn(`[h5p] Plugin "${entry.name}" has no entry point (exports, main or index.js) in ${entry.path}`);
+        continue;
+      }
+      commands.push(...await loadPlugin(file, program));
     } catch (e) {
-      ui.warn(`[h5p] Failed to read package.json from plugin`);
+      // e.g. the plugin's folder was removed after it was installed
+      ui.warn(`[h5p] Plugin "${entry.name}" could not be loaded from ${entry.path}`);
       ui.error(e);
     }
   }
   return commands;
+}
+
+/* The file a plugin's stored path points at: the path itself, or a folder's entry point,
+found the way Node would for a package - exports["."] (a string, or its import, default
+or node condition), then main, then index.js/.mjs/.ts. Nested conditions are not
+followed; such a plugin falls through to main. Install and load both use this, so a
+plugin that installs also loads. */
+export function resolvePluginEntry(absPath: string): string | undefined {
+  if (!fs.statSync(absPath).isDirectory()) return absPath;
+  const pkgPath = path.join(absPath, 'package.json');
+  let entry: unknown;
+  if (fs.existsSync(pkgPath)) {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const exp = pkg.exports?.['.'] ?? pkg.exports;
+    entry = typeof exp === 'string' ? exp : exp?.import ?? exp?.default ?? exp?.node;
+    if (typeof entry !== 'string') entry = pkg.main;
+  }
+  const candidates = typeof entry === 'string' ? [entry] : ['index.js', 'index.mjs', 'index.ts'];
+  for (const candidate of candidates) {
+    const full = path.join(absPath, candidate);
+    if (fs.existsSync(full)) return full;
+  }
+  return undefined;
 }
 
 export function applyPluginCommands(program: Command, commands: Command[]): void {

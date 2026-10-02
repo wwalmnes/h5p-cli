@@ -54,7 +54,7 @@ requests beyond the git clones themselves. Use `h5p setup <library>` for anythin
 |----------|--------|
 | `H5P_NO_UPDATES=1` | Skip updating existing libraries (faster). |
 | `H5P_CONCURRENCY=<n>` | How many libraries to install at once. Same as `--concurrency`, default 4. |
-| `H5P_SSH_CLONE=1` | Use SSH URLs when cloning. |
+| `H5P_SSH_CLONE=1` | Use SSH URLs when cloning. ssh cannot prompt here: your key must be loaded in ssh-agent and github.com already in `known_hosts`. |
 
 > [!IMPORTANT]
 > Core libraries already present in `libraries/` are refreshed from `master`. One with uncommitted
@@ -89,7 +89,7 @@ h5p setup <library|repoUrl> [ref] [download]
 | `H5P_NO_UPDATES=1` | Skip updating existing libraries (faster). |
 | `H5P_CONCURRENCY=<n>` | How many libraries to install at once. Same as `--concurrency`, default 4. |
 | `H5P_NO_RAW=1` | Read library metadata by cloning rather than over HTTP. |
-| `H5P_SSH_CLONE=1` | Use SSH URLs when cloning (useful for private repos or committing from `libraries/<library>`). |
+| `H5P_SSH_CLONE=1` | Use SSH URLs when cloning (useful for private repos or committing from `libraries/<library>`). ssh cannot prompt here: your key must be loaded in ssh-agent and github.com already in `known_hosts`. |
 
 > [!IMPORTANT]
 > If no `[ref]` is specified, master branches are used — and libraries already present in `libraries/` are refreshed from `master`. One with uncommitted changes, or on a branch other than `master`, is reported and left untouched.

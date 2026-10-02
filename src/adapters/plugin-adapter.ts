@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { _exec } from '../logic/exec.ts';
-import { sharePeerDependencies } from '../lib/plugin-loader.ts';
+import { sharePeerDependencies, resolvePluginEntry } from '../lib/plugin-loader.ts';
 
 export interface PluginEntry {
   name: string;
@@ -23,24 +23,6 @@ export interface IPluginAdapter {
   rmRecursive(absPath: string): void;
   installDependencies(absPath: string): Promise<void>;
   loadPluginName(absPath: string): Promise<string | undefined>;
-}
-
-function resolvePackageEntry(dir: string): string | undefined {
-  const pkgPath = path.join(dir, 'package.json');
-  let entry: string | undefined;
-  if (fs.existsSync(pkgPath)) {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-    const exp = pkg.exports?.['.'] ?? pkg.exports;
-    if (typeof exp === 'string') entry = exp;
-    else if (exp && typeof exp === 'object') entry = exp.import ?? exp.default ?? exp.node;
-    entry = entry ?? pkg.main;
-  }
-  const candidates = entry ? [entry] : ['index.js', 'index.mjs', 'index.ts'];
-  for (const c of candidates) {
-    const full = path.join(dir, c);
-    if (fs.existsSync(full)) return full;
-  }
-  return undefined;
 }
 
 export class PluginAdapter implements IPluginAdapter {
@@ -96,7 +78,7 @@ export class PluginAdapter implements IPluginAdapter {
 
   async loadPluginName(absPath: string): Promise<string | undefined> {
     try {
-      const entry = fs.statSync(absPath).isDirectory() ? resolvePackageEntry(absPath) : absPath;
+      const entry = resolvePluginEntry(absPath);
       if (!entry) return undefined;
       // the plugin's own imports of h5p-cli/commander must resolve here as at load time
       sharePeerDependencies();
