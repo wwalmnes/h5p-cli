@@ -82,14 +82,16 @@ export class PluginAdapter implements IPluginAdapter {
   }
 
   /* A cloned plugin has no node_modules, and outside the CLI's folder it cannot borrow
-  the CLI's. Peers are omitted: the loader resolves h5p-cli and commander to the CLI's
-  own copies whatever is installed here (see sharePeerDependencies). */
+  the CLI's. Peers are the host's to provide, and the loader resolves h5p-cli and
+  commander to the CLI's own copies (see sharePeerDependencies). --legacy-peer-deps,
+  not --omit=peer: omit leaves the peer packages out but still installs their
+  dependency trees, which for h5p-cli is the whole CLI's. */
   async installDependencies(absPath: string): Promise<void> {
     const pkgPath = path.join(absPath, 'package.json');
     if (!fs.existsSync(pkgPath)) return;
     const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
     if (!Object.keys(pkg.dependencies ?? {}).length) return;
-    await _exec('npm install --omit=dev --omit=peer --no-audit --no-fund', absPath);
+    await _exec('npm install --omit=dev --legacy-peer-deps --no-audit --no-fund', absPath);
   }
 
   async loadPluginName(absPath: string): Promise<string | undefined> {

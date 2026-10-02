@@ -438,7 +438,7 @@ h5p plugin install git@github.com:user/h5p-cli-my-plugin.git
 ```
 
 Git plugins are cloned into `~/.h5p-cli/plugins/`, and their `dependencies` are installed with
-`npm install --omit=dev --omit=peer` (peers come from the CLI itself).
+`npm install --omit=dev --legacy-peer-deps`.
 
 Everything plugin-related lives in the **plugin home**, `~/.h5p-cli/` — set `H5P_CLI_HOME` to use
 another folder. It is deliberately not inside the CLI's own install folder: `npm update -g h5p-cli`
