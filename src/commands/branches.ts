@@ -25,24 +25,39 @@ export function branchesCommand(): Command {
     .argument('<branches...>', 'Branch names to clone')
     .action((library: string, branches: string[]) => {
       try {
-        const libDir = library; //path.join(config.folders.libraries, library);
+        const libDir = library;
         if (!fs.existsSync(libDir)) {
           throw new Error(`library "${library}" not found in "${config.folders.libraries}"`);
         }
-        const run = (command: string): string => execSync(command, { cwd: libDir }).toString();
+        const run = (command: string, options: any = {}): string => execSync(command, {...options, ...{ cwd: libDir }}).toString();
 
         console.log(run('git checkout .'));
         run('rm -rdf @*');
         const initialBranch = run('git rev-parse --abbrev-ref HEAD');
         const validBranches: string[] = [];
+
+        const remotes = run('git remote', { encoding: 'utf8' })
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        const hasOrigin = remotes.includes('origin');
+        const hasAnyRemote = remotes.length > 0;
+
+        // Ensure origin is up to date
+        if (hasOrigin) {
+          run('git fetch origin');
+        }
+
         for (const branch of branches) {
           const target = `@${branch.replace('/', '_')}`;
           const tmpTarget = `/tmp/h5p-cli-${target}`;
 
           let checkoutRef = branch;
+          let hasLocal = true;
 
           if (!gitRefExists(branch, libDir)) {
             if (!branch.includes('/') && gitRefExists(`origin/${branch}`, libDir)) {
+              hasLocal = false;
               checkoutRef = `origin/${branch}`;
             } else {
               console.log(`\x1b[33m > branch "${branch}" does not exist locally or remotely \x1b[0m`);
@@ -51,6 +66,9 @@ export function branchesCommand(): Command {
           }
 
           run(`git checkout ${checkoutRef}`);
+          if (hasLocal && hasAnyRemote) {
+            run('git pull --ff-only');
+          }
           fs.rmSync(tmpTarget, { recursive: true, force: true });
           run(`cp -r . ${tmpTarget}`);
           validBranches.push(branch);
