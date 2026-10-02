@@ -1,6 +1,7 @@
 const fs = require('fs');
 const _userConfig = `${process.cwd()}/config.js`;
-const _bundleConfig = `${__dirname}/../src/config.ts`;
+// config.ts in the repo, config.js in the published (compiled) package
+const _bundleConfig = [`${__dirname}/../src/config.ts`, `${__dirname}/../src/config.js`].find(fs.existsSync);
 const config = fs.existsSync(_userConfig) ? require(_userConfig) : require(_bundleConfig).default;
 // scaffolding for h5peditor.js
 global.window = {

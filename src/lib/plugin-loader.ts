@@ -1,18 +1,41 @@
 import fs from 'fs';
 import path from 'path';
+import { registerHooks } from 'module';
 import { pathToFileURL } from 'url';
 import { Command } from 'commander';
 import { adapterRegistry } from './adapter-registry.ts';
 import type { H5PPlugin } from './plugin-types.ts';
 import type { PluginsConfig } from '../adapters/plugin-adapter.ts';
+import { pluginHome } from './plugin-home.ts';
 import { ui } from './ui.ts';
 
-const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..', '..');
+/* Plugins declare h5p-cli and commander as peer dependencies, but Node never reads
+that: it resolves a bare specifier by walking up from the importing file. A plugin
+outside the CLI's folder therefore finds no copy at all, or, after `npm install`, a
+copy of its own, whose separate `ui` ignores --quiet/--verbose and the progress area.
+Resolving both as if the CLI had imported them gives every plugin the CLI's own
+instances, wherever it lives. `h5p-cli/<subpath>` resolves through the CLI's own
+package.json exports (a self-reference), so it is the same file the CLI loaded. */
+const SHARED_PEERS = /^(h5p-cli|commander)(\/|$)/;
+let peersShared = false;
+
+export function sharePeerDependencies(): void {
+  if (peersShared) return;
+  peersShared = true;
+  registerHooks({
+    resolve(specifier, context, nextResolve) {
+      return SHARED_PEERS.test(specifier)
+        ? nextResolve(specifier, { ...context, parentURL: import.meta.url })
+        : nextResolve(specifier, context);
+    },
+  });
+}
 
 /** Load every installed plugin and return the commands they added to `program`. */
 export async function loadPlugins(program: Command): Promise<Command[]> {
-  const filePath = path.join(H5P_CLI_ROOT, 'h5p.plugins.json');
+  const filePath = path.join(pluginHome(), 'h5p.plugins.json');
   if (!fs.existsSync(filePath)) return [];
+  sharePeerDependencies();
 
   let config: Partial<PluginsConfig>;
   try {
@@ -55,6 +78,11 @@ async function loadPlugin(ref: string, program: Command): Promise<Command[]> {
     const mod = await import(pathToFileURL(ref).href);
     plugin = mod.default ?? mod;
   } catch (e) {
+    if ((e as NodeJS.ErrnoException)?.code === 'ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING') {
+      ui.warn(`[h5p] Plugin "${ref}" is TypeScript inside a node_modules folder, which Node will not run. ` +
+        'Install it from a path outside node_modules, or ship it as JavaScript.');
+      return [];
+    }
     ui.warn(`[h5p] Failed to load plugin "${ref}"`);
     ui.error(e);
     return [];

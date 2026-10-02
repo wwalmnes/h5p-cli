@@ -37,6 +37,8 @@ export class PluginService {
         this.adapter.mkdirRecursive(this.pluginsDir);
         this.logger.log(`> cloning ${source}`);
         this.adapter.cloneRepo(source, absPath);
+        this.logger.log(`> installing dependencies for ${repoName}`);
+        await this.adapter.installDependencies(absPath);
       }
     } else {
       absPath = path.resolve(source);
@@ -51,8 +53,6 @@ export class PluginService {
       this.logger.log(`> plugin at "${absPath}" does not export a name`);
       return;
     }
-
-    this.adapter.ensureGitignored();
 
     const config = this.adapter.readConfig();
     if (config.plugins.some(p => p.path === absPath)) {

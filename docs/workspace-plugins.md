@@ -133,7 +133,7 @@ This links everything together. Your plugin can now import from `h5p-cli`.
 h5p plugin install plugins/my-plugin
 ```
 
-This adds an entry to `h5p-cli/h5p.plugins.json`:
+This adds an entry to `~/.h5p-cli/h5p.plugins.json` (the plugin home; `H5P_CLI_HOME` moves it):
 
 ```json
 {

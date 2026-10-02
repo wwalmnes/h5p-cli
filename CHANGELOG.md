@@ -5,8 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [2.0.0]
 
-h5p-cli 2.0 is a rewrite. The tool is written in TypeScript, ships as an ESM package that Node runs
-directly with no build step, parses its command line with [Commander](https://github.com/tj/commander.js),
+h5p-cli 2.0 is a rewrite. The tool is written in TypeScript, ships as a compiled ESM package with type
+declarations, parses its command line with [Commander](https://github.com/tj/commander.js),
 and is organised into a layered architecture (Command → Service → Adapter → Logic) that is covered by
 tests and extensible through plugins. Output goes through a single UI layer, failures set an exit code,
 and every command is documented.
@@ -17,11 +17,12 @@ enforced instead of silently producing empty results.
 
 ### Breaking changes
 
-- **Node v24 or newer is required** (`engines: { node: ">=24" }`). The CLI runs its TypeScript sources
-  directly using Node's native type stripping.
+- **Node v24 or newer is required** (`engines: { node: ">=24" }`). A checkout of the repository runs its
+  TypeScript sources directly using Node's native type stripping, and plugins can rely on it too.
 - **The package is now ESM** (`"type": "module"`). Code that did `require('h5p-cli/logic')` must switch
-  to `import`. The package also gains an `exports` map, and every subpath in it resolves to a `.ts`
-  source that Node runs as-is — there is nothing to build, in the CLI or in a plugin.
+  to `import`. The package also gains an `exports` map. The published package is compiled JavaScript
+  with `.d.ts` declarations, because Node refuses to strip types for files under `node_modules`, which
+  is where `npm install -g h5p-cli` puts them.
 - **Git subcommands moved from `h5p utils` to `h5p git`.** `checkout`, `new-branch`, `rm-branch`,
   `merge`, `status`, `diff`, `commit`, `pull`, `push` and `tag` are now `h5p git <command>`. `h5p utils`
   keeps the repo, versioning, translation, packaging and consistency commands.
@@ -55,8 +56,13 @@ enforced instead of silently producing empty results.
 - **Plugin system.** `h5p plugin install <source>`, `h5p plugin list` and `h5p plugin uninstall <name>`
   install plugins from a local path or a GitHub URL (https or ssh). A plugin is a Node module that
   default-exports an `H5PPlugin` and can add commands, override built-in adapters, or both. Installed
-  plugins are recorded in `h5p.plugins.json` and loaded on every invocation. Plugins can be written in
-  TypeScript or ESM JavaScript — no build step either way. See `docs/plugins.md`.
+  plugins are recorded in `~/.h5p-cli/h5p.plugins.json` and loaded on every invocation; git installs
+  are cloned into `~/.h5p-cli/plugins/` and get their dependencies installed. Keeping them in the home
+  folder means they survive `npm update -g` and need no write access to a global install
+  (`H5P_CLI_HOME` moves the folder). A plugin's imports of `h5p-cli` and `commander` always resolve to
+  the running CLI's own copies, so it shares its output settings and progress area. Plugins can be
+  written in TypeScript (types that can simply be erased: no `enum` or parameter properties) or ESM
+  JavaScript, with no build step either way. See `docs/plugins.md`.
 - **Adapter overrides.** Adapters are the I/O boundary (file access, git, HTTP). Twelve built-in adapters
   can be replaced: `export`, `import`, `list`, `tags`, `deps`, `missing`, `install`, `verify`, `register`,
   `create`, `core`, `setup`. A plugin can replace one as the new default, or register it under a custom

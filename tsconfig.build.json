@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": ".",
+    "rewriteRelativeImportExtensions": true,
+    "declaration": true
+  },
+  "include": ["src/**/*", "logic.ts", "logic-content-upgrade.ts", "configLoader.ts"],
+  "exclude": ["node_modules", "dist"]
+}

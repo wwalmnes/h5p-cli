@@ -4,6 +4,7 @@
   "description": "a tool for developing & testing H5P content types",
   "author": "H5P Group",
   "license": "MIT",
+  "private": true,
   "engines": {
     "node": ">=24"
   },
@@ -32,7 +33,8 @@
     "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
     "test:smoke": "playwright test",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "node scripts/build.ts"
   },
   "main": "./src/index.ts",
   "exports": {
@@ -94,7 +96,7 @@
     "@types/he": "^1.2.3",
     "@types/livereload": "^0.9.5",
     "@types/multer": "^2.1.0",
-    "@types/node": "^20.19.37",
+    "@types/node": "^24.19.1",
     "@types/sanitize-html": "^2.16.1",
     "@types/tmp": "^0.2.6",
     "tmp": "^0.2.4",

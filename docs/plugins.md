@@ -77,6 +77,22 @@ export default {
 
 Set `"main"` in your `package.json` to `index.ts` for TypeScript or `index.js` for JavaScript.
 
+Declare `h5p-cli` and `commander` as **`peerDependencies`** (and as `devDependencies`, if you want their
+types in your editor). Whatever copies end up installed next to your plugin, its imports of `h5p-cli`,
+`h5p-cli/*` and `commander` always resolve to the running CLI's own, so your plugin shares its `ui`:
+`--quiet`, `--verbose` and the progress area apply to your output too.
+
+TypeScript plugins run without a build step because Node strips the types itself, which sets two limits:
+
+- **Only erasable syntax.** Node removes type annotations but does not compile anything, so `enum`,
+  `namespace`, constructor parameter properties (`constructor(private x: number)`) and
+  `import x = require()` fail at load time. `"erasableSyntaxOnly": true` in your `tsconfig.json`
+  (TypeScript 5.8+) flags them in the editor. Relative imports need their `.ts` extension, and
+  type-only imports need `import type`.
+- **Not from inside `node_modules`.** Node refuses to strip types for any file under a `node_modules`
+  folder. Plugins installed with `h5p plugin install` live in `~/.h5p-cli/`, so this only bites a
+  plugin you publish to npm and register from where npm installed it: ship that one as JavaScript.
+
 After installing, `h5p greet Alice` prints `Hello, Alice!`.
 
 The greeting is what the command produces, so it goes out through `ui.data()` rather than `console.log`. See [Output and progress](#output-and-progress) for why that matters.
@@ -421,12 +437,18 @@ h5p plugin install https://github.com/user/h5p-cli-my-plugin.git
 h5p plugin install git@github.com:user/h5p-cli-my-plugin.git
 ```
 
-Git plugins are cloned into a `plugins/` directory inside h5p-cli. The `plugins/` folder is in `.gitignore`. This is to avoid having plugins leaked into the h5p-cli codebase.
+Git plugins are cloned into `~/.h5p-cli/plugins/`, and their `dependencies` are installed with
+`npm install --omit=dev --omit=peer` (peers come from the CLI itself).
+
+Everything plugin-related lives in the **plugin home**, `~/.h5p-cli/` — set `H5P_CLI_HOME` to use
+another folder. It is deliberately not inside the CLI's own install folder: `npm update -g h5p-cli`
+replaces that folder entirely, and a global install may be owned by root.
 
 ### What happens on install
 
-1. The plugin's entry point is loaded to verify it exports a `name`.
-2. An entry is added to `h5p.plugins.json` (auto-created if missing).
+1. A git source is cloned into `~/.h5p-cli/plugins/` and its dependencies are installed.
+2. The plugin's entry point is loaded to verify it exports a `name`.
+3. An entry is added to `~/.h5p-cli/h5p.plugins.json` (auto-created if missing).
 
 ## Managing plugins
 
@@ -435,15 +457,16 @@ h5p plugin list                # show installed plugins
 h5p plugin uninstall my-plugin # remove by name
 ```
 
-Uninstalling removes the entry from `h5p.plugins.json`. If the plugin was cloned into `plugins/`, the directory is also deleted.
+Uninstalling removes the entry from `h5p.plugins.json`. If the plugin was cloned into `~/.h5p-cli/plugins/`, the directory is also deleted.
 
 ## Plugin loading
 
-Plugins are loaded at startup from `h5p.plugins.json`. Each entry has a `name` and an absolute `path` to the module. The loader:
+Plugins are loaded at startup from `~/.h5p-cli/h5p.plugins.json`. Each entry has a `name` and an absolute `path` to the module. The loader:
 
-1. `import()`s the module at the stored path
-2. Calls `adapters()` if present, registering overrides in the adapter registry
-3. Calls `commands()` if present, adding/replacing commands on the program
+1. Makes `h5p-cli`, `h5p-cli/*` and `commander` resolve to the CLI's own copies for every plugin
+2. `import()`s the module at the stored path
+3. Calls `adapters()` if present, registering overrides in the adapter registry
+4. Calls `commands()` if present, adding/replacing commands on the program
 
 Plugins are loaded **after** all built-in commands are registered, so plugin commands **always** take precedence.
 

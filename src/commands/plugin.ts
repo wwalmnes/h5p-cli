@@ -2,9 +2,8 @@ import { Command } from 'commander';
 import path from 'path';
 import { PluginAdapter } from '../adapters/plugin-adapter.ts';
 import { PluginService } from '../services/plugin-service.ts';
+import { pluginHome } from '../lib/plugin-home.ts';
 import { ui } from '../lib/ui.ts';
-
-const H5P_CLI_ROOT = path.resolve(import.meta.dirname, '..', '..');
 
 export function pluginCommand(service?: PluginService): Command {
   const plugin = new Command('plugin').description('Manage h5p-cli plugins');
@@ -14,8 +13,8 @@ export function pluginCommand(service?: PluginService): Command {
     .description('Install a plugin from a GitHub URL (https or ssh) or a local path')
     .action(async (source: string) => {
       const svc = service ?? new PluginService(
-        new PluginAdapter(H5P_CLI_ROOT),
-        path.join(H5P_CLI_ROOT, 'plugins')
+        new PluginAdapter(pluginHome()),
+        path.join(pluginHome(), 'plugins')
       );
       try {
         await svc.install(source);
@@ -29,8 +28,8 @@ export function pluginCommand(service?: PluginService): Command {
     .description('List installed plugins')
     .action(() => {
       const svc = service ?? new PluginService(
-        new PluginAdapter(H5P_CLI_ROOT),
-        path.join(H5P_CLI_ROOT, 'plugins')
+        new PluginAdapter(pluginHome()),
+        path.join(pluginHome(), 'plugins')
       );
       const plugins = svc.list();
 
@@ -47,8 +46,8 @@ export function pluginCommand(service?: PluginService): Command {
     .description('Uninstall a plugin by name')
     .action((name: string) => {
       const svc = service ?? new PluginService(
-        new PluginAdapter(H5P_CLI_ROOT),
-        path.join(H5P_CLI_ROOT, 'plugins')
+        new PluginAdapter(pluginHome()),
+        path.join(pluginHome(), 'plugins')
       );
       try {
         svc.uninstall(name);

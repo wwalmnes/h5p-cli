@@ -2,6 +2,8 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import { _exec } from '../logic/exec.ts';
+import { sharePeerDependencies } from '../lib/plugin-loader.ts';
 
 export interface PluginEntry {
   name: string;
@@ -19,7 +21,7 @@ export interface IPluginAdapter {
   pathExists(absPath: string): boolean;
   mkdirRecursive(dir: string): void;
   rmRecursive(absPath: string): void;
-  ensureGitignored(): void;
+  installDependencies(absPath: string): Promise<void>;
   loadPluginName(absPath: string): Promise<string | undefined>;
 }
 
@@ -59,6 +61,7 @@ export class PluginAdapter implements IPluginAdapter {
   }
 
   writeConfig(config: PluginsConfig): void {
+    fs.mkdirSync(this.root, { recursive: true });
     fs.writeFileSync(path.join(this.root, 'h5p.plugins.json'), JSON.stringify(config, null, 2));
   }
 
@@ -78,24 +81,23 @@ export class PluginAdapter implements IPluginAdapter {
     fs.rmSync(absPath, { recursive: true, force: true });
   }
 
-  ensureGitignored(): void {
-    const gitignorePath = path.join(this.root, '.gitignore');
-    const entries = ['plugins/', 'h5p.plugins.json'];
-    let content = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf-8') : '';
-    let changed = false;
-    for (const entry of entries) {
-      if (!content.split('\n').some(line => line.trim() === entry)) {
-        content += (content.endsWith('\n') ? '' : '\n') + entry + '\n';
-        changed = true;
-      }
-    }
-    if (changed) fs.writeFileSync(gitignorePath, content);
+  /* A cloned plugin has no node_modules, and outside the CLI's folder it cannot borrow
+  the CLI's. Peers are omitted: the loader resolves h5p-cli and commander to the CLI's
+  own copies whatever is installed here (see sharePeerDependencies). */
+  async installDependencies(absPath: string): Promise<void> {
+    const pkgPath = path.join(absPath, 'package.json');
+    if (!fs.existsSync(pkgPath)) return;
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    if (!Object.keys(pkg.dependencies ?? {}).length) return;
+    await _exec('npm install --omit=dev --omit=peer --no-audit --no-fund', absPath);
   }
 
   async loadPluginName(absPath: string): Promise<string | undefined> {
     try {
       const entry = fs.statSync(absPath).isDirectory() ? resolvePackageEntry(absPath) : absPath;
       if (!entry) return undefined;
+      // the plugin's own imports of h5p-cli/commander must resolve here as at load time
+      sharePeerDependencies();
       const mod = await import(pathToFileURL(entry).href);
       return (mod.default ?? mod)?.name;
     } catch {
