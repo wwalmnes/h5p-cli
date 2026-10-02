@@ -1,5 +1,5 @@
 import express from 'express';
-import config from '../config.ts';
+import config from '../../configLoader.ts';
 import multerLib from 'multer';
 import api from './api.ts';
 import path from 'path';

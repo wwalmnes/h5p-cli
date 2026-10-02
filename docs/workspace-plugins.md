@@ -58,9 +58,9 @@ Key fields:
 
 | Field | Why |
 |-------|-----|
-| `"main"` | Points to your entry file. Use `index.ts` for TypeScript or `index.js` for JavaScript |
+| `"main"` | Points to your entry file. Use `index.ts` for TypeScript or `index.js` for JavaScript (`exports` works too, see [plugins.md](plugins.md#minimal-example)) |
 | `"type": "module"` | Required. h5p-cli is ESM throughout |
-| `peerDependencies` | Resolved from the workspace root. Keeps your plugin from bundling its own copy |
+| `peerDependencies` | Always resolved to the running CLI's own copies, so your plugin shares its `ui` |
 
 ### 2. Create the entry point
 
@@ -160,6 +160,7 @@ The CLI exposes several entry points that plugins can use:
 | `h5p-cli/config` | Configuration loader (paths, settings) |
 | `h5p-cli/compute-dependencies` | Dependency resolution helpers |
 | `h5p-cli/ui` | Consistent output: messages, errors, verbosity, progress |
+| `h5p-cli/content-upgrade` | `upgradeContent`, for content parameter upgrades |
 
 Example:
 

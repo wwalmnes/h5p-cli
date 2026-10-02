@@ -30,15 +30,32 @@ enforced instead of silently producing empty results.
   run from the workspace root — the folder holding `libraries/`, `content/` and `temp/`. `h5p git` and
   `h5p utils` run from *inside* `libraries/`. Both groups previously read bare relative paths, so a wrong
   directory produced an empty result; now it stops with a message telling you where to go. `h5p core`,
-  `h5p plugin` and commands added by plugins work from anywhere.
+  `h5p plugin`, `h5p branches` and commands added by plugins work from anywhere. Only `h5p core` creates
+  the workspace folders (`content/`, `libraries/`, `temp/`, `uploads/`) now; `setup`, `clone` and
+  `install` used to create them too, and now stop if `libraries/` is missing. In a new folder, run
+  `h5p core` first.
+- **A workspace `config.js` exports only the settings it changes**, e.g.
+  `module.exports = { port: 8081 };`, and is merged over the defaults (nested objects key by key). The
+  1.x recipe of loading the defaults with `` require(`${require.main.path}/config.js`) `` and modifying
+  them no longer works — `require.main` is undefined under ESM — and stops every command with a message
+  naming `config.js`.
+- **`h5p server` takes its port as an option**: `h5p server --port 8081` instead of `h5p server 8081`.
+- **`h5p @branches` takes the library folder first**: `h5p branches <library> <branches...>`, with
+  `@branches` kept as an alias. It used to act on the current folder; from inside the library that is
+  now `h5p @branches . master`.
+- **Single-dash long flags became standard options**: `h5p utils check-translations -diff` is now
+  `-d`/`--diff`, and `h5p utils build -test`/`-install` are now `-t`/`--test` and `-i`/`--install`.
+- **`h5p list` prints a `NAME`/`ORG` table** instead of `name (org)` lines. Piped, it is bare aligned
+  columns.
 - **Failing commands exit non-zero.** A command that reported an error still exited 0 before, so
   `h5p install X && next` ran `next` after a failed install. Failures now set exit code 1.
 - **`h5p utils list-deps` and `h5p utils recursive-minor-bump` were removed**, replaced by
   `h5p utils dependency-check` (report) and `h5p utils dependency-check --apply` (write).
 - **Internal file layout moved.** `cli.js`, `logic.js`, `config.js`, `configLoader.js`, `server.js`,
   `api.js` and everything under `assets/utils/` are gone; source now lives under `src/` plus `logic.ts`,
-  `logic-content-upgrade.ts` and `configLoader.ts` in the repo root. Only relevant if you imported
-  h5p-cli internals by file path — use the `exports` map instead:
+  `logic-content-upgrade.ts` and `configLoader.ts` in the repo root. `logic.log` and `logic.write` were
+  removed (use `ui` from `h5p-cli/ui`), and `logic.machineToShort` moved to `h5p-cli/utils`. Only
+  relevant if you imported h5p-cli internals by file path — use the `exports` map instead:
 
   | Import path | What it provides |
   |-------------|------------------|
@@ -62,10 +79,11 @@ enforced instead of silently producing empty results.
   (`H5P_CLI_HOME` moves the folder). A plugin's imports of `h5p-cli` and `commander` always resolve to
   the running CLI's own copies, so it shares its output settings and progress area. Plugins can be
   written in TypeScript (types that can simply be erased: no `enum` or parameter properties) or ESM
-  JavaScript, with no build step either way. See `docs/plugins.md`.
-- **Adapter overrides.** Adapters are the I/O boundary (file access, git, HTTP). Twelve built-in adapters
+  JavaScript, with no build step either way. The entry point is found as Node would: `exports`, then
+  `main`, then `index.js`/`.mjs`/`.ts`. See `docs/plugins.md`.
+- **Adapter overrides.** Adapters are the I/O boundary (file access, git, HTTP). Eleven built-in adapters
   can be replaced: `export`, `import`, `list`, `tags`, `deps`, `missing`, `install`, `verify`, `register`,
-  `create`, `core`, `setup`. A plugin can replace one as the new default, or register it under a custom
+  `create`, `core`. A plugin can replace one as the new default, or register it under a custom
   name that users opt into per run with `--adapter <name>`, e.g. `h5p export MyLibrary --adapter s3-export`.
 - **`h5p create <name>`** — scaffolds a new H5P content type into `libraries/`.
 - **`h5p git`** — the git sweep commands as their own group, with their own reference (`docs/commands-git.md`).
@@ -84,7 +102,8 @@ enforced instead of silently producing empty results.
   - Live progress rendering for multi-repo sweeps; colour honours `NO_COLOR` and `FORCE_COLOR`.
   - Error stacks are hidden by default and shown under `--verbose`.
 - **Proper help and version output.** `--help` / `-h` on every command and subcommand, and `--version`.
-  `h5p help [command]` still works.
+  `h5p help [command]` still works. `h5p utils help <command>` no longer prints a command's help; use
+  `h5p utils <command> --help`.
 - **Input validation.** Command arguments are validated with [zod](https://zod.dev) at the CLI boundary,
   so bad input produces a clear message instead of a stack trace from deep inside the tool.
 - **Documentation**, linked from a table in the readme:
@@ -93,11 +112,13 @@ enforced instead of silently producing empty results.
   - `docs/commands-utils.md` — the `h5p utils` group
   - `docs/plugins.md` — plugin API: commands, adapters, interfaces, installation
   - `docs/workspace-plugins.md` — developing plugins with npm workspaces
-- **Test suite.** 55 test files across commands, services, lib, logic, integration and end-to-end layers,
-  plus a Playwright smoke test that boots the dev server. `npm test`, `test:unit`, `test:integration`,
+- **Test suite** across commands, services, lib, logic, integration and end-to-end layers, plus a
+  Playwright smoke test that boots the dev server. `npm test`, `test:unit`, `test:integration`,
   `test:logic`, `test:e2e`, `test:watch`, `test:smoke`, and `npm run typecheck`.
-- **A bundled `libraryRegistry.json`**, and a `files` allowlist in `package.json` so the published
-  package ships sources, assets and docs only.
+- **A `files` allowlist** in `package.json`, so the published package ships the compiled sources,
+  assets and docs only.
+- **`h5p utils pack -o, --output <file>`** names the output file. Passing it as a trailing `.h5p`
+  argument still works, with a deprecation warning.
 
 ### Changed
 
@@ -112,13 +133,8 @@ enforced instead of silently producing empty results.
   `versioning-service`, `dependency-analysis-service`, and others).
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
-- `.gitignore` now also covers `plugins/`, `h5p.plugins.json`, `playwright-report/` and `test-results/`.
-- **`h5p setup <library> [ref]` accepts a branch name, not just a release.** The second positional took
-  a version and nothing else; it now takes any git ref. A release (`1.14` / `1.14.3`) resolves through
-  the graph and clones everyone at the resulting patch. A branch name clones only the library at that
-  ref; its dependencies are read from that ref's `library.json` and cloned at their declared versions,
-  falling back to `master` if a tag is missing. Branch metadata is not written to the on-disk cache
-  (a branch moves).
+- `.gitignore` now also covers `dist/`, `plugins/`, `h5p.plugins.json`, `playwright-report/` and
+  `test-results/`.
 - **`h5p setup` resolves its dependency graph once instead of once per dependency.** It used to run
   about N+4 traversals of the same graph — 16 for `h5p-blanks`, 73 for `h5p-interactive-book`. A single
   `edit` resolution covers all of them, because the mode is applied at every node and view edges are a
@@ -189,9 +205,6 @@ enforced instead of silently producing empty results.
   working directory. Children are spawned `detached` and signalled as `-pid`, because commands run
   through a shell and the npm/webpack/ssh processes below it survive a kill aimed at the shell alone —
   keeping the inherited pipes open, so node could never exit.
-- **`h5p server` moved ports usage to parameter.** If you want to use a different port than the default one
-it has to be done with a parameter `h5p server --port <newPort>` instead of `h5p server <newport>`.
-
 ### Fixed
 
 - **`h5p setup <library> <version>` now works at all.** A `major.minor` version was passed through to the
@@ -253,7 +266,9 @@ it has to be done with a parameter `h5p server --port <newPort>` instead of `h5p
 
 ### Compatibility
 
-Everything except the git subcommands keeps its name and positional arguments: `setup`, `core`, `list`,
-`register`, `deps`, `missing`, `clone`, `install`, `verify`, `export`, `import`, `help` and the remaining
-`utils` subcommands. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment variables behave as before, and
-`config.js` in the workspace root still overrides folder names.
+These keep their name and positional arguments: `setup`, `core`, `list`, `register`, `deps`, `missing`,
+`clone`, `install`, `verify`, `export`, `import`, `help` and the `utils` subcommands other than the two
+removed ones. The exceptions are the git subcommands, `server`, `@branches`, `tags` (no `mainBranch`) and
+the single-dash flags listed under breaking changes. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment
+variables behave as before, and a `config.js` in the workspace root still overrides any setting, in the
+new format.

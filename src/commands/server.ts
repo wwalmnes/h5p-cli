@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { ui } from '../lib/ui.ts';
-import config from '../config.ts';
+import config from '../../configLoader.ts';
 
 export function serverCommand(): Command {
   return new Command('server')

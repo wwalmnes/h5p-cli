@@ -1,6 +1,6 @@
 # Folder structure
 
-Running commands listed in [commands.md](commands.md) results in the creation of 4 folders. The folders are created in the current working directory (the folder where you ran the command).  
+`h5p core` creates 4 folders in the current working directory (the folder where you ran the command), which is then your workspace root: the other [commands](../../docs/commands.md) run from there.  
 - `content` holds actual content types and their assets.  
 - `libraries` holds the libraries that have been set up.  
 - `temp` caches the library metadata used when computing dependencies, under `temp/.metadata`. Only pinned versions are cached there: a release tag cannot change, so it is kept indefinitely. `master` and other branches are never written to disk, so `h5p setup <library>` with no version always resolves against the current state of the branch. `temp` also holds local copies of git repositories, for the repositories that cannot be read over plain HTTP (private ones, for instance); a branch checkout there is fetched forward before it is read.

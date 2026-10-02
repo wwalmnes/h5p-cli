@@ -1,7 +1,7 @@
 An h5p toolkit for running, editing and developing h5p content types.  
 
 Make sure you have [git](https://git-scm.com/downloads), [NodeJS](https://nodejs.org/en/download/current) **version 24 or newer** and [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) (usually included in NodeJS) installed.
-The CLI runs TypeScript sources directly using Node's native type stripping, which is why v24+ is required.
+A checkout of this repository runs its TypeScript sources directly using Node's native type stripping, which is why v24+ is required.
 Some of the commands listed here are Linux & MacOS specific. On Windows it’s recommended that you run them inside [git bash](https://git-scm.com/download/win).  
 
 ## Documentation
@@ -96,4 +96,4 @@ You can now use your browser to view, edit, delete, import, export and create ne
 
 <video src="https://github.com/h5p/h5p-cli/assets/5208532/b33a12e6-3200-488c-81c6-eae41b13f512"></video>
 
-You can [find more commands in an overview](assets/docs/commands.md) or by running `h5p help`.  
+You can [find more commands in an overview](docs/commands.md) or by running `h5p help`.  

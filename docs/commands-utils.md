@@ -317,7 +317,7 @@ h5p utils check-translations [options] [language] [library]
 
 | Option | Description |
 |--------|-------------|
-| `-diff` | Show differences between translations. |
+| `-d, --diff` | Show differences between translations. Replaces the single-dash `-diff`. |
 
 Exits with code `0` on success, `1` on failure.
 
@@ -332,18 +332,28 @@ Exits with code `0` on success, `1` on failure.
 Pack one or more libraries into a `.h5p` archive.
 
 ```
-h5p utils pack [options] <libraries...> [output.h5p]
+h5p utils pack [options] <libraries...>
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. The last argument is used as the output filename if it ends with `.h5p`. |
-| `output.h5p` | No | Output filename. Detected by `.h5p` extension in the argument list. |
+| `libraries...` | Yes | One or more library names. |
 
 | Option | Description |
 |--------|-------------|
+| `-o, --output <file>` | Output filename. Defaults to `$H5P_DEFAULT_PACK`, or `libraries.h5p`. |
 | `-r` | Recursive: include dependencies. |
 | `-f` | Skip library validation before packing. |
+
+A library argument ending in `.h5p` is still taken as the output filename, with a deprecation
+warning; use `-o` instead.
+
+Which files go into the package can be changed with environment variables:
+
+| Variable | Effect |
+|----------|--------|
+| `H5P_ALLOWED_FILE_PATTERN`, `H5P_ALLOWED_FILE_MODIFIERS` | Regular expression (and its flags) for the files that are allowed. |
+| `H5P_IGNORE_PATTERN`, `H5P_IGNORE_MODIFIERS` | Regular expression (and its flags) for the files that are skipped. Defaults to `^\.\|~$` with `ig`. |
 
 ---
 
@@ -365,7 +375,8 @@ Exits with code `0` if all libraries are valid, `1` if any are invalid.
 
 ## `h5p utils build`
 
-Install dependencies, build, and optionally test the given libraries.
+Build the given libraries, optionally installing their dependencies first and testing them after.
+Libraries without a `package.json` are skipped.
 
 ```
 h5p utils build [options] <libraries...>
@@ -377,7 +388,8 @@ h5p utils build [options] <libraries...>
 
 | Option | Description |
 |--------|-------------|
-| `-t` | Run tests after building. |
+| `-i, --install` | Run `npm install --ignore-scripts` before building. Replaces the single-dash `-install`. |
+| `-t, --test` | Run `npm test` after building. Replaces the single-dash `-test`. |
 
 ---
 
@@ -502,18 +514,11 @@ of library directories.
 
 ## `h5p utils help`
 
-Display help for utils commands.
-
-```
-h5p utils help [command]
-```
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `command` | No | Subcommand name. Omit to list all utils subcommands. |
-
-For detailed option help on any subcommand, use the `--help` flag directly:
+Use the `--help` flag:
 
 ```bash
-h5p utils <subcommand> --help
+h5p utils --help                # list all utils subcommands
+h5p utils <subcommand> --help   # arguments and options for one subcommand
 ```
+
+`h5p utils help` only points you to `h5p utils --help`.

@@ -3,23 +3,42 @@
 Quick reference for all `h5p` commands. Run `h5p help` in the terminal to print this list, or `h5p help <command>` for a specific entry.
 You can also do `h5p <command> --help` for the same information.
 
+Global options go **before** the command:
+
+| Option | Effect |
+|--------|--------|
+| `--verbose` | Show subprocess output and error stacks. Same as `H5P_VERBOSE=1`. |
+| `--quiet` | Only show warnings, errors and results. Same as `H5P_QUIET=1`. |
+| `-V, --version` | Print the version. |
+
+Results go to stdout and progress to stderr, so `h5p list > libraries.txt` captures only the rows.
+Every command exits with code `1` when it fails. Colour follows `NO_COLOR` and `FORCE_COLOR`.
+
+Most commands on this page also take `--adapter <name>`, which swaps in an adapter from an
+installed plugin for that run (see [plugins.md](./plugins.md#overriding-adapters)).
+
+Every git, npm and build step is killed after ten minutes; set `H5P_EXEC_TIMEOUT` (in seconds)
+to change that.
+
 ## Working directory
 
 **Run these commands from the workspace root** — the folder that holds `libraries/`,
-`content/` and `temp/`. A library argument names a folder inside `libraries/`, so
-`h5p export H5P.Accordion-1.0 demo` reads `libraries/H5P.Accordion-1.0`. Running them
-anywhere else fails with a message telling you where to go.
+`content/` and `temp/`. Folders resolve against it: `h5p export h5p-agamotto demo` packs
+`content/demo`, and libraries are looked up in `libraries/`. Running them anywhere else
+fails with a message telling you where to go. Only `h5p core` creates these folders, so
+in a new folder run it first.
 
 The other two command groups follow the opposite convention and run from **inside
 `libraries/`**, where each library is a direct subfolder:
 [`h5p git`](./commands-git.md) and [`h5p utils`](./commands-utils.md).
 
-`h5p plugin` is the exception on this page: it manages plugins of the installed CLI itself
-and works from anywhere. `h5p core` also works from anywhere, since it creates the
-workspace folders.
+The exceptions on this page work from anywhere: `h5p plugin` manages plugins of the
+installed CLI itself, `h5p core` creates the workspace folders, and `h5p branches` takes
+the path to a library folder.
 
-The `libraries/` folder name comes from `folders.libraries` in `config.js`; drop a
-`config.js` in the workspace root to change it.
+The `libraries/` folder name comes from `folders.libraries` in the config; drop a
+`config.js` in the workspace root to change it (see
+[configuration](../assets/docs/configuration.md)).
 
 ---
 
@@ -31,7 +50,7 @@ Install the core H5P libraries required to view and edit content types.
 h5p core
 ```
 
-No arguments. The set installed comes from `core.clone` and `core.setup` in `config.js`, and all of
+No arguments. The set installed comes from the `core.clone` and `core.setup` settings, which a `config.js` can override, and all of
 them are fetched at once:
 
 | Config key | What it is | Folder |
@@ -110,16 +129,21 @@ h5p setup H5P.Accordion master 1   # download instead of clone
 Start the development server.
 
 ```bash
-h5p server [port]
+h5p server [--port <port>]
 ```
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `port` | No | Port number. Defaults to `8080`. |
+| Option | Effect |
+|--------|--------|
+| `--port <port>` | Port number. Defaults to `port` in `config.js`, or `8080`. |
 
 Once running, open the URL in a browser to view, edit, create, import, export, and delete content types.
 
-> To disable auto-reload on library file changes, set `files.watch` to `false` in `config.json`.
+- Content is upgraded to the version of the installed main library when you view it.
+- Resume sessions save the state of a content type that supports it, so it is the same on
+  reload. Create one with the "new session" button and switch between them with the
+  dropdown; the "null" session saves nothing.
+- The view page reloads when library files change. To turn that off, set `files.watch` to
+  `false` in `config.js`.
 
 ---
 
@@ -266,13 +290,13 @@ asked about is made only of `preloadedDependencies` and `editorDependencies` ent
 Clone a library and its dependencies as git repositories into the `libraries/` folder.
 
 ```bash
-h5p clone <library> <mode>
+h5p clone <library> [mode]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `library` | Yes | Library machine name. |
-| `mode` | Yes | `view` or `edit`. |
+| `mode` | No | `view` or `edit`. Defaults to `view`. |
 
 Every library is fetched at the `major.minor.patch` its `library.json` declares. Where that version
 was never tagged, it is fetched from `master` instead and the fallback is reported:
@@ -285,13 +309,13 @@ was never tagged, it is fetched from `master` instead and the fallback is report
 Download (non-git) a library and its dependencies into the `libraries/` folder.
 
 ```bash
-h5p install <library> <mode>
+h5p install <library> [mode]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `library` | Yes | Library machine name. |
-| `mode` | Yes | `view` or `edit`. |
+| `mode` | No | `view` or `edit`. Defaults to `view`. |
 
 Versions are pinned and fall back to `master` exactly as in `h5p clone` above — an untagged version
 is a 404 on the archive URL rather than a missing git ref, and is treated the same way.
@@ -337,18 +361,23 @@ h5p @branches <library> <branch...>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library folder inside `libraries/`, e.g. `H5P.Accordion-1.0`. |
+| `library` | Yes | Path to the library's git checkout, relative to the current folder: `libraries/H5P.Accordion-1.0` from the workspace root, `H5P.Accordion-1.0` from inside `libraries/`, or `.` from inside the library. |
 | `branch...` | Yes | One or more branch names. Each becomes an `@<branch>` folder. |
 
-- Like every command on this page, it runs from the workspace root; the `@<branch>` folders
-  are created inside `libraries/<library>/`.
+- Works from any folder; the `@<branch>` folders are created inside the library folder.
 - Runs `npm install --ignore-scripts` and `npm run build` inside each `@<branch>` folder if a `build` script is present.
-- Updates the `preloadedJs` and `preloadedCss` entries in `libraries/<library>/library.json` to include assets from each `@<branch>` folder.
+- Updates the `preloadedJs` and `preloadedCss` entries in the library's `library.json` to include assets from each `@<branch>` folder.
+
+**Example**
+
+```bash
+h5p branches libraries/H5P.Accordion-1.0 master feat/example
+```
 
 > [!NOTE]
-> This command used to be run from inside a library folder and took only branch names
-> (`h5p @branches master`). It now takes the library as its first argument and is run from
-> the workspace root like the rest of the top-level commands.
+> This command used to take only branch names and act on the current folder
+> (`h5p @branches master`). It now takes the library folder as its first argument; run
+> from inside the library, that is `h5p @branches . master`.
 
 ---
 
@@ -398,6 +427,45 @@ h5p import agamotto-test ~/Downloads/agamotto_test.h5p
 
 ---
 
+## `h5p create`
+
+Scaffold a new content type in the `libraries/` folder.
+
+```bash
+h5p create <name>
+```
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `name` | Yes | Content type name, e.g. `MyContentType`. |
+
+Creates `libraries/H5P.<name>-1.0/` with a runnable `library.json`, a `semantics.json` with one
+text field and an `index.js` that attaches to the page. An existing folder is left alone.
+
+---
+
+## `h5p plugin`
+
+Install, list and remove plugins. Works from any folder.
+
+```bash
+h5p plugin install <source>
+h5p plugin list
+h5p plugin uninstall <name>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `install <source>` | Install a plugin from a local path or a GitHub URL (https or ssh). |
+| `list` | List installed plugins. |
+| `uninstall <name>` | Remove a plugin by name. |
+
+Plugins are recorded in `~/.h5p-cli/h5p.plugins.json`, and git installs are cloned into
+`~/.h5p-cli/plugins/`; set `H5P_CLI_HOME` to use another folder. See
+[plugins.md](./plugins.md) for writing one.
+
+---
+
 ## `h5p help`
 
 Print the help page or a help entry for a specific command.
@@ -413,8 +481,8 @@ h5p help [command]
 For utility subcommands:
 
 ```bash
-h5p utils help           # list all utils subcommands
-h5p utils help <cmd>     # detailed help for a specific utils subcommand
+h5p utils --help         # list all utils subcommands
+h5p utils <cmd> --help   # detailed help for a specific utils subcommand
 ```
 
 ---
@@ -451,6 +519,6 @@ See [commands-utils.md](./commands-utils.md) for the full reference.
 For quick help in the terminal:
 
 ```bash
-h5p utils help           # list all utils subcommands
-h5p utils help <cmd>     # detailed help for a specific subcommand
+h5p utils --help         # list all utils subcommands
+h5p utils <cmd> --help   # detailed help for a specific subcommand
 ```

@@ -11,11 +11,11 @@ A plugin is a Node.js module (a directory with a main entry point) that exports 
 ```typescript
 import { Command } from 'commander';
 
-interface H5PPlugin {
+type H5PPlugin = {
   name: string;
   commands?(): Command[];
   adapters?(): Record<string, new () => unknown>;
-}
+};
 ```
 
 | Field | Required | Description |
@@ -75,7 +75,9 @@ export default {
 };
 ```
 
-Set `"main"` in your `package.json` to `index.ts` for TypeScript or `index.js` for JavaScript.
+The entry point is found the way Node finds a package's: `exports["."]` in your `package.json` (a
+string, or its `import`, `default` or `node` condition), then `"main"`, then `index.js`, `index.mjs` or
+`index.ts`. Setting `"main"` to `index.ts` or `index.js` is enough.
 
 Declare `h5p-cli` and `commander` as **`peerDependencies`** (and as `devDependencies`, if you want their
 types in your editor). Whatever copies end up installed next to your plugin, its imports of `h5p-cli`,
@@ -372,7 +374,8 @@ Adapters are the I/O boundary in h5p-cli. Each built-in command resolves its ada
 | `register` | `h5p register` | `IRegisterAdapter` |
 | `create` | `h5p create` | `ICreateAdapter` |
 | `core` | `h5p core` | `ICoreAdapter` |
-| `setup` | `h5p core` | `ISetupAdapter` |
+
+`h5p core` has no `--adapter` flag, so its adapter can only be replaced as the default.
 
 ### Default override
 
@@ -408,13 +411,14 @@ h5p export MyLibrary --adapter s3-export
 
 ### Implementing an adapter
 
-An adapter is a class whose constructor takes no arguments. It must implement the interface expected by the command. Check the corresponding adapter file in `src/adapters/` for the interface definition.
+An adapter is a class whose constructor takes no arguments. It must have the methods the command
+calls, as declared by the interface in the corresponding file in
+[`src/adapters/`](../src/adapters/). The interfaces are not exported from the package, so match
+their shape rather than importing them.
 
 ```typescript
-// Example: custom export adapter
-import { IExportAdapter } from 'h5p-cli/src/adapters/export-adapter';
-
-class S3ExportAdapter implements IExportAdapter {
+// Example: custom export adapter, matching IExportAdapter in src/adapters/export-adapter.ts
+class S3ExportAdapter {
   async export(library: string, folder?: string): Promise<string> {
     // upload to S3 instead of writing locally
     return 's3://bucket/path';
