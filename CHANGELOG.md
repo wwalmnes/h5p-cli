@@ -137,7 +137,8 @@ enforced instead of silently producing empty results.
   reported libraries are unchanged.
 - **`h5p tags` reads `git ls-remote`** instead of cloning the repository into `temp/`, unshallowing it,
   checking out and pulling. Dependency resolution calls it once per library whenever a version is given,
-  so a versioned setup no longer clones the entire graph just to read version numbers.
+  so a versioned setup no longer clones the entire graph just to read version numbers. No longer necessary
+  with `mainBranch` argument.
 - **`h5p core` fetches everything it installs at once, and resolves nothing.** It ran in two
   sequential phases: clone `h5p-php-library` and `h5p-editor-php-library` one after the other through
   `spawnSync` (which blocks the event loop, so the command printed a line per library and then froze),
@@ -182,6 +183,8 @@ enforced instead of silently producing empty results.
   working directory. Children are spawned `detached` and signalled as `-pid`, because commands run
   through a shell and the npm/webpack/ssh processes below it survive a kill aimed at the shell alone —
   keeping the inherited pipes open, so node could never exit.
+- **`h5p server` moved ports usage to parameter.** If you want to use a different port than the default one
+it has to be done with a paramter `h5p server --port <newPort>` instead of `h5p server <newport>`.
 
 ### Fixed
 
@@ -244,8 +247,7 @@ enforced instead of silently producing empty results.
 
 ### Compatibility
 
-Everything except the git subcommands keeps its name and positional arguments: `setup`, `core`,
-`server`, `list`, `tags`, `register`, `deps`, `missing`, `clone`, `install`, `verify`,
-`branches` / `@branches`, `export`, `import`, `help` and the remaining `utils` subcommands. The
-`H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment variables behave as before, and `config.js` in the
-workspace root still overrides folder names.
+Everything except the git subcommands keeps its name and positional arguments: `setup`, `core`, , `list`,
+`register`, `deps`, `missing`, `clone`, `install`, `verify`, `branches` / `@branches`, `export`, `import`,
+`help` and the remaining `utils` subcommands. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment variables
+behave as before, and `config.js` in the workspace root still overrides folder names.

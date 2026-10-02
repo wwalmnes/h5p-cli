@@ -62,6 +62,6 @@ program.addCommand(utilsCommand());
 const pluginCommands = await loadPlugins(program);
 
 // Top-level commands must run from the workspace root; see guardTopLevelCommands.
-guardTopLevelCommands(program, ['utils', 'git', 'plugin', 'core'], pluginCommands);
+guardTopLevelCommands(program, ['utils', 'git', 'plugin', 'core', 'branches'], pluginCommands);
 
 program.parse(process.argv);

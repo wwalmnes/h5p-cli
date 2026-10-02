@@ -66,3 +66,6 @@ Logic - Currently too many responsibilities: mix of pure computational functions
 - Plain mode to avoid the "fluff" with tables and such (like from `h5p git status`)
 - We have both `h5p create` and `h5p utils init`. Merge them?
 - We have `h5p utils get`, `h5p setup`, `h5p install` and `h5p clone`. Review if this is really necessary or if it is better to merge them.
+- `h5p branches` overwrites library.json -> should probably just add like `h5p utils dependency-check --apply` does.
+- Command to update folders in `libraries` to match the version they are? Perhaps `h5p utils dependency-check` can have an option to rename folder as well?
+- `h5p utils dependency-check` can exclude some libraries?

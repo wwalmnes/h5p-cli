@@ -163,14 +163,13 @@ header reads `MACHINE NAME`. Progress messages go to stderr, so
 List available version tags for a library.
 
 ```bash
-h5p tags <org> <library> <mainBranch>
+h5p tags <org> <library>
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `org` | Yes | GitHub organization (shown in `h5p list` output). |
 | `library` | Yes | Repository name (e.g. `h5p-accordion`). |
-| `mainBranch` | Yes | Main branch of the repository. Defaults to `master`. |
 
 ---
 

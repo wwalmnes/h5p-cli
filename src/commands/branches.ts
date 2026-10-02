@@ -25,7 +25,7 @@ export function branchesCommand(): Command {
     .argument('<branches...>', 'Branch names to clone')
     .action((library: string, branches: string[]) => {
       try {
-        const libDir = path.join(config.folders.libraries, library);
+        const libDir = library; //path.join(config.folders.libraries, library);
         if (!fs.existsSync(libDir)) {
           throw new Error(`library "${library}" not found in "${config.folders.libraries}"`);
         }
