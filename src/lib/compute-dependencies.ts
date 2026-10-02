@@ -158,7 +158,7 @@ export async function computeDependencies(
   }
   const compute = async (org: string, dep: string, version: string) => {
     const parent = toDo[dep].parent ? `/${toDo[dep].parent}` : '';
-    const lastParent = registry.regular[toDo[dep].parent]?.requiredBy?.[registry.regular[toDo[dep].parent]?.requiredBy?.length ?? 0 - 1] ?? '';
+    const lastParent = registry.regular[toDo[dep].parent]?.requiredBy?.[(registry.regular[toDo[dep].parent]?.requiredBy?.length ?? 0) - 1] ?? '';
     const requiredByPath = lastParent + parent;
     if (pathHasDuplicates(requiredByPath)) {
       delete toDo[dep];

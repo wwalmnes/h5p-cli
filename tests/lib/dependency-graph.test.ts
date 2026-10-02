@@ -180,4 +180,45 @@ describe('dependency graph', () => {
     expect(optional(edit, 'H5P.Deep')).toBe(true);
     expect(optional(edit, 'H5P.EditorOnlyMissing')).toBe(true);
   });
+
+  /* The order of the result is the script load order. h5p-p is reached twice:
+  off the root, and again two levels deeper through h5p-a -> h5p-b. The deeper
+  visit is only taken because requiredBy records the full path to a library, not
+  just its direct parent - and it is what pushes h5p-x, reached through h5p-p
+  both times, deep enough to come out ahead of h5p-p. */
+  it('orders a dependency ahead of a library that is reached again deeper in the graph', async () => {
+    const graph: Record<string, { machineName: string; preloaded: string[] }> = {
+      'h5p-root': { machineName: 'H5P.Root', preloaded: ['H5P.P', 'H5P.A'] },
+      'h5p-a': { machineName: 'H5P.A', preloaded: ['H5P.B'] },
+      'h5p-b': { machineName: 'H5P.B', preloaded: ['H5P.P'] },
+      'h5p-p': { machineName: 'H5P.P', preloaded: ['H5P.X'] },
+      'h5p-x': { machineName: 'H5P.X', preloaded: [] },
+    };
+    const port: IComputeDependenciesPort = {
+      getRegistry: async () => {
+        const registry: Registry = { regular: {}, reversed: {} };
+        for (const [shortName, lib] of Object.entries(graph)) {
+          const entry = { id: lib.machineName, shortName, org: 'h5p', repoName: shortName } as any;
+          registry.regular[shortName] = entry;
+          registry.reversed[lib.machineName] = entry;
+        }
+        return registry;
+      },
+      parseLibraryFolders: async () => ({}),
+      getTags: () => [],
+      getLibraryJson: async (_folder, _org, repoName: string) => ({
+        machineName: graph[repoName].machineName,
+        title: graph[repoName].machineName,
+        majorVersion: 1,
+        minorVersion: 0,
+        patchVersion: 0,
+        preloadedDependencies: graph[repoName].preloaded.map(machineName => ({ machineName, majorVersion: 1, minorVersion: 0 })),
+      }),
+      getSemanticsJson: async () => [],
+    };
+
+    const order = Object.keys(await computeDependencies('h5p-root', 'view', null, undefined, port));
+
+    expect(order.indexOf('h5p-x')).toBeLessThan(order.indexOf('h5p-p'));
+  });
 });
