@@ -1,9 +1,7 @@
 import { Command } from 'commander';
-import { TranslationService } from '../../services/translation-service.ts';
-import { TranslationAdapter } from '../../adapters/translation-adapter.ts';
+import { importLanguageFiles } from '../../logic/translations.ts';
 
-export function importLanguageFilesCommand(service?: TranslationService): Command {
-  const svc = service ?? new TranslationService(new TranslationAdapter());
+export function importLanguageFilesCommand(): Command {
   return new Command('import-language-files')
     .description('Get files from dir')
     .argument('<dir>', 'Source directory')
@@ -11,7 +9,7 @@ export function importLanguageFilesCommand(service?: TranslationService): Comman
       const lf = '\u000A';
       const color = { default: '\x1B[0m', emphasize: '\x1B[1m', green: '\x1B[32m', yellow: '\x1B[33m', red: '\x1B[31m' };
       try {
-        const results = await svc.importLanguageFiles(dir, ['*']);
+        const results = await importLanguageFiles(dir, ['*']);
         for (const repo of results) {
           process.stdout.write(color.emphasize + repo.name + color.default);
           if ('failed' in repo && repo.failed) process.stdout.write(' ' + color.red + 'FAILED' + color.default);

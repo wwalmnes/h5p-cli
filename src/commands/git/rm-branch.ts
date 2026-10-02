@@ -1,11 +1,10 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
 import { resolveRepos } from '../../lib/process-repos.ts';
 import { reportResult } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function rmBranchCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function rmBranchCommand(): Command {
   return new Command('rm-branch')
     .description('Removes branch (local and remote)')
     .argument('<branch>', 'Branch name')

@@ -1,11 +1,11 @@
 import { Command } from 'commander';
-import { GitAdapter, type GitOpResult, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
+import type { GitOpResult } from '../../logic/git.ts';
 import { processRepos, type RepoResult } from '../../lib/process-repos.ts';
 import { reportResults, reportSummary, sortByNameDescending } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function pullCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function pullCommand(): Command {
   return new Command('pull')
     .description('Pull the given or all repos')
     .argument('[libraries...]', 'Library names')

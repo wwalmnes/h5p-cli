@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { importCommand } from '../../src/commands/import.ts';
+import { importContent } from '../../src/logic/content.ts';
 
-vi.mock('../../configLoader', () => ({
-  default: { registry: 'libraryRegistry.json', folders: { libraries: 'libraries', temp: 'temp' } },
-}));
-vi.mock('../../logic', () => ({
-  default: { import: vi.fn() },
-}));
+vi.mock('../../src/logic/content.ts', () => ({ importContent: vi.fn() }));
 
 describe('importCommand', () => {
+  let stdout: string;
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    stdout = '';
     stderr = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += chunk;
+      return true;
+    });
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
       stderr += chunk;
       return true;
@@ -23,31 +23,25 @@ describe('importCommand', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    process.exitCode = 0;
   });
 
-  it('has correct name', () => {
-    const mockAdapter = { import: vi.fn().mockReturnValue('myfolder') } as any;
-    expect(importCommand(mockAdapter).name()).toBe('import');
+  it('imports the archive into the folder and prints where it went', async () => {
+    vi.mocked(importContent).mockReturnValue('myfolder');
+    await importCommand().parseAsync(['node', 'h5p', 'myfolder', 'archive.h5p']);
+    expect(importContent).toHaveBeenCalledWith('myfolder', 'archive.h5p');
+    expect(stdout).toContain('content/myfolder');
   });
 
-  it('calls adapter.import with folder and archive', async () => {
-    const mockAdapter = { import: vi.fn().mockReturnValue('myfolder') } as any;
-    const cmd = importCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'myfolder', 'archive.h5p']);
-    expect(mockAdapter.import).toHaveBeenCalledWith('myfolder', 'archive.h5p');
-  });
-
-  it('calls adapter.import without archive', async () => {
-    const mockAdapter = { import: vi.fn().mockReturnValue('myfolder') } as any;
-    const cmd = importCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'myfolder']);
-    expect(mockAdapter.import).toHaveBeenCalledWith('myfolder', undefined);
+  it('leaves the archive to the default when none is given', async () => {
+    vi.mocked(importContent).mockReturnValue('myfolder');
+    await importCommand().parseAsync(['node', 'h5p', 'myfolder']);
+    expect(importContent).toHaveBeenCalledWith('myfolder', undefined);
   });
 
   it('logs error on exception', async () => {
-    const mockAdapter = { import: vi.fn().mockImplementation(() => { throw new Error('import failed'); }) } as any;
-    const cmd = importCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'myfolder']);
+    vi.mocked(importContent).mockImplementation(() => { throw new Error('import failed'); });
+    await importCommand().parseAsync(['node', 'h5p', 'myfolder']);
     expect(stderr).toContain('> error: import failed');
   });
 });

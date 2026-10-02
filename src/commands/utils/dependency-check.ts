@@ -1,8 +1,9 @@
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import { DependencyService } from '../../services/dependency-service.ts';
-import type { Plan } from '../../lib/dependencies/plan.ts';
+import { applyPlan } from '../../lib/dependencies/apply.ts';
+import { buildPlan, type Plan } from '../../lib/dependencies/plan.ts';
+import { scanLibraries } from '../../lib/dependencies/scan.ts';
 import {
   chain,
   cycleLines,
@@ -12,7 +13,7 @@ import {
   summary,
   upToDateLines,
 } from '../../lib/dependencies/report.ts';
-import { formatVersion } from '../../lib/dependencies/version.ts';
+import { formatVersion, parseSeedArg } from '../../lib/dependencies/version.ts';
 import { ui } from '../../lib/ui.ts';
 
 const argsSchema = z.object({
@@ -45,7 +46,7 @@ function reportPlan(plan: Plan): void {
   for (const warning of plan.warnings) ui.warn(warning);
 }
 
-export function dependencyCheckCommand(service?: DependencyService): Command {
+export function dependencyCheckCommand(): Command {
   return new Command('dependency-check')
     .description('Report which libraries need a minor bump when one or more libraries are bumped')
     .argument(
@@ -55,8 +56,6 @@ export function dependencyCheckCommand(service?: DependencyService): Command {
     .option('--libraries <path>', 'Folder of library checkouts to analyse', process.env.H5P_LIBRARIES ?? '.')
     .option('--apply', 'Write the bumps and reference updates to disk', false)
     .action(async (libraries: string[], options) => {
-      const svc = service ?? new DependencyService();
-
       try {
         const args = argsSchema.parse({
           libraries,
@@ -64,7 +63,11 @@ export function dependencyCheckCommand(service?: DependencyService): Command {
           apply: Boolean(options.apply),
         });
 
-        const plan = svc.plan(args.librariesDir, args.libraries);
+        const librariesDir = path.resolve(args.librariesDir);
+        const plan = buildPlan(scanLibraries(librariesDir), {
+          seeds: args.libraries.map(parseSeedArg),
+          librariesDir,
+        });
         reportPlan(plan);
 
         if (!args.apply) {
@@ -72,7 +75,7 @@ export function dependencyCheckCommand(service?: DependencyService): Command {
           return;
         }
 
-        const result = svc.apply(plan);
+        const result = applyPlan(plan);
 
         for (const failure of result.failures) {
           ui.error(`could not apply ${failure.relFile}: ${failure.detail} — ${failure.reason}`);

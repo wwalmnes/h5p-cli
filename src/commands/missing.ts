@@ -1,24 +1,37 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { MissingAdapter, type IMissingAdapter } from '../adapters/missing-adapter.ts';
-import { MissingService } from '../services/missing-service.ts';
-import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { computeDependencies } from '../logic/dependencies.ts';
+import { getRegistry, parseLibraryFolders } from '../logic/registry.ts';
 import { ui } from '../lib/ui.ts';
 
 const missingArgsSchema = z.object({
   library: z.string(),
 });
 
-export function missingCommand(service?: MissingService): Command {
+export function missingCommand(): Command {
   return new Command('missing')
     .description('Computes missing dependencies for h5p library')
     .argument('<library>', 'Library name')
-    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
-    .action(async (library: string, options) => {
-      const svc = service ?? new MissingService(adapterRegistry.resolve<IMissingAdapter>(options.adapter ?? 'missing') ?? new MissingAdapter());
+    .action(async (library: string) => {
       try {
         const args = missingArgsSchema.parse({ library });
-        await svc.missing(args.library);
+        const libraryDirs = await parseLibraryFolders();
+        const registry = await getRegistry();
+        const folder = libraryDirs[registry.regular[args.library]?.id];
+        // One edit resolution, from the installed folder, covers the whole graph.
+        const result = await computeDependencies(args.library, 'edit', null, folder);
+
+        // entries without an id are the ones the registry does not know about
+        const missing = Object.keys(result).filter(item => !result[item].id);
+        if (!missing.length) {
+          ui.info(`${args.library} has no unregistered dependencies`);
+          return;
+        }
+
+        ui.info(`unregistered dependencies for ${args.library}`);
+        for (const item of missing) {
+          ui.data(`${item} (${result[item].optional ? 'optional' : 'required'})`);
+        }
       } catch (error) {
         ui.fail(error);
       }

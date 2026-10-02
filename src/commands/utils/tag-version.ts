@@ -1,9 +1,8 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
 import { processRepos } from '../../lib/process-repos.ts';
 
-export function tagVersionCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function tagVersionCommand(): Command {
   return new Command('tag-version')
     .description('Create tag from current version number')
     .argument('[libraries...]', 'Library names')

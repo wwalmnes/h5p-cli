@@ -1,11 +1,10 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
 import { processRepos } from '../../lib/process-repos.ts';
 import { reportChanges } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function commitCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function commitCommand(): Command {
   return new Command('commit')
     .description('Commit to repos with given message')
     .argument('<message>', 'Commit message')

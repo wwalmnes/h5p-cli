@@ -1,9 +1,7 @@
 import { Command } from 'commander';
-import { VersioningService } from '../../services/versioning-service.ts';
-import { VersioningAdapter } from '../../adapters/versioning-adapter.ts';
+import { increasePatchVersion } from '../../logic/versioning.ts';
 
-export function increasePatchVersionCommand(service?: VersioningService): Command {
-  const svc = service ?? new VersioningService(new VersioningAdapter());
+export function increasePatchVersionCommand(): Command {
   return new Command('increase-patch-version')
     .description('Increases the patch version')
     .argument('[libraries...]', 'Library names')
@@ -14,7 +12,7 @@ export function increasePatchVersionCommand(service?: VersioningService): Comman
 
       try {
         const repos = libraries.length ? libraries : ['*'];
-        const results = await svc.increasePatchVersion(repos, !!options.f);
+        const results = await increasePatchVersion(repos, !!options.f);
         for (const repo of results) {
           process.stdout.write(color.emphasize + repo.name + color.default);
           if ('failed' in repo && repo.failed) process.stdout.write(' ' + color.red + 'FAILED' + color.default);

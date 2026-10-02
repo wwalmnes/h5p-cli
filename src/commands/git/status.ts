@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
 import { processRepos } from '../../lib/process-repos.ts';
 import { reportChanges } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
@@ -10,8 +10,7 @@ const statusArgsSchema = z.object({
   f: z.boolean().optional(),
 });
 
-export function statusCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function statusCommand(): Command {
   return new Command('status')
     .description('Show the status for the given or all libraries')
     .argument('[libraries...]', 'Library names')

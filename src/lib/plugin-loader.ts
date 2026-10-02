@@ -3,9 +3,8 @@ import path from 'path';
 import { registerHooks } from 'module';
 import { pathToFileURL } from 'url';
 import { Command } from 'commander';
-import { adapterRegistry } from './adapter-registry.ts';
 import type { H5PPlugin } from './plugin-types.ts';
-import type { PluginsConfig } from '../adapters/plugin-adapter.ts';
+import type { PluginsConfig } from './plugins.ts';
 import { pluginHome } from './plugin-home.ts';
 import { ui } from './ui.ts';
 
@@ -119,15 +118,6 @@ async function loadPlugin(ref: string, program: Command): Promise<Command[]> {
   if (!plugin || typeof plugin !== 'object' || !plugin.name) {
     ui.warn(`[h5p] Plugin "${ref}" does not export a valid H5PPlugin object`);
     return [];
-  }
-
-  if (typeof plugin.adapters === 'function') {
-    try {
-      adapterRegistry.register(plugin.adapters());
-    } catch (e) {
-      ui.warn(`[h5p] Plugin "${plugin.name}" adapters() threw`);
-      ui.error(e);
-    }
   }
 
   if (typeof plugin.commands === 'function') {

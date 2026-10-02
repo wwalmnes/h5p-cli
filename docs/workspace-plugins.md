@@ -1,6 +1,6 @@
 # Developing Plugins with NPM Workspace
 
-This guide covers how to develop h5p-cli plugins using the [npm workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces) setup. For the full plugin API reference (commands, adapters, interfaces), see [plugins.md](plugins.md).
+This guide covers how to develop h5p-cli plugins using the [npm workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces) setup. For the full plugin API reference (commands, output, installation), see [plugins.md](plugins.md).
 
 Note: This is _not_ a requirement on how to work with h5p-cli and plugins, but a suggestion that can make your life easier :).
 
@@ -154,7 +154,7 @@ The CLI exposes several entry points that plugins can use:
 
 | Import path | What it provides |
 |-------------|-----------------|
-| `h5p-cli/plugin-types` | `H5PPlugin` and `AdapterOverrides` types |
+| `h5p-cli/plugin-types` | The `H5PPlugin` type |
 | `h5p-cli/utils` | Utility functions (`fromTemplate`, `parseGitUrl`, etc.) |
 | `h5p-cli/logic` | Core logic layer (library parsing, registry, content operations) |
 | `h5p-cli/config` | Configuration loader (paths, settings) |

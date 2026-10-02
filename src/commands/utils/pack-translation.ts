@@ -1,9 +1,7 @@
 import { Command } from 'commander';
-import { TranslationService } from '../../services/translation-service.ts';
-import { TranslationAdapter } from '../../adapters/translation-adapter.ts';
+import { packTranslation } from '../../logic/translations.ts';
 
-export function packTranslationCommand(service?: TranslationService): Command {
-  const svc = service ?? new TranslationService(new TranslationAdapter());
+export function packTranslationCommand(): Command {
   return new Command('pack-translation')
     .description('Export translations')
     .argument('<languageCode>', 'Language code')
@@ -17,7 +15,7 @@ export function packTranslationCommand(service?: TranslationService): Command {
 
       try {
         const repos = libraries.length ? libraries : ['*'];
-        const count = await svc.packTranslation(languageCode, repos, file);
+        const count = await packTranslation(languageCode, repos, file);
         process.stdout.write(`Successfully packed ${count} translations into ${file}` + lf);
       } catch (error: any) {
         process.stderr.write(error.message + lf);

@@ -1,11 +1,11 @@
 import { Command } from 'commander';
-import { GitAdapter, type GitOpResult, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
+import type { GitOpResult } from '../../logic/git.ts';
 import { resolveRepos } from '../../lib/process-repos.ts';
 import { reportResult } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function newBranchCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function newBranchCommand(): Command {
   return new Command('new-branch')
     .description('Creates a new branch (local and remote)')
     .argument('<branch>', 'Branch name')

@@ -1,7 +1,8 @@
+import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import { DependencyService } from '../../services/dependency-service.ts';
-import type { InconsistencyReport } from '../../lib/dependencies/inconsistencies.ts';
+import { findInconsistencies, type InconsistencyReport } from '../../lib/dependencies/inconsistencies.ts';
+import { scanLibraries } from '../../lib/dependencies/scan.ts';
 import {
   conflictHead,
   conflictLines,
@@ -36,21 +37,20 @@ function reportInconsistencies(report: InconsistencyReport, transitive: boolean)
   for (const warning of report.warnings) ui.warn(warning);
 }
 
-export function findInconsistenciesCommand(service?: DependencyService): Command {
+export function findInconsistenciesCommand(): Command {
   return new Command('find-inconsistencies')
     .description('Find libraries that pin the same dependency at two different versions')
     .option('--libraries <path>', 'Folder of library checkouts to analyse', process.env.H5P_LIBRARIES ?? '.')
     .option('--transitive', 'Also report conflicts reachable through dependencies', false)
     .action(async (options) => {
-      const svc = service ?? new DependencyService();
-
       try {
         const args = argsSchema.parse({
           librariesDir: options.libraries,
           transitive: Boolean(options.transitive),
         });
 
-        const report = svc.inconsistencies(args.librariesDir, args.transitive);
+        const librariesDir = path.resolve(args.librariesDir);
+        const report = findInconsistencies(scanLibraries(librariesDir), { librariesDir, transitive: args.transitive });
         reportInconsistencies(report, args.transitive);
 
         // A conflict is a finding, not a crash — but it should still fail a

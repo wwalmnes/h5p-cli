@@ -1,11 +1,10 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
 import { processRepos } from '../../lib/process-repos.ts';
 import { reportResults } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function checkoutCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function checkoutCommand(): Command {
   return new Command('checkout')
     .description('Change branch')
     .argument('<branch>', 'Branch name')

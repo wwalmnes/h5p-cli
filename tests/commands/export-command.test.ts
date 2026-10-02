@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { exportCommand } from '../../src/commands/export.ts';
+import { exportContent } from '../../src/logic/content.ts';
 
-vi.mock('../../configLoader', () => ({
-  default: { registry: 'libraryRegistry.json', folders: { libraries: 'libraries', temp: 'temp' } },
-}));
-vi.mock('../../logic', () => ({
-  default: { export: vi.fn() },
-}));
+vi.mock('../../src/logic/content.ts', () => ({ exportContent: vi.fn() }));
 
 describe('exportCommand', () => {
+  let stdout: string;
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    stdout = '';
     stderr = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+      stdout += chunk;
+      return true;
+    });
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
       stderr += chunk;
       return true;
@@ -23,31 +23,25 @@ describe('exportCommand', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    process.exitCode = 0;
   });
 
-  it('has correct name', () => {
-    const mockAdapter = { export: vi.fn().mockResolvedValue('/out/h5p-blanks.h5p') } as any;
-    expect(exportCommand(mockAdapter).name()).toBe('export');
+  it('exports the library into the given folder and prints the file', async () => {
+    vi.mocked(exportContent).mockResolvedValue('/out/h5p-blanks.h5p');
+    await exportCommand().parseAsync(['node', 'h5p', 'h5p-blanks', '/out']);
+    expect(exportContent).toHaveBeenCalledWith('h5p-blanks', '/out');
+    expect(stdout).toContain('/out/h5p-blanks.h5p');
   });
 
-  it('calls adapter.export with library and folder', async () => {
-    const mockAdapter = { export: vi.fn().mockResolvedValue('/out/h5p-blanks.h5p') } as any;
-    const cmd = exportCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '/out']);
-    expect(mockAdapter.export).toHaveBeenCalledWith('h5p-blanks', '/out');
-  });
-
-  it('calls adapter.export without folder', async () => {
-    const mockAdapter = { export: vi.fn().mockResolvedValue('/out/h5p-blanks.h5p') } as any;
-    const cmd = exportCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockAdapter.export).toHaveBeenCalledWith('h5p-blanks', undefined);
+  it('leaves the folder to the default when none is given', async () => {
+    vi.mocked(exportContent).mockResolvedValue('h5p-blanks.h5p');
+    await exportCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
+    expect(exportContent).toHaveBeenCalledWith('h5p-blanks', undefined);
   });
 
   it('logs error on rejection', async () => {
-    const mockAdapter = { export: vi.fn().mockRejectedValue(new Error('export failed')) } as any;
-    const cmd = exportCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
+    vi.mocked(exportContent).mockRejectedValue(new Error('export failed'));
+    await exportCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: export failed');
   });
 });

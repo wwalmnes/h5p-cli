@@ -6,11 +6,9 @@ import { createEmptyProject, createSeededProject, type Fixture } from '../helper
 import { guardTopLevelCommands } from '../../src/lib/workspace.ts';
 import { applyPluginCommands } from '../../src/lib/plugin-loader.ts';
 
-// `utils list` is exempt from the guard, so it must reach its adapter. Stub the network.
-vi.mock('../../src/adapters/repo-discovery-adapter.ts', () => ({
-  RepoDiscoveryAdapter: class {
-    fetchRegistry = vi.fn(async () => ({ 'H5P.Accordion': { repository: 'h5p/h5p-accordion' } }));
-  },
+// `utils list` is exempt from the guard, so it must reach the registry. Stub the network.
+vi.mock('../../src/logic/h5p-org-registry.ts', () => ({
+  fetchRegistry: vi.fn(async () => ({ 'H5P.Accordion': { repository: 'h5p/h5p-accordion' } })),
 }));
 
 const { gitCommand } = await import('../../src/commands/git/index.ts');

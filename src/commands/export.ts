@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { ExportAdapter, type IExportAdapter } from '../adapters/export-adapter.ts';
-import { adapterRegistry } from '../lib/adapter-registry.ts';
+import { exportContent } from '../logic/content.ts';
 import { ui } from '../lib/ui.ts';
 
 const exportArgsSchema = z.object({
@@ -9,17 +8,15 @@ const exportArgsSchema = z.object({
   folder: z.string().optional(),
 });
 
-export function exportCommand(adapter?: IExportAdapter): Command {
+export function exportCommand(): Command {
   return new Command('export')
     .description('Exports content type as .h5p zipped file')
     .argument('<library>', 'Library name')
     .argument('[folder]', 'Output folder')
-    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
-    .action(async (library: string, folder: string | undefined, options) => {
-      const a = adapter ?? adapterRegistry.resolve<IExportAdapter>(options.adapter ?? 'export') ?? new ExportAdapter();
+    .action(async (library: string, folder: string | undefined) => {
       try {
         const args = exportArgsSchema.parse({ library, folder });
-        const file = await a.export(args.library, args.folder);
+        const file = await exportContent(args.library, args.folder);
         ui.data(file);
       } catch (error) {
         ui.fail(error);

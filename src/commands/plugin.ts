@@ -1,23 +1,16 @@
 import { Command } from 'commander';
-import path from 'path';
-import { PluginAdapter } from '../adapters/plugin-adapter.ts';
-import { PluginService } from '../services/plugin-service.ts';
-import { pluginHome } from '../lib/plugin-home.ts';
+import { installPlugin, listPlugins, uninstallPlugin } from '../lib/plugins.ts';
 import { ui } from '../lib/ui.ts';
 
-export function pluginCommand(service?: PluginService): Command {
+export function pluginCommand(): Command {
   const plugin = new Command('plugin').description('Manage h5p-cli plugins');
 
   plugin
     .command('install <source>')
     .description('Install a plugin from a GitHub URL (https or ssh) or a local path')
     .action(async (source: string) => {
-      const svc = service ?? new PluginService(
-        new PluginAdapter(pluginHome()),
-        path.join(pluginHome(), 'plugins')
-      );
       try {
-        await svc.install(source);
+        await installPlugin(source);
       } catch (error) {
         ui.fail(error);
       }
@@ -27,30 +20,15 @@ export function pluginCommand(service?: PluginService): Command {
     .command('list')
     .description('List installed plugins')
     .action(() => {
-      const svc = service ?? new PluginService(
-        new PluginAdapter(pluginHome()),
-        path.join(pluginHome(), 'plugins')
-      );
-      const plugins = svc.list();
-
-      ui.table(plugins.reduce<string[][]>((acc, p) => {
-        acc.push([p.name, p.path]);
-        return acc;
-      }, []), {
-        head: ['Name', 'Path']
-      });
+      ui.table(listPlugins().map(p => [p.name, p.path]), { head: ['Name', 'Path'] });
     });
 
   plugin
     .command('uninstall <name>')
     .description('Uninstall a plugin by name')
     .action((name: string) => {
-      const svc = service ?? new PluginService(
-        new PluginAdapter(pluginHome()),
-        path.join(pluginHome(), 'plugins')
-      );
       try {
-        svc.uninstall(name);
+        uninstallPlugin(name);
       } catch (error) {
         ui.fail(error);
       }

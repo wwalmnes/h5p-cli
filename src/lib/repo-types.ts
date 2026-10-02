@@ -1,9 +1,9 @@
 /**
  * Shapes shared by everything that operates on a set of repositories.
  *
- * These live here rather than in process-repos.ts so that adapters, services and
- * the output helpers can all agree on one result shape without importing the
- * repo-walking machinery.
+ * These live here rather than in process-repos.ts so that the git, versioning and
+ * translation operations and the output helpers can all agree on one result shape
+ * without importing the repo-walking machinery.
  */
 
 /**
@@ -27,9 +27,4 @@ export type RepoOpResult<TMsg = string> = {
 export type ExecResult = {
   stdout: string;
   stderr: string;
-};
-
-/** Output sink injected into services, so tests can capture what was printed. */
-export type Logger = {
-  log: (...args: any[]) => void;
 };

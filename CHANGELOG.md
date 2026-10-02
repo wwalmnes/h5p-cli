@@ -7,8 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 h5p-cli 2.0 is a rewrite. The tool is written in TypeScript, ships as a compiled ESM package with type
 declarations, parses its command line with [Commander](https://github.com/tj/commander.js),
-and is organised into a layered architecture (Command → Service → Adapter → Logic) that is covered by
-tests and extensible through plugins. Output goes through a single UI layer, failures set an exit code,
+and is organised as small command modules over focused logic modules, covered by tests and extensible
+through plugins. Output goes through a single UI layer, failures set an exit code,
 and every command is documented.
 
 Most command names and arguments are unchanged. The changes that will affect an existing workflow are
@@ -64,7 +64,7 @@ enforced instead of silently producing empty results.
   | `h5p-cli/config` | Configuration loader (paths, settings) |
   | `h5p-cli/utils` | Utility helpers (`fromTemplate`, `parseGitUrl`, …) |
   | `h5p-cli/compute-dependencies` | Dependency resolution helpers |
-  | `h5p-cli/plugin-types` | `H5PPlugin` and `AdapterOverrides` types |
+  | `h5p-cli/plugin-types` | The `H5PPlugin` type |
   | `h5p-cli/ui` | Output helpers — messages, tables, progress, verbosity |
   | `h5p-cli/content-upgrade` | `upgradeContent`, for content parameter upgrades |
 
@@ -72,7 +72,7 @@ enforced instead of silently producing empty results.
 
 - **Plugin system.** `h5p plugin install <source>`, `h5p plugin list` and `h5p plugin uninstall <name>`
   install plugins from a local path or a GitHub URL (https or ssh). A plugin is a Node module that
-  default-exports an `H5PPlugin` and can add commands, override built-in adapters, or both. Installed
+  default-exports an `H5PPlugin` and can add commands or replace built-in ones. Installed
   plugins are recorded in `~/.h5p-cli/h5p.plugins.json` and loaded on every invocation; git installs
   are cloned into `~/.h5p-cli/plugins/` and get their dependencies installed. Keeping them in the home
   folder means they survive `npm update -g` and need no write access to a global install
@@ -81,10 +81,6 @@ enforced instead of silently producing empty results.
   written in TypeScript (types that can simply be erased: no `enum` or parameter properties) or ESM
   JavaScript, with no build step either way. The entry point is found as Node would: `exports`, then
   `main`, then `index.js`/`.mjs`/`.ts`. See `docs/plugins.md`.
-- **Adapter overrides.** Adapters are the I/O boundary (file access, git, HTTP). Eleven built-in adapters
-  can be replaced: `export`, `import`, `list`, `tags`, `deps`, `missing`, `install`, `verify`, `register`,
-  `create`, `core`. A plugin can replace one as the new default, or register it under a custom
-  name that users opt into per run with `--adapter <name>`, e.g. `h5p export MyLibrary --adapter s3-export`.
 - **`h5p create <name>`** — scaffolds a new H5P content type into `libraries/`.
 - **`h5p git`** — the git sweep commands as their own group, with their own reference (`docs/commands-git.md`).
 - **`h5p utils dependency-check <libraries...>`** — walks the *reverse* dependency graph to show which
@@ -110,9 +106,9 @@ enforced instead of silently producing empty results.
   - `docs/commands.md` — every top-level `h5p` command
   - `docs/commands-git.md` — the `h5p git` group
   - `docs/commands-utils.md` — the `h5p utils` group
-  - `docs/plugins.md` — plugin API: commands, adapters, interfaces, installation
+  - `docs/plugins.md` — plugin API: commands, output, installation
   - `docs/workspace-plugins.md` — developing plugins with npm workspaces
-- **Test suite** across commands, services, lib, logic, integration and end-to-end layers, plus a
+- **Test suite** across commands, lib, logic, integration and end-to-end layers, plus a
   Playwright smoke test that boots the dev server. `npm test`, `test:unit`, `test:integration`,
   `test:logic`, `test:e2e`, `test:watch`, `test:smoke`, and `npm run typecheck`.
 - **A `files` allowlist** in `package.json`, so the published package ships the compiled sources,
@@ -124,13 +120,13 @@ enforced instead of silently producing empty results.
 
 - Rewritten in TypeScript with `strict` mode enabled; `npm run typecheck` covers the whole tree.
 - Command line parsing moved from a hand-rolled argv switch to Commander v14.
-- Architecture split into **Command → Service → Adapter → Logic**: commands own the CLI contract,
-  services own the flow, adapters own I/O. This is what makes both the tests and the plugin adapter
-  overrides possible.
+- Each command is its own module under `src/commands/` that owns the CLI contract (arguments,
+  validation, output) and calls into `src/logic/` for the work. Flow that is more than one call, such
+  as `h5p setup`'s, is a plain function there (`src/logic/setup.ts`) rather than inline in the command.
 - The monolithic `logic.js` (752 lines, mixed responsibilities) was split into a slimmer `logic.ts` plus
   focused modules under `src/lib/` (`compute-dependencies`, `h5p-utils`, `semantics-utils`,
-  `archive-utils`, `process-repos`, `workspace`, `ui`) and `src/services/` (`translation-service`,
-  `versioning-service`, `dependency-analysis-service`, and others).
+  `archive-utils`, `process-repos`, `workspace`, `ui`) and `src/logic/` (`git`, `versioning`,
+  `translations`, `setup`, `register`, and others).
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
 - `.gitignore` now also covers `dist/`, `plugins/`, `h5p.plugins.json`, `playwright-report/` and

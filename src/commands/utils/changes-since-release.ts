@@ -1,17 +1,15 @@
 import { Command } from 'commander';
-import { VersioningService } from '../../services/versioning-service.ts';
-import { VersioningAdapter } from '../../adapters/versioning-adapter.ts';
+import { changesSinceRelease } from '../../logic/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
 
-export function changesSinceReleaseCommand(service?: VersioningService): Command {
-  const svc = service ?? new VersioningService(new VersioningAdapter());
+export function changesSinceReleaseCommand(): Command {
   return new Command('changes-since-release')
     .description('Show changed files since last release')
     .argument('[libraries...]', 'Library names')
     .action(async (libraries: string[]) => {
       try {
         const repos = libraries.length ? libraries : ['*'];
-        const results = await svc.changesSinceRelease(repos);
+        const results = await changesSinceRelease(repos);
         printVersionResults(results);
       } catch (error: any) {
         process.stdout.write(error.message + '\u000A');

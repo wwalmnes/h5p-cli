@@ -1,11 +1,10 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
+import * as git from '../../logic/git.ts';
 import { processRepos } from '../../lib/process-repos.ts';
 import { reportResults } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function tagCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function tagCommand(): Command {
   return new Command('tag')
     .description('Create a tag')
     .argument('<tagName>', 'Tag name')

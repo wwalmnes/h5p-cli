@@ -2,7 +2,7 @@
 
 > **Developing in the workspace?** See [workspace-plugins.md](workspace-plugins.md) for how to create and link plugins using the npm workspaces setup.
 
-Plugins extend h5p-cli by adding new commands or replacing built-in adapters (the layer that performs I/O operations like file access, git calls, and API requests).
+Plugins extend h5p-cli by adding new commands or replacing built-in ones.
 
 ## Plugin structure
 
@@ -14,7 +14,6 @@ import { Command } from 'commander';
 type H5PPlugin = {
   name: string;
   commands?(): Command[];
-  adapters?(): Record<string, new () => unknown>;
 };
 ```
 
@@ -22,7 +21,6 @@ type H5PPlugin = {
 |-------|----------|-------------|
 | `name` | Yes | Unique identifier for the plugin |
 | `commands()` | No | Returns an array of Commander.js `Command` objects to add to the CLI |
-| `adapters()` | No | Returns a map of adapter keys to constructor classes that replace built-in adapters |
 
 ## Minimal example
 
@@ -355,77 +353,6 @@ vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
 expect(stderr).toContain('> error: something failed');
 ```
 
-## Overriding adapters
-
-Adapters are the I/O boundary in h5p-cli. Each built-in command resolves its adapter through a registry, falling back to the default implementation if no override is found. Plugins can replace any adapter by returning constructors keyed by adapter name.
-
-### Built-in adapter keys
-
-| Key | Used by | Interface |
-|-----|---------|-----------|
-| `export` | `h5p export` | `IExportAdapter` |
-| `import` | `h5p import` | `IImportAdapter` |
-| `list` | `h5p list` | `IListAdapter` |
-| `tags` | `h5p tags` | `ITagsAdapter` |
-| `deps` | `h5p deps` | `IDepsAdapter` |
-| `missing` | `h5p missing` | `IMissingAdapter` |
-| `install` | `h5p install`, `h5p clone` | `IInstallAdapter` |
-| `verify` | `h5p verify` | `IVerifyAdapter` |
-| `register` | `h5p register` | `IRegisterAdapter` |
-| `create` | `h5p create` | `ICreateAdapter` |
-| `core` | `h5p core` | `ICoreAdapter` |
-
-`h5p core` has no `--adapter` flag, so its adapter can only be replaced as the default.
-
-### Default override
-
-When a plugin registers an adapter under a built-in key (e.g. `export`), that adapter becomes the default for the command — no flags needed:
-
-```typescript
-export default {
-  name: 'my-s3-plugin',
-
-  adapters() {
-    return {
-      export: S3ExportAdapter,  // replaces the default export adapter
-    };
-  },
-};
-```
-
-### Named adapter (opt-in via --adapter flag)
-
-You can also register adapters under custom keys. Users select them with the `--adapter` flag:
-
-```typescript
-adapters() {
-  return {
-    's3-export': S3ExportAdapter,
-  };
-}
-```
-
-```bash
-h5p export MyLibrary --adapter s3-export
-```
-
-### Implementing an adapter
-
-An adapter is a class whose constructor takes no arguments. It must have the methods the command
-calls, as declared by the interface in the corresponding file in
-[`src/adapters/`](../src/adapters/). The interfaces are not exported from the package, so match
-their shape rather than importing them.
-
-```typescript
-// Example: custom export adapter, matching IExportAdapter in src/adapters/export-adapter.ts
-class S3ExportAdapter {
-  async export(library: string, folder?: string): Promise<string> {
-    // upload to S3 instead of writing locally
-    return 's3://bucket/path';
-  }
-}
-```
-
 ## Installing a plugin
 
 ### From a local path
@@ -469,44 +396,51 @@ Plugins are loaded at startup from `~/.h5p-cli/h5p.plugins.json`. Each entry has
 
 1. Makes `h5p-cli`, `h5p-cli/*` and `commander` resolve to the CLI's own copies for every plugin
 2. `import()`s the module at the stored path
-3. Calls `adapters()` if present, registering overrides in the adapter registry
-4. Calls `commands()` if present, adding/replacing commands on the program
+3. Calls `commands()` if present, adding/replacing commands on the program
 
 Plugins are loaded **after** all built-in commands are registered, so plugin commands **always** take precedence.
 
 ## Full example: custom storage plugin
 
+A plugin changes what a built-in command does by replacing the command. It can still reuse the
+built-in behaviour through `h5p-cli/logic` and do its own work around it — here, building the
+`.h5p` as usual and uploading it to S3 instead of leaving it on disk.
+
 ```typescript
 // h5p-cli-s3/index.ts
 import { Command } from 'commander';
 import type { H5PPlugin } from 'h5p-cli/plugin-types';
+import logic from 'h5p-cli/logic';
+import { ui } from 'h5p-cli/ui';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-
-class S3ExportAdapter {
-  async export(library, folder) {
-    const client = new S3Client({ region: 'eu-west-1' });
-    // ... build the .h5p, upload to S3
-    return `s3://my-bucket/${library}.h5p`;
-  }
-}
 
 const plugin: H5PPlugin = {
   name: 'h5p-cli-s3',
 
   commands() {
+    // Same name as the built-in, so it replaces `h5p export`.
+    const exportToS3 = new Command('export')
+      .description('Exports content type as .h5p and uploads it to S3')
+      .argument('<library>', 'Library name')
+      .argument('[folder]', 'Output folder')
+      .action(async (library: string, folder?: string) => {
+        try {
+          const file = await logic.export(library, folder);
+          const client = new S3Client({ region: 'eu-west-1' });
+          // ... upload `file` with PutObjectCommand
+          ui.data(`s3://my-bucket/${library}.h5p`);
+        } catch (error) {
+          ui.fail(error);
+        }
+      });
+
     const sync = new Command('s3-sync')
       .description('Sync all libraries to S3')
       .action(async () => {
         // custom sync logic
       });
-    return [sync];
-  },
 
-  adapters() {
-    return {
-      export: S3ExportAdapter,       // replaces default export
-      's3-export': S3ExportAdapter,  // also available via --adapter s3-export
-    };
+    return [exportToS3, sync];
   },
 };
 
@@ -515,7 +449,6 @@ export default plugin;
 
 ```bash
 h5p plugin install /path/to/h5p-cli-s3
-h5p export MyLibrary              # uses S3ExportAdapter by default
-h5p export MyLibrary --adapter s3-export  # explicit selection
-h5p s3-sync                       # new command from plugin
+h5p export MyLibrary   # the plugin's export: builds the .h5p, then uploads it
+h5p s3-sync            # new command from plugin
 ```

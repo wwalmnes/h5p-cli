@@ -1,61 +1,49 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { installCommand } from '../../src/commands/install.ts';
+import { getWithDependencies } from '../../src/logic/install.ts';
 
 vi.mock('../../configLoader', () => ({
   default: { registry: 'libraryRegistry.json', folders: { libraries: 'libraries', temp: 'temp' } },
 }));
-vi.mock('../../logic', () => ({
-  default: { getWithDependencies: vi.fn() },
-}));
+vi.mock('../../src/logic/install.ts', () => ({ getWithDependencies: vi.fn() }));
 
 describe('installCommand', () => {
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stderr = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
       stderr += chunk;
       return true;
     });
+    vi.mocked(getWithDependencies).mockResolvedValue([]);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    process.exitCode = 0;
   });
 
-  it('has correct name', () => {
-    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
-    expect(installCommand(mockAdapter).name()).toBe('install');
+  it('downloads the library and its dependencies in the given mode', async () => {
+    await installCommand().parseAsync(['node', 'h5p', 'h5p-blanks', 'edit']);
+    expect(getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', 'edit', false);
   });
 
-  it('calls adapter.getWithDependencies with download action, library and mode', async () => {
-    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = installCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', 'edit']);
-    expect(mockAdapter.getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', 'edit');
-  });
-
-  it('calls adapter.getWithDependencies without mode', async () => {
-    const mockAdapter = { getWithDependencies: vi.fn().mockResolvedValue(undefined) } as any;
-    const cmd = installCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockAdapter.getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', undefined);
+  it('leaves the mode to the default when none is given', async () => {
+    await installCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
+    expect(getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', undefined, false);
   });
 
   it('logs error on rejection', async () => {
-    const mockAdapter = { getWithDependencies: vi.fn().mockRejectedValue(new Error('install failed')) } as any;
-    const cmd = installCommand(mockAdapter);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
+    vi.mocked(getWithDependencies).mockRejectedValue(new Error('install failed'));
+    await installCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: install failed');
   });
 
-  it('rejects an invalid mode without calling the adapter', async () => {
-    const mockAdapter = { getWithDependencies: vi.fn() } as any;
-    await installCommand(mockAdapter).parseAsync(['node', 'h5p', 'h5p-blanks', 'invalid']);
-    expect(mockAdapter.getWithDependencies).not.toHaveBeenCalled();
+  it('rejects an invalid mode without installing anything', async () => {
+    await installCommand().parseAsync(['node', 'h5p', 'h5p-blanks', 'invalid']);
+    expect(getWithDependencies).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
-    process.exitCode = 0;
   });
 });

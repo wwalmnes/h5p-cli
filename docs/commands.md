@@ -14,9 +14,6 @@ Global options go **before** the command:
 Results go to stdout and progress to stderr, so `h5p list > libraries.txt` captures only the rows.
 Every command exits with code `1` when it fails. Colour follows `NO_COLOR` and `FORCE_COLOR`.
 
-Most commands on this page also take `--adapter <name>`, which swaps in an adapter from an
-installed plugin for that run (see [plugins.md](./plugins.md#overriding-adapters)).
-
 Every git, npm and build step is killed after ten minutes; set `H5P_EXEC_TIMEOUT` (in seconds)
 to change that.
 

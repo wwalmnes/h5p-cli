@@ -1,113 +1,50 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupCommand } from '../../src/commands/setup.ts';
-import { SetupService } from '../../src/services/setup-service.ts';
-import type { ISetupAdapter } from '../../src/adapters/setup-adapter.ts';
-import type { IRegisterAdapter } from '../../src/adapters/register-adapter.ts';
-import { RegisterService } from '../../src/services/register-service.ts';
+import { setup } from '../../src/logic/setup.ts';
 
-vi.mock('../../configLoader', () => ({
-  default: {
-    registry: 'libraryRegistry.json',
-    folders: { libraries: 'libraries', temp: 'temp' },
-  },
-}));
-
-vi.mock('../../logic', () => ({
-  default: {
-    machineToShort: vi.fn(),
-    computeDependencies: vi.fn(),
-    getWithDependencies: vi.fn(),
-    getRegistry: vi.fn(),
-    registryEntryFromRepoUrl: vi.fn(),
-  },
-}));
-
-function makeSetupAdapter(overrides: Partial<ISetupAdapter> = {}): ISetupAdapter {
-  return {
-    machineToShort: vi.fn().mockReturnValue('h5p-blanks'),
-    computeDependencies: vi.fn().mockResolvedValue({}),
-    getWithDependencies: vi.fn().mockResolvedValue([]),
-    installDependencies: vi.fn().mockResolvedValue([]),
-    ...overrides,
-  };
-}
-
-function makeRegisterAdapter(overrides: Partial<IRegisterAdapter> = {}): IRegisterAdapter {
-  return {
-    getRegistry: vi.fn().mockResolvedValue({ regular: {}, reversed: {} }),
-    registryEntryFromRepoUrl: vi.fn().mockResolvedValue({}),
-    readJsonFile: vi.fn().mockReturnValue({}),
-    writeJsonFile: vi.fn(),
-    ...overrides,
-  };
-}
-
-function makeMockService(overrides: Partial<SetupService> = {}): SetupService {
-  const setupAdapter = makeSetupAdapter();
-  const registerSvc = new RegisterService(makeRegisterAdapter(), 'libraryRegistry.json');
-  const svc = new SetupService(setupAdapter, registerSvc, 'libraries');
-  svc.setup = vi.fn().mockResolvedValue(undefined);
-  Object.assign(svc, overrides);
-  return svc;
-}
+vi.mock('../../src/logic/setup.ts', () => ({ setup: vi.fn() }));
 
 describe('setupCommand', () => {
   let stderr: string;
 
   beforeEach(() => {
-    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     stderr = '';
+    vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
     vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => {
       stderr += chunk;
       return true;
     });
+    vi.mocked(setup).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    process.exitCode = 0;
   });
 
-  it('has correct name', () => {
-    const mockSvc = makeMockService();
-    const cmd = setupCommand(mockSvc);
-    expect(cmd.name()).toBe('setup');
+  it('sets up the library', async () => {
+    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
+    expect(setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, undefined);
   });
 
-  it('calls service.setup with library arg', async () => {
-    const mockSvc = makeMockService();
-    const cmd = setupCommand(mockSvc);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, undefined);
+  it('forwards the ref and download args', async () => {
+    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks', '1.14', '1']);
+    expect(setup).toHaveBeenCalledWith('h5p-blanks', '1.14', '1', undefined);
   });
 
-  it('forwards version and download args to service.setup', async () => {
-    const mockSvc = makeMockService();
-    const cmd = setupCommand(mockSvc);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '1.14', '1']);
-    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', '1.14', '1', undefined);
+  it('forwards a git ref positional', async () => {
+    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks', 'feat/my-pr']);
+    expect(setup).toHaveBeenCalledWith('h5p-blanks', 'feat/my-pr', undefined, undefined);
   });
 
-  it('logs error when service.setup rejects, no unhandled rejection', async () => {
-    const mockSvc = makeMockService({
-      setup: vi.fn().mockRejectedValue(new Error('setup failed')),
-    });
-    const cmd = setupCommand(mockSvc);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks']);
+  it('forwards --concurrency as a number', async () => {
+    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks', '--concurrency', '8']);
+    expect(setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, 8);
+  });
+
+  it('logs error when setup rejects, no unhandled rejection', async () => {
+    vi.mocked(setup).mockRejectedValue(new Error('setup failed'));
+    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: setup failed');
-  });
-
-  it('forwards --concurrency to service.setup as a number', async () => {
-    const mockSvc = makeMockService();
-    const cmd = setupCommand(mockSvc);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', '--concurrency', '8']);
-    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', undefined, undefined, 8);
-  });
-
-  it('forwards a git ref positional to service.setup', async () => {
-    const mockSvc = makeMockService();
-    const cmd = setupCommand(mockSvc);
-    await cmd.parseAsync(['node', 'h5p', 'h5p-blanks', 'feat/my-pr']);
-    expect(mockSvc.setup).toHaveBeenCalledWith('h5p-blanks', 'feat/my-pr', undefined, undefined);
   });
 });

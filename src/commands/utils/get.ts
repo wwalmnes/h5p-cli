@@ -1,11 +1,9 @@
 import { Command } from 'commander';
-import { LibraryInstallService } from '../../services/library-install-service.ts';
-import { LibraryInstallAdapter } from '../../adapters/library-install-adapter.ts';
+import { cloneLibrary, resolveCollection, type RegistryLibrary } from '../../logic/h5p-org-registry.ts';
 import { reportResult } from '../../lib/repo-report.ts';
 import { ui } from '../../lib/ui.ts';
 
-export function getCommand(service?: LibraryInstallService): Command {
-  const svc = service ?? new LibraryInstallService(new LibraryInstallAdapter());
+export function getCommand(): Command {
   return new Command('get')
     .description('Clone library and all dependencies')
     .argument('[libraries...]', 'Library names')
@@ -18,10 +16,10 @@ export function getCommand(service?: LibraryInstallService): Command {
         return;
       }
 
-      let collection: Map<string, { repository: string }>;
+      let collection: Map<string, RegistryLibrary>;
       try {
         ui.status('lookup', 'Looking up dependencies...');
-        collection = await svc.resolveCollection(libraries);
+        collection = await resolveCollection(libraries);
         ui.statusDone('lookup');
       } catch (error) {
         ui.statusDone('lookup');
@@ -31,7 +29,7 @@ export function getCommand(service?: LibraryInstallService): Command {
 
       for (const [name, entry] of collection) {
         ui.status('clone', `Cloning into '${name}'...`);
-        const { status, error } = await svc.cloneLibrary(name, entry.repository, fetchWithHttps);
+        const { status, error } = await cloneLibrary(name, entry.repository, fetchWithHttps);
         ui.statusDone('clone');
 
         reportResult({

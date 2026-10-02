@@ -1,10 +1,8 @@
 import { Command } from 'commander';
-import { VersioningService } from '../../services/versioning-service.ts';
-import { VersioningAdapter } from '../../adapters/versioning-adapter.ts';
+import { commitsSince } from '../../logic/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
 
-export function commitsSinceCommand(service?: VersioningService): Command {
-  const svc = service ?? new VersioningService(new VersioningAdapter());
+export function commitsSinceCommand(): Command {
   return new Command('commits-since')
     .description('Show commits since last version')
     .argument('[numVersions]', 'Number of versions (default 1)')
@@ -19,7 +17,7 @@ export function commitsSinceCommand(service?: VersioningService): Command {
 
       try {
         const repos = libraries.length ? libraries : ['*'];
-        const results = await svc.commitsSince(repos, versions);
+        const results = await commitsSince(repos, versions);
         printVersionResults(results);
       } catch (error: any) {
         process.stdout.write(error.message + '\u000A');

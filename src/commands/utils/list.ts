@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { RepoDiscoveryAdapter, type IRepoDiscoveryAdapter } from '../../adapters/repo-discovery-adapter.ts';
+import { fetchRegistry } from '../../logic/h5p-org-registry.ts';
 
 const color = {
   default: '\x1B[0m',
@@ -9,13 +9,12 @@ const color = {
 };
 const lf = '\u000A';
 
-export function utilsListCommand(adapter?: IRepoDiscoveryAdapter): Command {
-  const a = adapter ?? new RepoDiscoveryAdapter();
+export function utilsListCommand(): Command {
   return new Command('list')
     .description('List all H5P libraries')
     .action(async () => {
       try {
-        const libraries = await a.fetchRegistry();
+        const libraries = await fetchRegistry();
         for (const name in libraries) {
           process.stdout.write('  ' + color.emphasize + name + color.default + lf);
         }
