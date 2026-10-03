@@ -27,6 +27,10 @@ import { bumpCommand } from './bump.ts';
 export function utilsCommand(): Command {
   const utils = new Command('utils');
   utils.description('Utility commands for H5P library management');
+  utils.addHelpText('after', `
+Run from inside libraries/. Library arguments are folder names there:
+h5p-accordion if it was cloned with "h5p utils get", H5P.Accordion-1.0 if it
+was installed with "h5p setup".`);
 
   // Most utils sweep the checkouts in cwd, so they run from inside `libraries/`. `list` and
   // `help` touch no files, and `get`/`init` create the checkouts, so cwd may still be empty.

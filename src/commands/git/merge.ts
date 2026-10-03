@@ -8,7 +8,10 @@ export function mergeCommand(): Command {
   return new Command('merge')
     .description('Merge in branch')
     .argument('<branch>', 'Branch name')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git merge feat/example h5p-accordion`)
     .action(async (branch: string, libraries: string[]) => {
       if (!branch) {
         ui.warn('No branch today.');

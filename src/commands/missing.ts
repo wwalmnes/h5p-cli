@@ -11,7 +11,10 @@ const missingArgsSchema = z.object({
 export function missingCommand(): Command {
   return new Command('missing')
     .description('Computes missing dependencies for h5p library')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .addHelpText('after', `
+Examples:
+  $ h5p missing h5p-accordion`)
     .action(async (library: string) => {
       try {
         const args = missingArgsSchema.parse({ library });

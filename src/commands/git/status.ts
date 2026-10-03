@@ -13,8 +13,12 @@ const statusArgsSchema = z.object({
 export function statusCommand(): Command {
   return new Command('status')
     .description('Show the status for the given or all libraries')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
     .option('-f', 'Display which branch each library is on')
+    .addHelpText('after', `
+Examples:
+  $ h5p git status
+  $ h5p git status -f h5p-accordion h5p-blanks`)
     .action(async (libraries: string[], options: { f?: boolean }) => {
       const result = statusArgsSchema.safeParse({ libraries, f: options.f });
 

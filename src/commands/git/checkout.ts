@@ -8,7 +8,11 @@ export function checkoutCommand(): Command {
   return new Command('checkout')
     .description('Change branch')
     .argument('<branch>', 'Branch name')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git checkout master
+  $ h5p git checkout feat/example h5p-accordion h5p-blanks`)
     .action(async (branch: string, libraries: string[]) => {
       if (!branch) {
         ui.warn('No branch today.');

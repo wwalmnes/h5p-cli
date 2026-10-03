@@ -8,7 +8,10 @@ export function tagCommand(): Command {
   return new Command('tag')
     .description('Create a tag')
     .argument('<tagName>', 'Tag name')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git tag 1.0.5 h5p-accordion`)
     .action(async (tagName: string, libraries: string[]) => {
       try {
         const repos = libraries.length ? libraries : ['*'];

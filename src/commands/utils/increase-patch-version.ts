@@ -6,8 +6,11 @@ import { ui } from '../../ui/ui.ts';
 export function increasePatchVersionCommand(): Command {
   return new Command('increase-patch-version')
     .description('Increases the patch version')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
     .option('-f', 'Force increase even if no new changes')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils increase-patch-version h5p-accordion`)
     .action(async (libraries: string[], options: { f?: boolean }) => {
       try {
         const repos = libraries.length ? libraries : ['*'];

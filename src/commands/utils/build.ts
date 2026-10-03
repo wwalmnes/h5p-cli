@@ -5,9 +5,12 @@ import { ui } from '../../ui/ui.ts';
 export function buildCommand(): Command {
   return new Command('build')
     .description('Installs dependencies, builds libraries and runs tests')
-    .argument('<libraries...>', 'Library names')
+    .argument('<libraries...>', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0')
     .option('-t, --test', 'Run tests')
     .option('-i, --install', 'Install dependencies before building')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils build -i h5p-accordion`)
     .action(async (libraries: string[], options: { test?: boolean; install?: boolean }) => {
       try {
         await buildLibraries(libraries, { test: options.test, install: options.install });

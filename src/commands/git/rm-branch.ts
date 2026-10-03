@@ -8,7 +8,10 @@ export function rmBranchCommand(): Command {
   return new Command('rm-branch')
     .description('Removes branch (local and remote)')
     .argument('<branch>', 'Branch name')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git rm-branch feat/example h5p-accordion`)
     .action(async (branch: string, libraries: string[]) => {
       if (!branch || branch.startsWith('h5p-') || branch === 'master') {
         ui.warn('I would think twice about doing that!');

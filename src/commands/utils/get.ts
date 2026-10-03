@@ -6,8 +6,12 @@ import { ui } from '../../ui/ui.ts';
 export function getCommand(): Command {
   return new Command('get')
     .description('Clone library and all dependencies')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Repo names, e.g. h5p-accordion (not H5P.Accordion)')
     .option('--https', 'Use https:// urls for git repos instead of ssh urls')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils get h5p-accordion
+  $ h5p utils get --https h5p-accordion h5p-blanks`)
     .action(async (libraries: string[], options: { https?: boolean }) => {
       const fetchWithHttps = options.https ?? false;
 

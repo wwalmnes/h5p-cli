@@ -14,8 +14,12 @@ const installArgsSchema = z.object({
 export function installCommand(): Command {
   return new Command('install')
     .description('Installs dependencies for h5p library')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
     .argument('[mode]', 'Mode (view or edit)')
+    .addHelpText('after', `
+Examples:
+  $ h5p install h5p-accordion
+  $ h5p install h5p-accordion edit`)
     .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
       const result = installArgsSchema.safeParse({ library, mode });
       if (!result.success) {

@@ -6,7 +6,10 @@ export function packTranslationCommand(): Command {
   return new Command('pack-translation')
     .description('Export translations')
     .argument('<languageCode>', 'Language code')
-    .argument('<libraries...>', 'Library names (last arg can be output .zip file)')
+    .argument('<libraries...>', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (last arg can be output .zip file)')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils pack-translation nb h5p-accordion h5p-blanks nb.zip`)
     .action(async (languageCode: string, libraries: string[]) => {
       const zipPattern = /\.zip$/;
       let file = 'translations.zip';

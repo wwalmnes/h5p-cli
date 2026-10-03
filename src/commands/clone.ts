@@ -14,8 +14,12 @@ const cloneArgsSchema = z.object({
 export function cloneCommand(): Command {
   return new Command('clone')
     .description('Clones dependencies for h5p library')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
     .argument('[mode]', 'Mode (view or edit)')
+    .addHelpText('after', `
+Examples:
+  $ h5p clone h5p-accordion
+  $ h5p clone h5p-accordion edit`)
     .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
       const result = cloneArgsSchema.safeParse({ library, mode });
       if (!result.success) {

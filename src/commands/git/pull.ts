@@ -8,7 +8,11 @@ import { ui } from '../../ui/ui.ts';
 export function pullCommand(): Command {
   return new Command('pull')
     .description('Pull the given or all repos')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git pull
+  $ h5p git pull h5p-accordion h5p-blanks`)
     .action(async (libraries: string[]) => {
       const repos = libraries.length ? libraries : ['*'];
       const repoCount = libraries.length ? libraries.length : 'all';

@@ -11,8 +11,11 @@ const exportArgsSchema = z.object({
 export function exportCommand(): Command {
   return new Command('export')
     .description('Exports content type as .h5p zipped file')
-    .argument('<library>', 'Library name')
-    .argument('[folder]', 'Output folder')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .argument('[folder]', 'Content folder inside content/, e.g. my-accordion')
+    .addHelpText('after', `
+Examples:
+  $ h5p export h5p-accordion my-accordion      # packs content/my-accordion`)
     .action(async (library: string, folder: string | undefined) => {
       try {
         const args = exportArgsSchema.parse({ library, folder });

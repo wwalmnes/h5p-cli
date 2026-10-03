@@ -10,7 +10,10 @@ const verifyArgsSchema = z.object({
 export function verifyCommand(): Command {
   return new Command('verify')
     .description('Generates report that verifies if an h5p library and its dependencies have been correctly computed & installed')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .addHelpText('after', `
+Examples:
+  $ h5p verify h5p-accordion`)
     .action(async (library: string) => {
       try {
         const args = verifyArgsSchema.parse({ library });

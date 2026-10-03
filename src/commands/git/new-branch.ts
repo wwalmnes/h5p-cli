@@ -9,7 +9,10 @@ export function newBranchCommand(): Command {
   return new Command('new-branch')
     .description('Creates a new branch (local and remote)')
     .argument('<branch>', 'Branch name')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git new-branch feat/example h5p-accordion h5p-blanks`)
     .action(async (branch: string, libraries: string[]) => {
       if (!branch || branch.startsWith('h5p-')) {
         ui.warn('That is a strange name for a branch..');

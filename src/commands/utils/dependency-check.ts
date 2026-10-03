@@ -55,6 +55,10 @@ export function dependencyCheckCommand(): Command {
     )
     .option('--libraries <path>', 'Folder of library checkouts to analyse', process.env.H5P_LIBRARIES ?? '.')
     .option('--apply', 'Write the bumps and reference updates to disk', false)
+    .addHelpText('after', `
+Examples:
+  $ h5p utils dependency-check h5p-accordion
+  $ h5p utils dependency-check H5P.Accordion@1.0..1.2`)
     .action(async (libraries: string[], options) => {
       try {
         const args = argsSchema.parse({

@@ -8,7 +8,10 @@ export function commitCommand(): Command {
   return new Command('commit')
     .description('Commit to repos with given message')
     .argument('<message>', 'Commit message')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git commit "Fix typo" h5p-accordion`)
     .action(async (message: string, libraries: string[]) => {
       if (!message) {
         ui.warn('No message means no commit.');

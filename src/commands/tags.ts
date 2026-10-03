@@ -11,8 +11,11 @@ const tagsArgsSchema = z.object({
 export function tagsCommand(): Command {
   return new Command('tags')
     .description('List tags for a library')
-    .argument('<org>', 'GitHub organization')
-    .argument('<library>', 'Library name')
+    .argument('<org>', 'GitHub organization, e.g. h5p')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .addHelpText('after', `
+Examples:
+  $ h5p tags h5p h5p-accordion`)
     .action((org: string, library: string) => {
       try {
         const args = tagsArgsSchema.parse({ org, library });

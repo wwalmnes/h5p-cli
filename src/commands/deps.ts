@@ -15,10 +15,15 @@ const depsArgsSchema = z.object({
 export function depsCommand(): Command {
   return new Command('deps')
     .description('Computes dependencies for h5p library')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
     .argument('[mode]', 'Mode (view or edit)')
-    .argument('[version]', 'Version')
-    .argument('[folder]', 'Folder')
+    .argument('[version]', 'Version or branch, e.g. 1.0 (default: master)')
+    .argument('[folder]', 'Read from libraries/<folder> instead of the remote, e.g. H5P.Accordion-1.0')
+    .addHelpText('after', `
+Examples:
+  $ h5p deps h5p-accordion
+  $ h5p deps h5p-accordion edit 1.0
+  $ h5p deps h5p-accordion edit master H5P.Accordion-1.0`)
     .action(async (library: string, mode: 'view' | 'edit' | undefined, version: string | undefined, folder: string | undefined) => {
       const result = depsArgsSchema.safeParse({ library, mode, version, folder });
 
