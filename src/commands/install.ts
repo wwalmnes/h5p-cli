@@ -14,7 +14,7 @@ const installArgsSchema = z.object({
 export function installCommand(): Command {
   return new Command('install')
     .description('Installs dependencies for h5p library')
-    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion')
     .argument('[mode]', 'Mode (view or edit)')
     .addHelpText('after', `
 Examples:

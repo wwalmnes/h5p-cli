@@ -10,12 +10,13 @@ Multi-repo git operations live under [`h5p git`](./commands-git.md).
 
 ```bash
 cd libraries
-h5p utils get H5P.Accordion
+h5p utils get h5p-accordion
 h5p utils validate h5p-accordion
 ```
 
 A library argument names a subfolder of the current directory — `<name>`, not
-`libraries/<name>`. This is the opposite of the top-level
+`libraries/<name>`. That is `h5p-accordion` for a library cloned with `h5p utils get`, and
+`H5P.Accordion-1.0` for one installed with `h5p setup`. This is the opposite of the top-level
 [`h5p` commands](./commands.md), which run from the workspace root. If no git repository is
 found in the current folder, the command stops with a message instead of quietly doing
 nothing.
@@ -41,7 +42,7 @@ h5p utils tag-version [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -59,7 +60,7 @@ h5p utils get [options] <libraries...>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | Library names to clone. |
+| `libraries...` | Yes | Names from the h5p.org registry, which are repository names (e.g. `h5p-accordion`). `h5p utils list` prints them. |
 
 | Option | Description |
 |--------|-------------|
@@ -89,7 +90,7 @@ h5p utils init <library>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library name. Also the folder it is created in. |
+| `library` | Yes | Library name without the `H5P.` prefix (e.g. `MyLibrary`). Also the folder it is created in; the machine name becomes `H5P.MyLibrary`. |
 
 Prompts for title, description, entry point, author and license.
 
@@ -109,7 +110,7 @@ h5p utils increase-patch-version [options] [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 | Option | Description |
 |--------|-------------|
@@ -157,7 +158,7 @@ h5p utils changes-since [numVersions] [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `numVersions` | No | Number of versions to look back. Defaults to `1`. If not a number, treated as a library name. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -171,7 +172,7 @@ h5p utils changes-since-release [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -186,7 +187,7 @@ h5p utils commits-since [numVersions] [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `numVersions` | No | Number of versions to look back. Defaults to `1`. If not a number, treated as a library name. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -200,7 +201,7 @@ h5p utils compare-tags-with-release [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -218,7 +219,7 @@ h5p utils create-language-file <library> <languageCode>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library name. |
+| `library` | Yes | Library folder name (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 | `languageCode` | Yes | BCP 47 language code (e.g. `nb`, `de`, `fr`). |
 
 ---
@@ -248,7 +249,7 @@ h5p utils add-english-texts [options] <languageCode> <libraries...>
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `languageCode` | Yes | Target language code. |
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 | Option | Description |
 |--------|-------------|
@@ -268,7 +269,7 @@ h5p utils copy-translation <from> <to> <libraries...>
 |----------|----------|-------------|
 | `from` | Yes | Source language code. |
 | `to` | Yes | Target language code. |
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 ---
 
@@ -283,7 +284,7 @@ h5p utils pack-translation <languageCode> <libraries...> [output.zip]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `languageCode` | Yes | Language code to export. |
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 | `output.zip` | No | Output zip filename. Defaults to `translations.zip`. Detected by `.zip` extension in the argument list. |
 
 ---
@@ -298,7 +299,7 @@ h5p utils update-translations <libraries...>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 ---
 
@@ -313,7 +314,7 @@ h5p utils check-translations [options] [language] [library]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `language` | No | Language code to check. |
-| `library` | No | Library name. |
+| `library` | No | Library folder name (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 | Option | Description |
 |--------|-------------|
@@ -337,7 +338,7 @@ h5p utils pack [options] <libraries...>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 | Option | Description |
 |--------|-------------|
@@ -367,7 +368,7 @@ h5p utils validate <libraries...>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 Exits with code `0` if all libraries are valid, `1` if any are invalid.
 
@@ -384,7 +385,7 @@ h5p utils build [options] <libraries...>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more library names. |
+| `libraries...` | Yes | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). |
 
 | Option | Description |
 |--------|-------------|
@@ -410,7 +411,7 @@ h5p utils dependency-check <libraries...> [--libraries <path>] [--apply]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | Yes | One or more libraries being bumped. Accepts a machine name (`H5P.Accordion`), a checkout folder name (`h5p-accordion`), or either with an explicit version range (`H5P.Accordion@1.0..1.2`). |
+| `libraries...` | Yes | One or more libraries being bumped. Accepts a machine name (`H5P.Accordion`), a checkout folder name (`h5p-accordion` or `H5P.Accordion-1.0`), or either with an explicit version range (`H5P.Accordion@1.0..1.2`). |
 
 | Option | Description |
 |--------|-------------|

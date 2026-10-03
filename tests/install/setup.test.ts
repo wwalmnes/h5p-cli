@@ -50,7 +50,7 @@ describe('setup', () => {
   });
 
   it('downloads instead of cloning when download=1', async () => {
-    await setup('h5p-blanks', undefined, '1');
+    await setup('h5p-blanks', undefined, true);
     expect(installDependencies).toHaveBeenCalledWith('download', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined, undefined);
   });
 

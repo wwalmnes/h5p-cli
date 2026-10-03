@@ -12,8 +12,12 @@ const listArgsSchema = z.object({
 export function listCommand(): Command {
   return new Command('list')
     .description('Lists h5p libraries from the registry')
-    .argument('[reversed]', 'Pass 1 to show reversed list')
+    .argument('[reversed]', 'Pass 1 to show machine names (H5P.Accordion) instead of repo names (h5p-accordion)')
     .argument('[ignoreFile]', 'Pass 1 to ignore local registry file')
+    .addHelpText('after', `
+Examples:
+  $ h5p list                                  # h5p-accordion, the name setup takes
+  $ h5p list 1                                # H5P.Accordion`)
     .action(async (reversed: string | undefined, ignoreFile: string | undefined) => {
       try {
         const args = listArgsSchema.parse({ reversed, ignoreFile });

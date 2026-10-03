@@ -12,7 +12,7 @@ export function tagsCommand(): Command {
   return new Command('tags')
     .description('List tags for a library')
     .argument('<org>', 'GitHub organization, e.g. h5p')
-    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion')
     .addHelpText('after', `
 Examples:
   $ h5p tags h5p h5p-accordion`)

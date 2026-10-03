@@ -15,7 +15,7 @@ const depsArgsSchema = z.object({
 export function depsCommand(): Command {
   return new Command('deps')
     .description('Computes dependencies for h5p library')
-    .argument('<library>', 'Repo name, e.g. h5p-accordion (not H5P.Accordion)')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion')
     .argument('[mode]', 'Mode (view or edit)')
     .argument('[version]', 'Version or branch, e.g. 1.0 (default: master)')
     .argument('[folder]', 'Read from libraries/<folder> instead of the remote, e.g. H5P.Accordion-1.0')

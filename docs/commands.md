@@ -83,19 +83,19 @@ requests beyond the git clones themselves. Use `h5p setup <library>` for anythin
 Full one-command setup: registers the library and installs it along with all dependencies.
 
 ```bash
-h5p setup <library|repoUrl> [ref] [download]
+h5p setup [options] <library|repoUrl> [ref]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library\|repoUrl` | Yes | Library machine name (e.g. `H5P.Accordion`) or a GitHub repo URL (e.g. `git@github.com:h5p/h5p-accordion.git`). Passing a URL also updates the local registry entry. |
+| `library\|repoUrl` | Yes | Repository name (e.g. `h5p-accordion`) or a GitHub repo URL (e.g. `git@github.com:h5p/h5p-accordion.git`). Passing a URL also updates the local registry entry. |
 | `ref` | No | Git tag or branch for the library. A release (`1.14` / `1.14.3`) resolves through the graph and clones everyone at the resulting patch. A branch name clones **this** library at that ref; dependencies are read from that ref's `library.json` and installed at their declared versions (falling back to `master` if a tag is missing). Defaults to `master`. Use `h5p tags` to list available versions. |
-| `download` | No | Pass `1` to download libraries instead of cloning them as git repos. The library is still cloned when `[ref]` is a branch. |
 
 **Options**
 
 | Option | Effect |
 |--------|--------|
+| `--download` | Download libraries instead of cloning them as git repos. The library is still cloned when `[ref]` is a branch. |
 | `-c, --concurrency <n>` | How many libraries to install at once (default 4). |
 
 **Environment variables**
@@ -116,7 +116,7 @@ h5p setup <library|repoUrl> [ref] [download]
 h5p setup git@github.com:h5p/h5p-accordion.git
 h5p setup h5p-accordion 1.0.0
 h5p setup h5p-accordion feat/example
-h5p setup H5P.Accordion master 1   # download instead of clone
+h5p setup h5p-accordion --download   # download instead of clone
 ```
 
 ---
@@ -149,13 +149,13 @@ Once running, open the URL in a browser to view, edit, create, import, export, a
 List H5P libraries from the local registry.
 
 ```bash
-h5p list [machineName] [pullRegistry]
+h5p list [reversed] [ignoreFile]
 ```
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `machineName` | No | Pass `1` to display machine names instead of repo names. |
-| `pullRegistry` | No | Pass `1` to recreate the local registry before listing. |
+| `reversed` | No | Pass `1` to display machine names (`H5P.Accordion`) instead of repo names (`h5p-accordion`). |
+| `ignoreFile` | No | Pass `1` to recreate the local registry before listing. |
 
 Output is a two-column table on stdout. On a terminal it is boxed with a header;
 piped, it degrades to bare aligned rows so scripts need not strip anything:
@@ -173,7 +173,7 @@ $ h5p list                          $ h5p list | head -2
 The boxed view is squeezed to the terminal width, clipping long cells with `…`.
 Piped output is never truncated.
 
-With `machineName` set to `1` the first column holds machine names and the
+With `reversed` set to `1` the first column holds machine names and the
 header reads `MACHINE NAME`. Progress messages go to stderr, so
 `h5p list > libraries.txt` captures only the rows.
 
@@ -240,7 +240,7 @@ https://github.com/h5p/h5p-accordion
 | `repo` | No | Repository info |
 | `author` | Yes | Author name |
 | `runnable` | Yes | `true` if this is a top-level content type; `false` if it's a dependency |
-| `shortName` | Yes | Library folder name |
+| `shortName` | Yes | The name `setup`, `deps` and the other top-level commands take as `<library>` — the repository name, e.g. `h5p-accordion` |
 | `repoName` | No | GitHub repository name |
 | `org` | No | GitHub organization — required for `clone`, `install`, and `deps` commands |
 
@@ -256,10 +256,18 @@ h5p deps <library> [mode] [version] [folder]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library machine name. |
+| `library` | Yes | Repository name (e.g. `h5p-accordion`). |
 | `mode` | No | `view` or `edit`. |
-| `version` | No | Version tag. Defaults to `master`. |
-| `folder` | No | Resolve deps from `libraries/<folder>` on disk instead of the registry. |
+| `version` | No | Version or branch (e.g. `1.0`). Defaults to `master`. |
+| `folder` | No | Resolve deps from `libraries/<folder>` on disk instead of the registry (e.g. `H5P.Accordion-1.0`). |
+
+**Example**
+
+```bash
+h5p deps h5p-accordion
+h5p deps h5p-accordion edit 1.0
+h5p deps h5p-accordion edit master H5P.Accordion-1.0
+```
 
 ---
 
@@ -273,7 +281,13 @@ h5p missing <library>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library machine name. The library itself must already exist in the local registry. |
+| `library` | Yes | Repository name (e.g. `h5p-accordion`). The library itself must already exist in the local registry. |
+
+**Example**
+
+```bash
+h5p missing h5p-accordion
+```
 
 Each dependency the registry does not know about is listed with `(required)` or `(optional)`. A
 dependency is optional when it is only reachable through an optional edge — a library offered as a
@@ -292,12 +306,18 @@ h5p clone <library> [mode]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library machine name. |
+| `library` | Yes | Repository name (e.g. `h5p-accordion`). |
 | `mode` | No | `view` or `edit`. Defaults to `view`. |
 
 Every library is fetched at the `major.minor.patch` its `library.json` declares. Where that version
 was never tagged, it is fetched from `master` instead and the fallback is reported:
 `h5p-accordion 1.0.47 not found, falling back to master`.
+
+**Example**
+
+```bash
+h5p clone h5p-accordion edit
+```
 
 ---
 
@@ -311,11 +331,17 @@ h5p install <library> [mode]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library machine name. |
+| `library` | Yes | Repository name (e.g. `h5p-accordion`). |
 | `mode` | No | `view` or `edit`. Defaults to `view`. |
 
 Versions are pinned and fall back to `master` exactly as in `h5p clone` above — an untagged version
 is a 404 on the archive URL rather than a missing git ref, and is treated the same way.
+
+**Example**
+
+```bash
+h5p install h5p-accordion edit
+```
 
 ---
 
@@ -388,7 +414,7 @@ h5p export <library> <folder>
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `library` | Yes | Library machine name (e.g. `h5p-agamotto`). |
+| `library` | Yes | Repository name (e.g. `h5p-agamotto`). |
 | `folder` | Yes | Content folder name inside `content/` (e.g. `agamotto-test`). |
 
 Make sure the library's dependencies are installed before exporting. The command prints the path to the resulting `.h5p` file.

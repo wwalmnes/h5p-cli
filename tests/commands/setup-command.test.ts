@@ -28,8 +28,8 @@ describe('setupCommand', () => {
   });
 
   it('forwards the ref and download args', async () => {
-    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks', '1.14', '1']);
-    expect(setup).toHaveBeenCalledWith('h5p-blanks', '1.14', '1', undefined);
+    await setupCommand().parseAsync(['node', 'h5p', 'h5p-blanks', '1.14', '--download']);
+    expect(setup).toHaveBeenCalledWith('h5p-blanks', '1.14', true, undefined);
   });
 
   it('forwards a git ref positional', async () => {

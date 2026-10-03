@@ -131,8 +131,8 @@ The rule is simple: **stdout is the command's product, stderr is everything a hu
 That split is what makes commands usable in a pipeline. `h5p export` prints only the resulting filename on stdout, so this works:
 
 ```bash
-h5p export MyLibrary > out.txt   # out.txt contains the filename and nothing else
-h5p export MyLibrary 2>/dev/null # errors and status suppressed, output intact
+h5p export h5p-accordion my-accordion > out.txt   # out.txt contains the filename and nothing else
+h5p export h5p-accordion my-accordion 2>/dev/null # errors and status suppressed, output intact
 ```
 
 If you print status messages with `console.log`, they land in `out.txt` and break the pipeline. Use `ui.data()` for the thing your command produces, and everything else from the table below.
@@ -421,8 +421,8 @@ const plugin: H5PPlugin = {
     // Same name as the built-in, so it replaces `h5p export`.
     const exportToS3 = new Command('export')
       .description('Exports content type as .h5p and uploads it to S3')
-      .argument('<library>', 'Library name')
-      .argument('[folder]', 'Output folder')
+      .argument('<library>', 'Repo name, e.g. h5p-accordion')
+      .argument('[folder]', 'Content folder inside content/, e.g. my-accordion')
       .action(async (library: string, folder?: string) => {
         try {
           const file = await logic.export(library, folder);
@@ -449,6 +449,6 @@ export default plugin;
 
 ```bash
 h5p plugin install /path/to/h5p-cli-s3
-h5p export MyLibrary   # the plugin's export: builds the .h5p, then uploads it
+h5p export h5p-accordion my-accordion   # the plugin's export: builds the .h5p, then uploads it
 h5p s3-sync            # new command from plugin
 ```

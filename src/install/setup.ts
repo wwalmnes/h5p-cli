@@ -18,7 +18,7 @@ libraries named in semantics.json, *and* editorDependencies the whole way
 down. View edges are a subset of edit edges from the same root, so the edit
 graph already contains everything the view pass found and everything the
 per-dependency edit passes were reaching one traversal at a time. */
-export async function setup(library: string, ref?: string, download?: string, concurrency?: number): Promise<void> {
+export async function setup(library: string, ref?: string, download?: boolean, concurrency?: number): Promise<void> {
   const missingOptionals: Record<string, any> = {};
 
   if (isRepoUrl(library)) {
@@ -30,7 +30,7 @@ export async function setup(library: string, ref?: string, download?: string, co
     throw new Error(`invalid ref "${ref}"`);
   }
 
-  const action = parseInt(download ?? '0') ? 'download' : 'clone';
+  const action = download ? 'download' : 'clone';
   const latest = !ref;
   // A release pin is resolved through the graph and cloned at the resulting
   // patch. Anything else is a git branch/tag for the root library only;

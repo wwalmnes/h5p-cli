@@ -40,6 +40,8 @@ enforced instead of silently producing empty results.
   them no longer works — `require.main` is undefined under ESM — and stops every command with a message
   naming `config.js`.
 - **`h5p server` takes its port as an option**: `h5p server --port 8081` instead of `h5p server 8081`.
+- **`h5p setup` takes download as an option**: `h5p setup h5p-accordion master --download` instead of
+  `h5p setup h5p-accordion master 1`.
 - **`h5p @branches` takes the library folder first**: `h5p branches <library> <branches...>`, with
   `@branches` kept as an alias. It used to act on the current folder; from inside the library that is
   now `h5p @branches . master`.
@@ -263,9 +265,9 @@ enforced instead of silently producing empty results.
 
 ### Compatibility
 
-These keep their name and positional arguments: `setup`, `core`, `list`, `register`, `deps`, `missing`,
+These keep their name and positional arguments: `core`, `list`, `register`, `deps`, `missing`,
 `clone`, `install`, `verify`, `export`, `import`, `help` and the `utils` subcommands other than the two
-removed ones. The exceptions are the git subcommands, `server`, `@branches`, `tags` (no `mainBranch`) and
-the single-dash flags listed under breaking changes. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment
+removed ones. The exceptions are the git subcommands, `server`, `setup` (no `download`), `@branches`,
+`tags` (no `mainBranch`) and the single-dash flags listed under breaking changes. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment
 variables behave as before, and a `config.js` in the workspace root still overrides any setting, in the
 new format.

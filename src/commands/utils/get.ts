@@ -6,7 +6,7 @@ import { ui } from '../../ui/ui.ts';
 export function getCommand(): Command {
   return new Command('get')
     .description('Clone library and all dependencies')
-    .argument('[libraries...]', 'Repo names, e.g. h5p-accordion (not H5P.Accordion)')
+    .argument('[libraries...]', 'Repo names, e.g. h5p-accordion')
     .option('--https', 'Use https:// urls for git repos instead of ssh urls')
     .addHelpText('after', `
 Examples:
