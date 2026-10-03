@@ -2,9 +2,7 @@
  * Renders the outcome of a per-repository operation.
  *
  * Every multi-repo command used to carry its own copy of this block, complete
- * with hand-rolled ANSI literals written straight to stdout. It lives in lib/
- * rather than beside the git commands because what it renders is a
- * `RepoOpResult` — not anything git-specific.
+ * with hand-rolled ANSI literals written straight to stdout.
  *
  * These lines are chrome, not data: they go to stderr and are dropped by
  * `--quiet`. Only output a script would consume belongs on stdout.

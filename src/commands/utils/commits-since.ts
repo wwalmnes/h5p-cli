@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { commitsSince } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function commitsSinceCommand(): Command {
   return new Command('commits-since')
@@ -19,8 +20,8 @@ export function commitsSinceCommand(): Command {
         const repos = libraries.length ? libraries : ['*'];
         const results = await commitsSince(repos, versions);
         printVersionResults(results);
-      } catch (error: any) {
-        process.stdout.write(error.message + '\u000A');
+      } catch (error) {
+        ui.fail(error);
       }
     });
 }

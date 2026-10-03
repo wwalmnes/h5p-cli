@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { compareTagsWithRelease } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function compareTagsWithReleaseCommand(): Command {
   return new Command('compare-tags-with-release')
@@ -11,8 +12,8 @@ export function compareTagsWithReleaseCommand(): Command {
         const repos = libraries.length ? libraries : ['*'];
         const results = await compareTagsWithRelease(repos);
         printVersionResults(results);
-      } catch (error: any) {
-        process.stdout.write(error.message + '\u000A');
+      } catch (error) {
+        ui.fail(error);
       }
     });
 }

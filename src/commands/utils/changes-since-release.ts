@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { changesSinceRelease } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function changesSinceReleaseCommand(): Command {
   return new Command('changes-since-release')
@@ -11,8 +12,8 @@ export function changesSinceReleaseCommand(): Command {
         const repos = libraries.length ? libraries : ['*'];
         const results = await changesSinceRelease(repos);
         printVersionResults(results);
-      } catch (error: any) {
-        process.stdout.write(error.message + '\u000A');
+      } catch (error) {
+        ui.fail(error);
       }
     });
 }
