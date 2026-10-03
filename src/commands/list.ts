@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { getRegistry } from '../logic/registry.ts';
-import { ui } from '../lib/ui.ts';
+import { getRegistry } from '../h5p/registry.ts';
+import { ui } from '../ui/ui.ts';
 
 const listArgsSchema = z.object({
   // @todo: string currently and backwards compatible to accept 1. Should be a boolean.

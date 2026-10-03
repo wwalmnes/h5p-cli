@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupCommand } from '../../src/commands/setup.ts';
-import { setup } from '../../src/logic/setup.ts';
+import { setup } from '../../src/install/setup.ts';
 
-vi.mock('../../src/logic/setup.ts', () => ({ setup: vi.fn() }));
+vi.mock('../../src/install/setup.ts', () => ({ setup: vi.fn() }));
 
 describe('setupCommand', () => {
   let stderr: string;

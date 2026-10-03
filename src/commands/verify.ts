@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { verifySetup } from '../logic/install.ts';
-import { ui } from '../lib/ui.ts';
+import { verifySetup } from '../install/install.ts';
+import { ui } from '../ui/ui.ts';
 
 const verifyArgsSchema = z.object({
   library: z.string(),

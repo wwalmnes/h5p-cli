@@ -2,8 +2,8 @@ import { Command } from 'commander';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import config from '../config/loader.ts';
+import { ui } from '../ui/ui.ts';
 
 const gitRefExists = (ref: string, cwd: string): boolean => {
   try {

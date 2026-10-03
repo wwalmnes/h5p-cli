@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import config from '../config/loader.ts';
+import { ui } from '../ui/ui.ts';
 
 const createArgsSchema = z.object({
   name: z.string().min(1),

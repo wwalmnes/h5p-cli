@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { verifyCommand } from '../../src/commands/verify.ts';
-import { verifySetup } from '../../src/logic/install.ts';
+import { verifySetup } from '../../src/install/install.ts';
 
-vi.mock('../../src/logic/install.ts', () => ({ verifySetup: vi.fn() }));
+vi.mock('../../src/install/install.ts', () => ({ verifySetup: vi.fn() }));
 
 describe('verifyCommand', () => {
   let stdout: string;

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import buildLibraries from '../../utils/commands/build-libraries.ts';
-import { ui } from '../../lib/ui.ts';
+import buildLibraries from '../../packaging/build-libraries.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function buildCommand(): Command {
   return new Command('build')

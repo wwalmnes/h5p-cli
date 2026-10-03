@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { register } from '../logic/register.ts';
-import { ui } from '../lib/ui.ts';
+import { register } from '../install/register.ts';
+import { ui } from '../ui/ui.ts';
 
 const registerArgsSchema = z.object({
   input: z.string(),

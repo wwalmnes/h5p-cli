@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { compareTagsWithRelease } from '../../logic/versioning.ts';
+import { compareTagsWithRelease } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
 
 export function compareTagsWithReleaseCommand(): Command {

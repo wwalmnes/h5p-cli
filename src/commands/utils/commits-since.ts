@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { commitsSince } from '../../logic/versioning.ts';
+import { commitsSince } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
 
 export function commitsSinceCommand(): Command {

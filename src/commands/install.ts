@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { getWithDependencies } from '../logic/install.ts';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import { getWithDependencies } from '../install/install.ts';
+import config from '../config/loader.ts';
+import { ui } from '../ui/ui.ts';
 
 const installArgsSchema = z.object({
   library: z.string(),

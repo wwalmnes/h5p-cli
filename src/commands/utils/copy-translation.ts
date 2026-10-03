@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { copyTranslation } from '../../logic/translations.ts';
+import { copyTranslation } from '../../translations/translations.ts';
 
 export function copyTranslationCommand(): Command {
   return new Command('copy-translation')

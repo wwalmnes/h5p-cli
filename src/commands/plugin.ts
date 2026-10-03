@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import { installPlugin, listPlugins, uninstallPlugin } from '../lib/plugins.ts';
-import { ui } from '../lib/ui.ts';
+import { installPlugin, listPlugins, uninstallPlugin } from '../cli/plugins.ts';
+import { ui } from '../ui/ui.ts';
 
 export function pluginCommand(): Command {
   const plugin = new Command('plugin').description('Manage h5p-cli plugins');

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { execSync } from 'child_process';
-import bump from '../../src/utils/commands/bump.ts';
+import bump from '../../src/versioning/bump.ts';
 
 vi.mock('child_process', () => ({ execSync: vi.fn() }));
 

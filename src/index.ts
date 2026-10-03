@@ -1,8 +1,8 @@
 import fs from 'fs';
 import { Command } from 'commander';
-import { guardTopLevelCommands } from './lib/workspace.ts';
-import { loadPlugins } from './lib/plugin-loader.ts';
-import { ui } from './lib/ui.ts';
+import { guardTopLevelCommands } from './cli/workspace.ts';
+import { loadPlugins } from './cli/plugin-loader.ts';
+import { ui } from './ui/ui.ts';
 import { exportCommand } from './commands/export.ts';
 import { importCommand } from './commands/import.ts';
 import { listCommand } from './commands/list.ts';

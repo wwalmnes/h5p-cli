@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { createLanguageFile } from '../../logic/translations.ts';
+import { createLanguageFile } from '../../translations/translations.ts';
 
 export function createLanguageFileCommand(): Command {
   return new Command('create-language-file')

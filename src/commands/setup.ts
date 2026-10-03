@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { setup } from '../logic/setup.ts';
-import { ui } from '../lib/ui.ts';
+import { setup } from '../install/setup.ts';
+import { ui } from '../ui/ui.ts';
 
 const setupArgsSchema = z.object({
   library: z.string(),

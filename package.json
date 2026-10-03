@@ -12,9 +12,6 @@
     "src",
     "assets",
     "docs",
-    "logic.ts",
-    "logic-content-upgrade.ts",
-    "configLoader.ts",
     "h5p.js",
     "libraryRegistry.json",
     "favicon.ico",
@@ -29,7 +26,6 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/commands",
     "test:integration": "vitest run tests/integration",
-    "test:logic": "vitest run tests/logic",
     "test:e2e": "vitest run tests/e2e",
     "test:watch": "vitest",
     "test:smoke": "playwright test",
@@ -43,33 +39,34 @@
       "import": "./src/index.ts"
     },
     "./logic": {
-      "types": "./logic.ts",
-      "import": "./logic.ts"
+      "types": "./src/logic.ts",
+      "import": "./src/logic.ts"
     },
     "./config": {
-      "types": "./configLoader.ts",
-      "import": "./configLoader.ts"
+      "types": "./src/config/loader.ts",
+      "import": "./src/config/loader.ts"
     },
     "./utils": {
-      "types": "./src/lib/h5p-utils.ts",
-      "import": "./src/lib/h5p-utils.ts"
+      "types": "./src/h5p/h5p-utils.ts",
+      "import": "./src/h5p/h5p-utils.ts"
     },
     "./compute-dependencies": {
-      "types": "./src/lib/compute-dependencies.ts",
-      "import": "./src/lib/compute-dependencies.ts"
+      "types": "./src/install/compute-dependencies.ts",
+      "import": "./src/install/compute-dependencies.ts"
     },
     "./plugin-types": {
-      "types": "./src/lib/plugin-types.ts",
-      "import": "./src/lib/plugin-types.ts"
+      "types": "./src/cli/plugin-types.ts",
+      "import": "./src/cli/plugin-types.ts"
     },
     "./ui": {
-      "types": "./src/lib/ui.ts",
-      "import": "./src/lib/ui.ts"
+      "types": "./src/ui/ui.ts",
+      "import": "./src/ui/ui.ts"
     },
     "./content-upgrade": {
-      "types": "./logic-content-upgrade.ts",
-      "import": "./logic-content-upgrade.ts"
-    }
+      "types": "./src/content/content-upgrade.ts",
+      "import": "./src/content/content-upgrade.ts"
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "h5p": "./h5p.js"

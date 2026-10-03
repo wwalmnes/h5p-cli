@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { computeDependencies } from '../logic/dependencies.ts';
-import { ui } from '../lib/ui.ts';
+import { computeDependencies } from '../install/dependencies.ts';
+import { ui } from '../ui/ui.ts';
 
 const depsArgsSchema = z.object({
   library: z.string(),

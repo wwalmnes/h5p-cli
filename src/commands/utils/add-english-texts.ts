@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { addEnglishTexts } from '../../logic/translations.ts';
+import { addEnglishTexts } from '../../translations/translations.ts';
 
 export function addEnglishTextsCommand(): Command {
   return new Command('add-english-texts')

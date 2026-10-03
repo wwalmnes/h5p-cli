@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { packTranslation } from '../../logic/translations.ts';
+import { packTranslation } from '../../translations/translations.ts';
 
 export function packTranslationCommand(): Command {
   return new Command('pack-translation')

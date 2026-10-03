@@ -1,14 +1,14 @@
 import path from 'path';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { dependencyCheckCommand } from '../../src/commands/utils/dependency-check.ts';
-import { applyPlan, type ApplyResult } from '../../src/lib/dependencies/apply.ts';
-import { buildPlan, type Plan } from '../../src/lib/dependencies/plan.ts';
-import { scanLibraries } from '../../src/lib/dependencies/scan.ts';
-import { ui } from '../../src/lib/ui.ts';
+import { applyPlan, type ApplyResult } from '../../src/dependency-check/apply.ts';
+import { buildPlan, type Plan } from '../../src/dependency-check/plan.ts';
+import { scanLibraries } from '../../src/dependency-check/scan.ts';
+import { ui } from '../../src/ui/ui.ts';
 
-vi.mock('../../src/lib/dependencies/scan.ts', () => ({ scanLibraries: vi.fn(() => []) }));
-vi.mock('../../src/lib/dependencies/plan.ts', () => ({ buildPlan: vi.fn() }));
-vi.mock('../../src/lib/dependencies/apply.ts', () => ({ applyPlan: vi.fn() }));
+vi.mock('../../src/dependency-check/scan.ts', () => ({ scanLibraries: vi.fn(() => []) }));
+vi.mock('../../src/dependency-check/plan.ts', () => ({ buildPlan: vi.fn() }));
+vi.mock('../../src/dependency-check/apply.ts', () => ({ applyPlan: vi.fn() }));
 
 /** Accordion 1.2 -> 1.3, stranding Column 1.22 -> 1.23. */
 function samplePlan(overrides: Partial<Plan> = {}): Plan {

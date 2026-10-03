@@ -52,8 +52,7 @@ enforced instead of silently producing empty results.
 - **`h5p utils list-deps` and `h5p utils recursive-minor-bump` were removed**, replaced by
   `h5p utils dependency-check` (report) and `h5p utils dependency-check --apply` (write).
 - **Internal file layout moved.** `cli.js`, `logic.js`, `config.js`, `configLoader.js`, `server.js`,
-  `api.js` and everything under `assets/utils/` are gone; source now lives under `src/` plus `logic.ts`,
-  `logic-content-upgrade.ts` and `configLoader.ts` in the repo root. `logic.log` and `logic.write` were
+  `api.js` and everything under `assets/utils/` are gone; all source now lives under `src/`. `logic.log` and `logic.write` were
   removed (use `ui` from `h5p-cli/ui`), and `logic.machineToShort` moved to `h5p-cli/utils`. Only
   relevant if you imported h5p-cli internals by file path — use the `exports` map instead:
 
@@ -108,9 +107,9 @@ enforced instead of silently producing empty results.
   - `docs/commands-utils.md` — the `h5p utils` group
   - `docs/plugins.md` — plugin API: commands, output, installation
   - `docs/workspace-plugins.md` — developing plugins with npm workspaces
-- **Test suite** across commands, lib, logic, integration and end-to-end layers, plus a
+- **Test suite** covering the commands, each feature module, integration and end-to-end, plus a
   Playwright smoke test that boots the dev server. `npm test`, `test:unit`, `test:integration`,
-  `test:logic`, `test:e2e`, `test:watch`, `test:smoke`, and `npm run typecheck`.
+  `test:e2e`, `test:watch`, `test:smoke`, and `npm run typecheck`.
 - **A `files` allowlist** in `package.json`, so the published package ships the compiled sources,
   assets and docs only.
 - **`h5p utils pack -o, --output <file>`** names the output file. Passing it as a trailing `.h5p`
@@ -121,12 +120,14 @@ enforced instead of silently producing empty results.
 - Rewritten in TypeScript with `strict` mode enabled; `npm run typecheck` covers the whole tree.
 - Command line parsing moved from a hand-rolled argv switch to Commander v14.
 - Each command is its own module under `src/commands/` that owns the CLI contract (arguments,
-  validation, output) and calls into `src/logic/` for the work. Flow that is more than one call, such
-  as `h5p setup`'s, is a plain function there (`src/logic/setup.ts`) rather than inline in the command.
-- The monolithic `logic.js` (752 lines, mixed responsibilities) was split into a slimmer `logic.ts` plus
-  focused modules under `src/lib/` (`compute-dependencies`, `h5p-utils`, `semantics-utils`,
-  `archive-utils`, `process-repos`, `workspace`, `ui`) and `src/logic/` (`git`, `versioning`,
-  `translations`, `setup`, `register`, and others).
+  validation, output) and calls into a feature folder for the work. Flow that is more than one call,
+  such as `h5p setup`'s, is a plain function there (`src/install/setup.ts`) rather than inline in the
+  command.
+- The monolithic `logic.js` (752 lines, mixed responsibilities) and `assets/utils/h5p.js` were split
+  into feature folders under `src/`: `h5p/` (registry, metadata, git remote, subprocesses), `install/`,
+  `content/`, `repos/` (the multi-repo sweeps), `versioning/`, `translations/`, `packaging/`,
+  `dependency-check/`, `cli/`, `ui/` and `config/`. `src/logic.ts` is only the facade behind the
+  public `h5p-cli/logic` export.
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
 - `.gitignore` now also covers `dist/`, `plugins/`, `h5p.plugins.json`, `playwright-report/` and
@@ -138,7 +139,7 @@ enforced instead of silently producing empty results.
   `logic.getWithDependencies` so a resolved graph can be installed without being resolved again;
   `getWithDependencies` remains as the one-shot pairing of the two.
 - **Dependency installs run through a bounded pool** rather than one library at a time in a serial
-  loop. `logic.installDependencies` hands its work to `runPool` (`src/lib/pool.ts`), four at a time by
+  loop. `logic.installDependencies` hands its work to `runPool` (`src/h5p/pool.ts`), four at a time by
   default, set with `-c, --concurrency <n>` on `h5p setup` or `H5P_CONCURRENCY`. Every library is
   reserved before any task starts, because the skip list is the only guard against installing one
   twice; a consequence is that a required unregistered library now aborts *before* anything installs,

@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { updateTranslations } from '../../logic/translations.ts';
+import { updateTranslations } from '../../translations/translations.ts';
 
 export function updateTranslationsCommand(): Command {
   return new Command('update-translations')

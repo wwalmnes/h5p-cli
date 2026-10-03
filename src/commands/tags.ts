@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { tags } from '../logic/repo.ts';
-import { ui } from '../lib/ui.ts';
+import { tags } from '../h5p/repo.ts';
+import { ui } from '../ui/ui.ts';
 
 const tagsArgsSchema = z.object({
   org: z.string(),

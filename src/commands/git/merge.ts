@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import * as git from '../../logic/git.ts';
-import { processRepos } from '../../lib/process-repos.ts';
-import { reportResults } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos } from '../../repos/process-repos.ts';
+import { reportResults } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function mergeCommand(): Command {
   return new Command('merge')

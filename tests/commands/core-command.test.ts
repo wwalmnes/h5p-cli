@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { coreCommand } from '../../src/commands/core.ts';
-import { installCore } from '../../src/logic/install.ts';
+import { installCore } from '../../src/install/install.ts';
 
-vi.mock('../../configLoader', () => ({
+vi.mock('../../src/config/loader', () => ({
   default: {
     folders: { libraries: 'libraries', temp: 'temp' },
     core: {
@@ -11,8 +11,8 @@ vi.mock('../../configLoader', () => ({
     },
   },
 }));
-vi.mock('../../src/logic/install.ts', () => ({ installCore: vi.fn() }));
-vi.mock('../../src/lib/setup-folders.ts', () => ({ setupFolders: vi.fn() }));
+vi.mock('../../src/install/install.ts', () => ({ installCore: vi.fn() }));
+vi.mock('../../src/cli/setup-folders.ts', () => ({ setupFolders: vi.fn() }));
 
 describe('coreCommand', () => {
   let stderr: string;

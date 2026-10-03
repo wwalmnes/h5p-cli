@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { enforce, requireLibrariesCwd } from '../../lib/workspace.ts';
+import { enforce, requireLibrariesCwd } from '../../cli/workspace.ts';
 import { initCommand } from './init.ts';
 import { utilsHelpCommand } from './help.ts';
 import { utilsListCommand } from './list.ts';

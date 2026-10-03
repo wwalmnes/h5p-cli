@@ -1,8 +1,8 @@
 import { Command } from 'commander';
-import checkTranslations from '../../utils/commands/check-translations.ts';
-import { splitLibrariesAndLanguages } from '../../lib/resolve-libraries.ts';
-import { findRepos } from '../../lib/process-repos.ts';
-import { ui } from '../../lib/ui.ts';
+import checkTranslations from '../../translations/check-translations.ts';
+import { splitLibrariesAndLanguages } from '../../repos/resolve-libraries.ts';
+import { findRepos } from '../../repos/process-repos.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function checkTranslationsCommand(): Command {
   return new Command('check-translations')

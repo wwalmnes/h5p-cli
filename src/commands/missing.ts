@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { computeDependencies } from '../logic/dependencies.ts';
-import { getRegistry, parseLibraryFolders } from '../logic/registry.ts';
-import { ui } from '../lib/ui.ts';
+import { computeDependencies } from '../install/dependencies.ts';
+import { getRegistry, parseLibraryFolders } from '../h5p/registry.ts';
+import { ui } from '../ui/ui.ts';
 
 const missingArgsSchema = z.object({
   library: z.string(),

@@ -1,9 +1,9 @@
 import { Command } from 'commander';
-import * as git from '../../logic/git.ts';
-import type { GitOpResult } from '../../logic/git.ts';
-import { resolveRepos } from '../../lib/process-repos.ts';
-import { reportResult } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import type { GitOpResult } from '../../repos/git.ts';
+import { resolveRepos } from '../../repos/process-repos.ts';
+import { reportResult } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function newBranchCommand(): Command {
   return new Command('new-branch')

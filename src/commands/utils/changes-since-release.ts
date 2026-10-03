@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { changesSinceRelease } from '../../logic/versioning.ts';
+import { changesSinceRelease } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
 
 export function changesSinceReleaseCommand(): Command {

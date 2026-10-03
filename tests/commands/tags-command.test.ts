@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { tagsCommand } from '../../src/commands/tags.ts';
-import { tags } from '../../src/logic/repo.ts';
+import { tags } from '../../src/h5p/repo.ts';
 
-vi.mock('../../src/logic/repo.ts', () => ({ tags: vi.fn() }));
+vi.mock('../../src/h5p/repo.ts', () => ({ tags: vi.fn() }));
 
 describe('tagsCommand', () => {
   let stdout: string;

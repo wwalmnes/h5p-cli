@@ -4,7 +4,7 @@ import path from 'path';
 import { createCommand } from '../../src/commands/create.ts';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
-vi.mock('../../configLoader', () => ({
+vi.mock('../../src/config/loader', () => ({
   default: { folders: { libraries: 'libraries' } },
 }));
 

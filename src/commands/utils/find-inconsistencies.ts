@@ -1,15 +1,15 @@
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import { findInconsistencies, type InconsistencyReport } from '../../lib/dependencies/inconsistencies.ts';
-import { scanLibraries } from '../../lib/dependencies/scan.ts';
+import { findInconsistencies, type InconsistencyReport } from '../../dependency-check/inconsistencies.ts';
+import { scanLibraries } from '../../dependency-check/scan.ts';
 import {
   conflictHead,
   conflictLines,
   conflictRows,
   inconsistencySummary,
-} from '../../lib/dependencies/report.ts';
-import { ui } from '../../lib/ui.ts';
+} from '../../dependency-check/report.ts';
+import { ui } from '../../ui/ui.ts';
 
 const argsSchema = z.object({
   librariesDir: z.string().min(1),

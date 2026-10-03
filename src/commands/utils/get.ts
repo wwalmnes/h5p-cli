@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import { cloneLibrary, resolveCollection, type RegistryLibrary } from '../../logic/h5p-org-registry.ts';
-import { reportResult } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import { cloneLibrary, resolveCollection, type RegistryLibrary } from '../../h5p/h5p-org-registry.ts';
+import { reportResult } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function getCommand(): Command {
   return new Command('get')

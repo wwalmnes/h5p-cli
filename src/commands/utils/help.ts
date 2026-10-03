@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { ui } from '../../lib/ui.ts';
+import { ui } from '../../ui/ui.ts';
 
 const helpArgsSchema = z.object({
   command: z.string().optional(),

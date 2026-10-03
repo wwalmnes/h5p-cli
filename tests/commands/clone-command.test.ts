@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cloneCommand } from '../../src/commands/clone.ts';
-import { getWithDependencies } from '../../src/logic/install.ts';
+import { getWithDependencies } from '../../src/install/install.ts';
 
-vi.mock('../../configLoader', () => ({
+vi.mock('../../src/config/loader', () => ({
   default: { registry: 'libraryRegistry.json', folders: { libraries: 'libraries', temp: 'temp' } },
 }));
-vi.mock('../../src/logic/install.ts', () => ({ getWithDependencies: vi.fn() }));
+vi.mock('../../src/install/install.ts', () => ({ getWithDependencies: vi.fn() }));
 
 describe('cloneCommand', () => {
   let stderr: string;

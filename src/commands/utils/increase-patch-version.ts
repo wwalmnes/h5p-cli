@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { increasePatchVersion } from '../../logic/versioning.ts';
+import { increasePatchVersion } from '../../versioning/versioning.ts';
 
 export function increasePatchVersionCommand(): Command {
   return new Command('increase-patch-version')

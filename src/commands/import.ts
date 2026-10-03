@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { importContent } from '../logic/content.ts';
-import { ui } from '../lib/ui.ts';
+import { importContent } from '../content/content.ts';
+import { ui } from '../ui/ui.ts';
 
 const importArgsSchema = z.object({
   folder: z.string(),

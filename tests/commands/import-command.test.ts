@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { importCommand } from '../../src/commands/import.ts';
-import { importContent } from '../../src/logic/content.ts';
+import { importContent } from '../../src/content/content.ts';
 
-vi.mock('../../src/logic/content.ts', () => ({ importContent: vi.fn() }));
+vi.mock('../../src/content/content.ts', () => ({ importContent: vi.fn() }));
 
 describe('importCommand', () => {
   let stdout: string;

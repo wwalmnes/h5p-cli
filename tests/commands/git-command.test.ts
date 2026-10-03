@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { MockInstance } from 'vitest';
 import type { Command } from 'commander';
-import type { GitOpResult } from '../../src/logic/git.ts';
+import type { GitOpResult } from '../../src/repos/git.ts';
 
 // The repo walk is filesystem-bound; stand in a fixed two-repo workspace so the
 // command factories are exercised without touching disk.
 const REPOS = ['h5p-accordion', 'h5p-column'];
 
-vi.mock('../../src/lib/process-repos.ts', () => ({
+vi.mock('../../src/repos/process-repos.ts', () => ({
   findRepos: vi.fn(async () => REPOS),
   processRepos: vi.fn(async (repos: string[], fn: (repo: string) => Promise<any>) => {
     const all = !repos.length || (repos.length === 1 && repos[0] === '*');
@@ -27,7 +27,7 @@ const fake = vi.hoisted(() => ({
   statuses: {} as Record<string, Partial<GitOpResult>>,
 }));
 
-vi.mock('../../src/logic/git.ts', () => {
+vi.mock('../../src/repos/git.ts', () => {
   const ok = (method: string) => vi.fn(async (repo: string, ...args: any[]) => {
     fake.calls.push({ method, repo, args });
     return { name: repo, msg: method };
@@ -52,7 +52,7 @@ vi.mock('../../src/logic/git.ts', () => {
   };
 });
 
-const git = await import('../../src/logic/git.ts');
+const git = await import('../../src/repos/git.ts');
 const { checkoutCommand } = await import('../../src/commands/git/checkout.ts');
 const { newBranchCommand } = await import('../../src/commands/git/new-branch.ts');
 const { rmBranchCommand } = await import('../../src/commands/git/rm-branch.ts');
@@ -63,7 +63,7 @@ const { mergeCommand } = await import('../../src/commands/git/merge.ts');
 const { diffCommand } = await import('../../src/commands/git/diff.ts');
 const { tagCommand } = await import('../../src/commands/git/tag.ts');
 const { statusCommand } = await import('../../src/commands/git/status.ts');
-const { ui } = await import('../../src/lib/ui.ts');
+const { ui } = await import('../../src/ui/ui.ts');
 
 /** Commander parses the subcommand in isolation; `from: 'user'` skips argv[0..1]. */
 function run(cmd: Command, args: string[]): Promise<unknown> {
@@ -220,7 +220,7 @@ describe('h5p git subcommands', () => {
   });
 
   it('status explains why a named library was skipped', async () => {
-    const { processRepos } = await import('../../src/lib/process-repos.ts');
+    const { processRepos } = await import('../../src/repos/process-repos.ts');
     vi.mocked(processRepos).mockResolvedValueOnce([
       { name: 'not-a-repo', skipped: true, msg: 'no git repository found' },
     ]);
@@ -250,7 +250,7 @@ describe('git output channels', () => {
   });
 
   it('reports why a repo was skipped', async () => {
-    const { processRepos } = await import('../../src/lib/process-repos.ts');
+    const { processRepos } = await import('../../src/repos/process-repos.ts');
     vi.mocked(processRepos).mockResolvedValueOnce([
       { name: 'h5p-column', skipped: true, msg: 'ignored' },
     ]);

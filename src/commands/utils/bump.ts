@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import bump from '../../utils/commands/bump.ts';
-import { ui } from '../../lib/ui.ts';
+import bump from '../../versioning/bump.ts';
+import { ui } from '../../ui/ui.ts';
 
 const bumpOptionsSchema = z.object({
   yes: z.boolean().optional(),

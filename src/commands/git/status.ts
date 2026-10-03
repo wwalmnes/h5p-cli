@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import * as git from '../../logic/git.ts';
-import { processRepos } from '../../lib/process-repos.ts';
-import { reportChanges } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos } from '../../repos/process-repos.ts';
+import { reportChanges } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
 const statusArgsSchema = z.object({
   libraries: z.array(z.string().min(1, 'Library names cannot be empty')),

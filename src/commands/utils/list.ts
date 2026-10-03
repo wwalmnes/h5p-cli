@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { fetchRegistry } from '../../logic/h5p-org-registry.ts';
+import { fetchRegistry } from '../../h5p/h5p-org-registry.ts';
 
 const color = {
   default: '\x1B[0m',

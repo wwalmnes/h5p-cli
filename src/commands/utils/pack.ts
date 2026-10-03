@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import pack, { defaultPackFile } from '../../utils/commands/pack.ts';
-import validate from '../../utils/commands/validate.ts';
-import { ui } from '../../lib/ui.ts';
+import pack, { defaultPackFile } from '../../packaging/pack.ts';
+import validate from '../../packaging/validate.ts';
+import { ui } from '../../ui/ui.ts';
 
 const H5P_PATTERN = /\.h5p$/;
 

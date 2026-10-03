@@ -1,9 +1,9 @@
 import path from 'path';
 import { Command } from 'commander';
 import { z } from 'zod';
-import { applyPlan } from '../../lib/dependencies/apply.ts';
-import { buildPlan, type Plan } from '../../lib/dependencies/plan.ts';
-import { scanLibraries } from '../../lib/dependencies/scan.ts';
+import { applyPlan } from '../../dependency-check/apply.ts';
+import { buildPlan, type Plan } from '../../dependency-check/plan.ts';
+import { scanLibraries } from '../../dependency-check/scan.ts';
 import {
   chain,
   cycleLines,
@@ -12,9 +12,9 @@ import {
   planRows,
   summary,
   upToDateLines,
-} from '../../lib/dependencies/report.ts';
-import { formatVersion, parseSeedArg } from '../../lib/dependencies/version.ts';
-import { ui } from '../../lib/ui.ts';
+} from '../../dependency-check/report.ts';
+import { formatVersion, parseSeedArg } from '../../dependency-check/version.ts';
+import { ui } from '../../ui/ui.ts';
 
 const argsSchema = z.object({
   libraries: z.array(z.string().min(1)).min(1),

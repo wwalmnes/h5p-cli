@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { depsCommand } from '../../src/commands/deps.ts';
-import { computeDependencies } from '../../src/logic/dependencies.ts';
+import { computeDependencies } from '../../src/install/dependencies.ts';
 
-vi.mock('../../src/logic/dependencies.ts', () => ({ computeDependencies: vi.fn() }));
+vi.mock('../../src/install/dependencies.ts', () => ({ computeDependencies: vi.fn() }));
 
 describe('depsCommand', () => {
   let stdout: string;

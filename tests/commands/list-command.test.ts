@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { listCommand } from '../../src/commands/list.ts';
-import { getRegistry } from '../../src/logic/registry.ts';
+import { getRegistry } from '../../src/h5p/registry.ts';
 
-vi.mock('../../src/logic/registry.ts', () => ({ getRegistry: vi.fn() }));
+vi.mock('../../src/h5p/registry.ts', () => ({ getRegistry: vi.fn() }));
 
 describe('listCommand', () => {
   let stdout: string;

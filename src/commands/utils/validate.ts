@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import validate from '../../utils/commands/validate.ts';
-import { ui } from '../../lib/ui.ts';
+import validate from '../../packaging/validate.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function validateCommand(): Command {
   return new Command('validate')

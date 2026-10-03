@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { installCore } from '../logic/install.ts';
-import config from '../../configLoader.ts';
-import type { CoreLibrary } from '../config.ts';
-import { setupFolders } from '../lib/setup-folders.ts';
-import { ui } from '../lib/ui.ts';
+import { installCore } from '../install/install.ts';
+import config from '../config/loader.ts';
+import type { CoreLibrary } from '../config/defaults.ts';
+import { setupFolders } from '../cli/setup-folders.ts';
+import { ui } from '../ui/ui.ts';
 
 const coreArgsSchema = z.object({
   concurrency: z.coerce.number().int().positive().optional(),

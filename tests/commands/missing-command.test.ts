@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { missingCommand } from '../../src/commands/missing.ts';
-import { computeDependencies } from '../../src/logic/dependencies.ts';
-import { getRegistry, parseLibraryFolders } from '../../src/logic/registry.ts';
+import { computeDependencies } from '../../src/install/dependencies.ts';
+import { getRegistry, parseLibraryFolders } from '../../src/h5p/registry.ts';
 
-vi.mock('../../src/logic/dependencies.ts', () => ({ computeDependencies: vi.fn() }));
-vi.mock('../../src/logic/registry.ts', () => ({ getRegistry: vi.fn(), parseLibraryFolders: vi.fn() }));
+vi.mock('../../src/install/dependencies.ts', () => ({ computeDependencies: vi.fn() }));
+vi.mock('../../src/h5p/registry.ts', () => ({ getRegistry: vi.fn(), parseLibraryFolders: vi.fn() }));
 
 describe('missingCommand', () => {
   let stdout: string;

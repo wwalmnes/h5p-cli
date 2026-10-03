@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { exportContent } from '../logic/content.ts';
-import { ui } from '../lib/ui.ts';
+import { exportContent } from '../content/content.ts';
+import { ui } from '../ui/ui.ts';
 
 const exportArgsSchema = z.object({
   library: z.string(),

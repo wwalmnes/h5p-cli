@@ -1,6 +1,6 @@
 import { Command } from 'commander';
-import * as git from '../../logic/git.ts';
-import { processRepos } from '../../lib/process-repos.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos } from '../../repos/process-repos.ts';
 
 export function tagVersionCommand(): Command {
   return new Command('tag-version')

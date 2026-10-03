@@ -1,9 +1,9 @@
 import { Command } from 'commander';
-import * as git from '../../logic/git.ts';
-import { processRepos, type RepoResult } from '../../lib/process-repos.ts';
-import { reportResults } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
-import type { GitOpResult } from '../../logic/git.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos, type RepoResult } from '../../repos/process-repos.ts';
+import { reportResults } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
+import type { GitOpResult } from '../../repos/git.ts';
 
 export function pushCommand(): Command {
   return new Command('push')

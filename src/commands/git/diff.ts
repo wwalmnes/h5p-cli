@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import * as git from '../../logic/git.ts';
-import { findRepos } from '../../lib/process-repos.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import { findRepos } from '../../repos/process-repos.ts';
+import { ui } from '../../ui/ui.ts';
 
 export function diffCommand(): Command {
   return new Command('diff')
