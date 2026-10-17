@@ -13,6 +13,7 @@
   "lang_dashboard": "dashboard",
   "lang_running": "rulează",
   "lang_contentCreatedFor": "conținut creat pentru",
+  "lang_versionNotInstalled": "nu este instalat, așa că acest conținut rulează pe o altă versiune fără a fi actualizat și este posibil să nu funcționeze corect.",
   "lang_userStateSession": "sesiunea curentă a utilizatorului",
   "lang_newSession": "sesiune nouă",
   "lang_resetSession": "resetează sesiunea",

@@ -13,6 +13,7 @@
   "lang_dashboard": "tableau de bord",
   "lang_running": "en cours d'exécution",
   "lang_contentCreatedFor": "contenu créé pour",
+  "lang_versionNotInstalled": "n'est pas installé : ce contenu s'exécute donc avec une autre version sans avoir été mis à niveau et risque de ne pas fonctionner correctement.",
   "lang_userStateSession": "session d'état de l'utilisateur",
   "lang_newSession": "nouvelle session",
   "lang_sessionName": "nom de la session",

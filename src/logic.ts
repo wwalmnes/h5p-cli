@@ -4,7 +4,7 @@ import { tags, download, clone } from './h5p/repo.ts';
 import { getRegistry, parseLibraryFolders, parseLibraryVersions, registryEntryFromRepoUrl } from './h5p/registry.ts';
 import { computeDependencies } from './install/dependencies.ts';
 import { installCore, installDependencies, getWithDependencies, verifySetup } from './install/install.ts';
-import { importContent, exportContent, generateInfo, upgrade } from './content/content.ts';
+import { importContent, exportContent, generateInfo, upgrade, contentLibraryVersion, contentDependencies } from './content/content.ts';
 
 const logic = {
   import: importContent,
@@ -20,6 +20,8 @@ const logic = {
   verifySetup,
   generateInfo,
   upgrade,
+  contentLibraryVersion,
+  contentDependencies,
   parseLibraryFolders,
   parseLibraryVersions,
   registryEntryFromRepoUrl,

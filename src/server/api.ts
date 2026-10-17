@@ -4,7 +4,7 @@ import he from 'he';
 import imageSize from 'image-size';
 import logic from '../logic.ts';
 import { fromTemplate, pickLibraryFolder, resolvedLibraryFolder } from '../h5p/h5p-utils.ts';
-import { contentLibraryFolder, contentDependencies } from '../content/content.ts';
+import { contentLibraryFolder, contentLibraryVersion, contentDependencies } from '../content/content.ts';
 import { ui } from '../ui/ui.ts';
 import config from '../config/loader.ts';
 import l10n from '../../assets/l10n.json' with { type: 'json' };
@@ -558,8 +558,8 @@ export default {
       if (!await verifySetup(library, response)) {
         return;
       }
-      const libFolder = contentLibraryFolder(folder, registry.regular[library].id, libraryVersions);
-      const libs = await logic.computeDependencies(library, 'view', null, libFolder);
+      const contentVersion = contentLibraryVersion(folder, registry.regular[library].id, libraryVersions);
+      const libs = await logic.computeDependencies(library, 'view', null, contentVersion.folder);
       const jsonContent = fs.readFileSync(`./content/${folder}/content.json`, 'utf8');
       const sessions = manageSession(request.params.folder, {
         language: request.query?.language,
@@ -636,6 +636,7 @@ export default {
         watcher: config.files.watch,
         themeControls: config.themeControls ?? false,
         simple: request.query.simple ? 'hidden' : '',
+        versionWarning: contentVersion.saved && contentVersion.saved !== contentVersion.running ? '' : 'hidden',
         saveFreq: config.saveFreq
       }
       input = {...input, ...labels};

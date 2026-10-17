@@ -13,6 +13,7 @@
   "lang_dashboard": "pulpit nawigacyjny",
   "lang_running": "bieganie",
   "lang_contentCreatedFor": "treść stworzona dla",
+  "lang_versionNotInstalled": "– ta wersja nie jest zainstalowana, więc ta treść działa na innej wersji bez aktualizacji i może nie działać zgodnie z oczekiwaniami.",
   "lang_userStateSession": "sesja stanu użytkownika",
   "lang_newSession": "nowa sesja",
   "lang_sessionName": "nazwa sesji",

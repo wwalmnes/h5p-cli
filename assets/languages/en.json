@@ -13,6 +13,7 @@
   "lang_dashboard": "dashboard",
   "lang_running": "running",
   "lang_contentCreatedFor": "content created for",
+  "lang_versionNotInstalled": "is not installed, so this content runs on another version without being upgraded and may not work as expected.",
   "lang_userStateSession": "user state session",
   "lang_newSession": "new session",
   "lang_resetSession": "reset session",

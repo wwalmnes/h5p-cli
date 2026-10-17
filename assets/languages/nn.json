@@ -13,6 +13,7 @@
   "lang_dashboard": "dashbord",
   "lang_running": "løper",
   "lang_contentCreatedFor": "innhold opprettet for",
+  "lang_versionNotInstalled": "er ikkje installert, så dette innhaldet køyrer på ein annan versjon utan å ha blitt oppgradert, og fungerer kanskje ikkje som venta.",
   "lang_userStateSession": "brukerstatusøkt",
   "lang_newSession": "ny økt",
   "lang_sessionName": "sesjonsnavn",

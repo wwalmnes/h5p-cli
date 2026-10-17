@@ -19,12 +19,27 @@ export const importContent = (folder: string, archive?: string): string => {
   return folder;
 };
 
-// library folder for the version of machineName that content/<folder> was saved with
-export const contentLibraryFolder = (folder: string, machineName: string, versions: LibraryVersionMap): string | undefined => {
-  const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
-  const saved = info.preloadedDependencies?.find((item: LibraryDependency) => item.machineName === machineName);
-  return pickLibraryFolder(versions, machineName, saved && `${saved.majorVersion}.${saved.minorVersion}`);
+export type ContentLibraryVersion = {
+  /** major.minor of machineName that the content was saved with */
+  saved?: string;
+  /** major.minor of machineName that the content runs against; differs from saved when that one is not installed */
+  running?: string;
+  folder?: string;
 };
+
+// the version of machineName that content/<folder> was saved with, and the installed one it runs against
+export const contentLibraryVersion = (folder: string, machineName: string, versions: LibraryVersionMap): ContentLibraryVersion => {
+  const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
+  const dependency = info.preloadedDependencies?.find((item: LibraryDependency) => item.machineName === machineName);
+  const saved = dependency && `${dependency.majorVersion}.${dependency.minorVersion}`;
+  const libFolder = pickLibraryFolder(versions, machineName, saved);
+  const running = Object.keys(versions[machineName] ?? {}).find((version) => versions[machineName][version] === libFolder);
+  return { saved, running, folder: libFolder };
+};
+
+// library folder for the version of machineName that content/<folder> was saved with
+export const contentLibraryFolder = (folder: string, machineName: string, versions: LibraryVersionMap): string | undefined =>
+  contentLibraryVersion(folder, machineName, versions).folder;
 
 // creates zip archive export file in the .h5p format
 export const exportContent = async (library: string, folder?: string): Promise<string> => {

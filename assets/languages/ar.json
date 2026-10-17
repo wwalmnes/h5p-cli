@@ -13,6 +13,7 @@
    "lang_dashboard": "لوحة القيادة",
    "lang_running": "قيد التشغيل",
    "lang_contentCreatedFor": "تم إنشاء المحتوى لـ",
+   "lang_versionNotInstalled": "غير مثبت، لذا يعمل هذا المحتوى على إصدار آخر دون ترقيته وقد لا يعمل كما هو متوقع.",
    "lang_userStateSession": "جلسة حالة المستخدم",
    "lang_newSession": "جلسة جديدة",
    "lang_resetSession": "reset session",

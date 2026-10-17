@@ -13,6 +13,7 @@
   "lang_dashboard": "dashboard",
   "lang_running": "rennen",
   "lang_contentCreatedFor": "inhoud gemaakt voor",
+  "lang_versionNotInstalled": "is niet geïnstalleerd, dus deze inhoud draait zonder upgrade op een andere versie en werkt mogelijk niet zoals verwacht.",
   "lang_userStateSession": "gebruikersstatussessie",
   "lang_newSession": "nieuwe sessie",
   "lang_sessionName": "sessienaam",
