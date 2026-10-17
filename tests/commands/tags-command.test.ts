@@ -27,19 +27,19 @@ describe('tagsCommand', () => {
   });
 
   it('asks for the tags of org/library', async () => {
-    vi.mocked(tags).mockReturnValue([]);
+    vi.mocked(tags).mockResolvedValue([]);
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks']);
     expect(tags).toHaveBeenCalledWith('h5p', 'h5p-blanks');
   });
 
   it('logs error on exception', async () => {
-    vi.mocked(tags).mockImplementation(() => { throw new Error('tags failed'); });
+    vi.mocked(tags).mockRejectedValue(new Error('tags failed'));
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks']);
     expect(stderr).toContain('> error: tags failed');
   });
 
   it('writes each tag to stdout on its own line', async () => {
-    vi.mocked(tags).mockReturnValue(['1.0.0', '1.1.0', '2.0.0']);
+    vi.mocked(tags).mockResolvedValue(['1.0.0', '1.1.0', '2.0.0']);
     await tagsCommand().parseAsync(['node', 'h5p', 'h5p', 'h5p-blanks']);
     expect(stdout).toBe('1.0.0\n1.1.0\n2.0.0\n');
   });

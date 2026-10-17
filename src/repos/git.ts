@@ -1,16 +1,14 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
-import path from 'path';
+import { _nonInteractiveEnv } from '../h5p/exec.ts';
 import type { ExecResult, RepoOpResult } from './repo-types.ts';
-
-export const GIT_SSH = path.resolve(import.meta.dirname, 'bin', 'h5p-ssh');
 
 export type GitOpResult = RepoOpResult;
 
 /** Run git in `dir` (relative to cwd) and capture both streams. */
 export function spawnGit(dir: string, args: string[]): Promise<ExecResult> {
   return new Promise((resolve, reject) => {
-    const env = { ...process.env, GIT_SSH };
+    const env = _nonInteractiveEnv();
     const proc = spawn('git', args, { cwd: `${process.cwd()}/${dir}`, env });
 
     let stdout = '';
@@ -40,7 +38,7 @@ async function runGit(dir: string, args: string[]): Promise<ExecResult> {
 
 export async function commit(repo: string, message: string): Promise<GitOpResult> {
   const result: GitOpResult = { name: repo };
-  const opts = { cwd: `${process.cwd()}/${repo}`, env: { ...process.env, GIT_SSH } };
+  const opts = { cwd: `${process.cwd()}/${repo}`, env: _nonInteractiveEnv() };
 
   const addExitCode = await new Promise<number>(resolve => {
     const proc = spawn('git', ['add', '--all'], opts);
@@ -79,7 +77,7 @@ export async function pull(repo: string): Promise<GitOpResult> {
   let output = '';
 
   await new Promise<void>(resolve => {
-    const env = { ...process.env, GIT_SSH };
+    const env = _nonInteractiveEnv();
     const proc = spawn('git', ['pull'], { cwd: `${process.cwd()}/${repo}`, env });
     proc.stderr.on('data', data => { result.failed = true; output += data.toString(); });
     proc.stdout.on('data', data => { output += data.toString(); });

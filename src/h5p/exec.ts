@@ -21,45 +21,19 @@ times a second, so the user sees a frozen row and never the prompt.
 GIT_TERMINAL_PROMPT=0 disables git's own username/password prompt without
 touching credential helpers. BatchMode=yes makes ssh fail instead of asking
 for a passphrase or a host-key confirmation, and leaves ssh-agent alone. Both
-are inherited by grandchildren, which is what reaches that nested clone. */
-const _nonInteractiveEnv = (): NodeJS.ProcessEnv => ({
-  ...process.env,
-  GIT_TERMINAL_PROMPT: '0',
-  GIT_SSH_COMMAND: `${process.env.GIT_SSH_COMMAND ?? 'ssh'} -o BatchMode=yes`,
-});
+are inherited by grandchildren, which is what reaches that nested clone.
+
+A GIT_SSH the user set without GIT_SSH_COMMAND is left alone */
+export const _nonInteractiveEnv = (): NodeJS.ProcessEnv => {
+  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  if (process.env.GIT_SSH_COMMAND || !process.env.GIT_SSH) {
+    env.GIT_SSH_COMMAND = `${process.env.GIT_SSH_COMMAND || 'ssh'} -o BatchMode=yes`;
+  }
+  return env;
+};
 
 const _timedOut = (command: string, cwd: string | undefined, ms: number): Error =>
   new Error(`Command timed out after ${Math.round(ms / 1000)}s: ${command}${cwd ? `\n  in ${cwd}` : ''}`);
-
-/* execSync inherits stderr, so git/npm write straight past ui — which both
-leaks output under --quiet and shreds the live progress frame. spawnSync
-captures both streams so everything reaches the terminal through emit().
-*/
-export const _execSync = (command: string, cwd?: string): string => {
-  const budget = resolveExecTimeout();
-  const result = spawnSync(command, {
-    shell: true,
-    cwd,
-    encoding: 'utf-8',
-    env: _nonInteractiveEnv(),
-    timeout: budget,
-  });
-  if (result.error) {
-    // node reports the timeout as ETIMEDOUT; say what actually happened
-    throw (result.error as NodeJS.ErrnoException).code === 'ETIMEDOUT'
-      ? _timedOut(command, cwd, budget)
-      : result.error;
-  }
-  _debug(result.stdout ?? '');
-  _debug(result.stderr ?? '');
-  if (result.signal) {
-    throw _timedOut(command, cwd, budget);
-  }
-  if (result.status !== 0) {
-    throw _failed(command, result.stderr ?? '');
-  }
-  return result.stdout ?? '';
-};
 
 const _children = new Set<ReturnType<typeof spawn>>();
 
@@ -68,9 +42,20 @@ like `a && b && c` sh does not exec - it stays, and the npm/webpack/ssh
 processes below it survive a kill aimed at sh alone. They keep the stdio pipes
 they inherited open, so 'close' never fires and node cannot exit either.
 Spawning detached puts each command in its own process group, and a negative
-pid signals the whole group. */
+pid signals the whole group.
+
+Windows has neither process groups nor negative pids, and a detached child
+there gets a console window of its own. It is spawned attached instead, and
+taskkill /T ends the tree below cmd.exe. /F because Windows has no SIGTERM to
+ask with. Synchronous, as the exit hook below cannot wait. */
+const _isWindows = process.platform === 'win32';
+
 const _killGroup = (child: ReturnType<typeof spawn>, signal: NodeJS.Signals = 'SIGTERM'): void => {
   if (child.pid === undefined) {
+    return;
+  }
+  if (_isWindows) {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
     return;
   }
   try {
@@ -108,7 +93,8 @@ export const _exec = (command: string, cwd?: string): Promise<string> => {
     const child = spawn(command, {
       shell: true,
       cwd,
-      detached: true,
+      detached: !_isWindows,
+      windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: _nonInteractiveEnv(),
     });

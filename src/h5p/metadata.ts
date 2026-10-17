@@ -77,7 +77,7 @@ export const getMetadataFile = async (org: string, repoName: string, version: st
   const cloned = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(version)}`;
 
   if (isPinnedRelease(version) && fs.existsSync(cloned)) {
-    return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
+    return writeMetaCache(org, repoName, version, file, await getRepoFile(gitUrl, file, version, true, false, true));
   }
 
   const key = _transportKey(org, repoName);
@@ -96,6 +96,6 @@ export const getMetadataFile = async (org: string, repoName: string, version: st
     }
     _transport.set(key, 'clone');
   }
-  _refreshClone(repoName, version);
-  return writeMetaCache(org, repoName, version, file, getRepoFile(gitUrl, file, version, true, false, true));
+  await _refreshClone(repoName, version);
+  return writeMetaCache(org, repoName, version, file, await getRepoFile(gitUrl, file, version, true, false, true));
 };

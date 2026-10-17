@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { execSync } from 'child_process';
-import { _exec as execCommand, _execSync as execCommandSync } from '../../src/h5p/exec.ts';
+import { EventEmitter } from 'events';
+import { _exec as execCommand, _nonInteractiveEnv } from '../../src/h5p/exec.ts';
 
 // We want to test and verify that subprocesses don't wait for user input. If they wait, they are killed.
 describe('subprocess contract', () => {
@@ -17,6 +18,10 @@ describe('subprocess contract', () => {
   describe('execCommand', () => {
     it('captures stdout', async () => {
       expect(await execCommand('echo hello')).toBe('hello\n');
+    });
+
+    it('runs in the given folder', async () => {
+      expect((await execCommand('pwd', '/')).trim()).toBe(execSync('cd / && pwd').toString().trim());
     });
 
     it('rejects with the command and its stderr on a non-zero exit', async () => {
@@ -62,22 +67,51 @@ describe('subprocess contract', () => {
     });
   });
 
-  describe('execCommandSync', () => {
-    it('returns stdout', () => {
-      expect(execCommandSync('echo hello')).toBe('hello\n');
+  describe('_nonInteractiveEnv', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
     });
 
-    it('runs in the given folder', () => {
-      expect(execCommandSync('pwd', '/').trim()).toBe(execSync('cd / && pwd').toString().trim());
+    it('runs plain ssh in batch mode when the user set nothing', () => {
+      vi.stubEnv('GIT_SSH_COMMAND', '');
+      vi.stubEnv('GIT_SSH', '');
+      expect(_nonInteractiveEnv().GIT_SSH_COMMAND).toBe('ssh -o BatchMode=yes');
     });
 
-    it('throws with the command and its stderr on a non-zero exit', () => {
-      expect(() => execCommandSync('echo boom >&2; exit 3')).toThrow(/Command failed.*boom/s);
+    it('composes onto GIT_SSH_COMMAND when both are set, as git uses that one', () => {
+      vi.stubEnv('GIT_SSH_COMMAND', 'ssh -i /keys/id');
+      vi.stubEnv('GIT_SSH', '/usr/bin/other-ssh');
+      expect(_nonInteractiveEnv().GIT_SSH_COMMAND).toBe('ssh -i /keys/id -o BatchMode=yes');
+    });
+  });
+
+  /* Windows has no process groups, so _exec must not spawn detached there (that
+  also opens a console window) and must end the tree with taskkill instead of a
+  negative pid. exec.ts reads the platform when it loads, hence the fresh import. */
+  describe('on Windows', () => {
+    afterEach(() => {
+      vi.doUnmock('child_process');
+      vi.resetModules();
     });
 
-    it('reports a timeout as a timeout', () => {
-      process.env.H5P_EXEC_TIMEOUT = '1';
-      expect(() => execCommandSync('sleep 30')).toThrow(/timed out after 1s/);
+    it('spawns attached and kills the tree with taskkill', async () => {
+      vi.resetModules();
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+      const child = Object.assign(new EventEmitter(), { pid: 4242, stdout: null, stderr: null });
+      const spawn = vi.fn(() => child);
+      const spawnSync = vi.fn(() => ({ status: 0 }));
+      vi.doMock('child_process', () => ({ spawn, spawnSync }));
+      const kill = vi.spyOn(process, 'kill');
+
+      const { _exec, _killRunning } = await import('../../src/h5p/exec.ts');
+      const running = _exec('npm run build', 'lib');
+      _killRunning();
+      child.emit('close', 1);
+      await expect(running).rejects.toThrow(/Command failed: npm run build/);
+
+      expect(spawn).toHaveBeenCalledWith('npm run build', expect.objectContaining({ detached: false, windowsHide: true }));
+      expect(spawnSync).toHaveBeenCalledWith('taskkill', ['/pid', '4242', '/T', '/F'], expect.anything());
+      expect(kill).not.toHaveBeenCalled();
     });
   });
 });

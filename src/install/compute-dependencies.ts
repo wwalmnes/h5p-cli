@@ -29,7 +29,7 @@ export type IComputeDependenciesPort = {
     repoName: string,
     version: string
   ): Promise<any>;
-  getTags(org: string, repo: string): string[];
+  getTags(org: string, repo: string): Promise<string[]>;
 };
 
 export async function computeDependencies(
@@ -65,8 +65,8 @@ export async function computeDependencies(
     return cache[dep].optionals;
   }
 
-  const latestPatch = (org: string, repo: string, version: string) => {
-    const tags = io.getTags(org, repo);
+  const latestPatch = async (org: string, repo: string, version: string) => {
+    const tags = await io.getTags(org, repo);
     let patch = -1;
     for (const item of tags) {
       if (!item.startsWith(`${version}.`)) {
@@ -84,7 +84,7 @@ export async function computeDependencies(
     return patch > -1 ? `${version}.${patch}` : version;
   }
   // determine if dependency needs to be processed
-  const handleDepListEntry = (machineName: string, parent: string, ver: string, dir: string | null | undefined) => {
+  const handleDepListEntry = async (machineName: string, parent: string, ver: string, dir: string | null | undefined) => {
     const lib = registry.reversed[machineName];
     const entry = lib?.shortName;
     if (!entry) {
@@ -96,7 +96,7 @@ export async function computeDependencies(
       ui.warn(`${optional ? 'optional' : 'required'} library ${machineName} ${ver} not found in registry; required by ${parent} (${parentVersion})`);
       return;
     }
-    const version = ver === 'master' ? ver : latestPatch(lib.org, entry, ver);
+    const version = ver === 'master' ? ver : await latestPatch(lib.org, entry, ver);
     if (!done[level][entry]?.id && !toDo[entry]?.parent) {
       toDo[entry] = { parent, version, folder: dir ?? undefined };
     }
@@ -208,19 +208,19 @@ export async function computeDependencies(
       for (let item of list.preloadedDependencies) {
         const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
         const dir = folder ? pickLibraryFolder(libraryVersions, item.machineName, `${item.majorVersion}.${item.minorVersion}`) : null;
-        handleDepListEntry(item.machineName, dep, ver, dir);
+        await handleDepListEntry(item.machineName, dep, ver, dir);
       }
     }
     for (let item in optionals) {
       const ver = version === 'master' ? version : optionals[item].version;
       const dir = folder ? pickLibraryFolder(libraryVersions, item, optionals[item].version) : null;
-      handleDepListEntry(item, dep, ver, dir);
+      await handleDepListEntry(item, dep, ver, dir);
     }
     if (mode === 'edit' && list.editorDependencies) {
       for (let item of list.editorDependencies) {
         const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
         const dir = folder ? pickLibraryFolder(libraryVersions, item.machineName, `${item.majorVersion}.${item.minorVersion}`) : null;
-        handleDepListEntry(item.machineName, dep, ver, dir);
+        await handleDepListEntry(item.machineName, dep, ver, dir);
       }
     }
     delete toDo[dep];
@@ -238,7 +238,7 @@ export async function computeDependencies(
   host 404s, the clone fallback reports "Remote branch 1.1 not found" and the
   whole versioned path is unreachable. */
   if (!folder && /^\d+\.\d+$/.test(toDo[library].version)) {
-    toDo[library].version = latestPatch(registry.regular[library].org, library, toDo[library].version);
+    toDo[library].version = await latestPatch(registry.regular[library].org, library, toDo[library].version);
   }
   let output: DependencyMap = {};
   try {

@@ -10,7 +10,7 @@ file holding a registry entry. Returns the entry that was added. */
 export async function register(input: string): Promise<Record<string, any>> {
   const registry = await getRegistry();
   const entry = isRepoUrl(input)
-    ? registryEntryFromRepoUrl(input)
+    ? await registryEntryFromRepoUrl(input)
     : JSON.parse(fs.readFileSync(input, 'utf-8'));
   registry.reversed = { ...registry.reversed, ...entry };
   fs.writeFileSync(config.registry, JSON.stringify(registry.reversed));

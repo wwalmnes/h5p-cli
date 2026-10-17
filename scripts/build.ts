@@ -28,7 +28,7 @@ const copy = (relative: string): void => {
   fs.cpSync(path.join(root, relative), path.join(dist, relative), { recursive: true });
 };
 
-// tsc emits only what it compiles; anything else under src/ (src/repos/bin/h5p-ssh) is copied
+// tsc emits only what it compiles; anything else under src/ is copied
 const copyNonTypeScript = (relative: string): void => {
   for (const entry of fs.readdirSync(path.join(root, relative), { withFileTypes: true })) {
     const child = path.join(relative, entry.name);

@@ -74,7 +74,7 @@ function makeRegistry(): Registry {
 const makePort = (libraryVersions: LibraryVersionMap = {}): IComputeDependenciesPort => ({
   getRegistry: vi.fn().mockImplementation(async () => makeRegistry()),
   parseLibraryVersions: vi.fn().mockResolvedValue(structuredClone(libraryVersions)),
-  getTags: vi.fn().mockReturnValue([]),
+  getTags: vi.fn().mockResolvedValue([]),
   getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) => {
     const lib = GRAPH[repoName];
     return {
@@ -205,7 +205,7 @@ describe('dependency graph', () => {
         return registry;
       },
       parseLibraryVersions: async () => ({}),
-      getTags: () => [],
+      getTags: async () => [],
       getLibraryJson: async (_folder, _org, repoName: string) => ({
         machineName: graph[repoName].machineName,
         title: graph[repoName].machineName,

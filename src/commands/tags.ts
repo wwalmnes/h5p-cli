@@ -16,11 +16,11 @@ export function tagsCommand(): Command {
     .addHelpText('after', `
 Examples:
   $ h5p tags h5p h5p-accordion`)
-    .action((org: string, library: string) => {
+    .action(async (org: string, library: string) => {
       try {
         const args = tagsArgsSchema.parse({ org, library });
         ui.info('fetching h5p library tags');
-        for (const tag of tags(args.org, args.library)) {
+        for (const tag of await tags(args.org, args.library)) {
           ui.data(tag);
         }
       } catch (error) {
