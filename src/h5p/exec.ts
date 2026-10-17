@@ -72,9 +72,20 @@ like `a && b && c` sh does not exec - it stays, and the npm/webpack/ssh
 processes below it survive a kill aimed at sh alone. They keep the stdio pipes
 they inherited open, so 'close' never fires and node cannot exit either.
 Spawning detached puts each command in its own process group, and a negative
-pid signals the whole group. */
+pid signals the whole group.
+
+Windows has neither process groups nor negative pids, and a detached child
+there gets a console window of its own. It is spawned attached instead, and
+taskkill /T ends the tree below cmd.exe. /F because Windows has no SIGTERM to
+ask with. Synchronous, as the exit hook below cannot wait. */
+const _isWindows = process.platform === 'win32';
+
 const _killGroup = (child: ReturnType<typeof spawn>, signal: NodeJS.Signals = 'SIGTERM'): void => {
   if (child.pid === undefined) {
+    return;
+  }
+  if (_isWindows) {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
     return;
   }
   try {
@@ -112,7 +123,8 @@ export const _exec = (command: string, cwd?: string): Promise<string> => {
     const child = spawn(command, {
       shell: true,
       cwd,
-      detached: true,
+      detached: !_isWindows,
+      windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: _nonInteractiveEnv(),
     });

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { execSync } from 'child_process';
+import { EventEmitter } from 'events';
 import { _exec as execCommand, _execSync as execCommandSync, _nonInteractiveEnv } from '../../src/h5p/exec.ts';
 
 // We want to test and verify that subprocesses don't wait for user input. If they wait, they are killed.
@@ -96,6 +97,36 @@ describe('subprocess contract', () => {
       vi.stubEnv('GIT_SSH_COMMAND', 'ssh -i /keys/id');
       vi.stubEnv('GIT_SSH', '/usr/bin/other-ssh');
       expect(_nonInteractiveEnv().GIT_SSH_COMMAND).toBe('ssh -i /keys/id -o BatchMode=yes');
+    });
+  });
+
+  /* Windows has no process groups, so _exec must not spawn detached there (that
+  also opens a console window) and must end the tree with taskkill instead of a
+  negative pid. exec.ts reads the platform when it loads, hence the fresh import. */
+  describe('on Windows', () => {
+    afterEach(() => {
+      vi.doUnmock('child_process');
+      vi.resetModules();
+    });
+
+    it('spawns attached and kills the tree with taskkill', async () => {
+      vi.resetModules();
+      vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+      const child = Object.assign(new EventEmitter(), { pid: 4242, stdout: null, stderr: null });
+      const spawn = vi.fn(() => child);
+      const spawnSync = vi.fn(() => ({ status: 0 }));
+      vi.doMock('child_process', () => ({ spawn, spawnSync }));
+      const kill = vi.spyOn(process, 'kill');
+
+      const { _exec, _killRunning } = await import('../../src/h5p/exec.ts');
+      const running = _exec('npm run build', 'lib');
+      _killRunning();
+      child.emit('close', 1);
+      await expect(running).rejects.toThrow(/Command failed: npm run build/);
+
+      expect(spawn).toHaveBeenCalledWith('npm run build', expect.objectContaining({ detached: false, windowsHide: true }));
+      expect(spawnSync).toHaveBeenCalledWith('taskkill', ['/pid', '4242', '/T', '/F'], expect.anything());
+      expect(kill).not.toHaveBeenCalled();
     });
   });
 });
