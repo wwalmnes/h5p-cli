@@ -1,44 +1,33 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { SetupAdapter } from '../adapters/setup-adapter.ts';
-import { RegisterAdapter } from '../adapters/register-adapter.ts';
-import { RegisterService } from '../services/register-service.ts';
-import { SetupService } from '../services/setup-service.ts';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import { setup } from '../install/setup.ts';
+import { ui } from '../ui/ui.ts';
 
 const setupArgsSchema = z.object({
   library: z.string(),
   ref: z.string().optional(),
-  download: z.string().optional(),
+  download: z.boolean().optional(),
   concurrency: z.coerce.number().int().positive().optional(),
 });
 
-export async function runSetup(library: string, ref?: string, download?: string, concurrency?: number): Promise<void> {
-  const svc = new SetupService(
-    new SetupAdapter(),
-    new RegisterService(new RegisterAdapter(), config.registry),
-    config.folders.libraries
-  );
-  await svc.setup(library, ref, download, concurrency);
-}
-
-export function setupCommand(service?: SetupService): Command {
-  const svc = service ?? new SetupService(
-    new SetupAdapter(),
-    new RegisterService(new RegisterAdapter(), config.registry),
-    config.folders.libraries
-  );
+export function setupCommand(): Command {
   return new Command('setup')
     .description('Computes & installs dependencies for h5p library')
-    .argument('<library>', 'Library name or URL')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion, or a git URL')
     .argument('[ref]', 'Git tag or branch for the library')
-    .argument('[download]', 'Pass 1 to download instead of clone')
+    .option('--download', 'Download instead of clone repositories')
     .option('-c, --concurrency <n>', 'How many libraries to install at once (default 4)')
-    .action(async (library: string, ref: string | undefined, download: string | undefined, options: { concurrency?: string }) => {
+    .addHelpText('after', `
+Examples:
+  $ h5p setup h5p-accordion
+  $ h5p setup h5p-accordion 1.0.0
+  $ h5p setup h5p-accordion feat/example
+  $ h5p setup h5p-accordion master --download
+  $ h5p setup git@github.com:h5p/h5p-accordion.git`)
+    .action(async (library: string, ref: string | undefined, options: { download?: boolean, concurrency?: string }) => {
       try {
-        const args = setupArgsSchema.parse({ library, ref, download, concurrency: options?.concurrency });
-        await svc.setup(args.library, args.ref, args.download, args.concurrency);
+        const args = setupArgsSchema.parse({ library, ref, download: options?.download, concurrency: options?.concurrency });
+        await setup(args.library, args.ref, args.download, args.concurrency);
       } catch (error) {
         ui.fail(error);
       }

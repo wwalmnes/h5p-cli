@@ -1,15 +1,17 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
-import { processRepos } from '../../lib/process-repos.ts';
-import { reportChanges } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos } from '../../repos/process-repos.ts';
+import { reportChanges } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
-export function commitCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function commitCommand(): Command {
   return new Command('commit')
     .description('Commit to repos with given message')
     .argument('<message>', 'Commit message')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git commit "Fix typo" h5p-accordion`)
     .action(async (message: string, libraries: string[]) => {
       if (!message) {
         ui.warn('No message means no commit.');

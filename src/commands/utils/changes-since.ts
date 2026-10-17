@@ -1,14 +1,17 @@
 import { Command } from 'commander';
-import { VersioningService } from '../../services/versioning-service.ts';
-import { VersioningAdapter } from '../../adapters/versioning-adapter.ts';
+import { changesSince } from '../../versioning/versioning.ts';
 import { printVersionResults } from './versioning-output.ts';
+import { ui } from '../../ui/ui.ts';
 
-export function changesSinceCommand(service?: VersioningService): Command {
-  const svc = service ?? new VersioningService(new VersioningAdapter());
+export function changesSinceCommand(): Command {
   return new Command('changes-since')
     .description('Show changed files since last version')
     .argument('[numVersions]', 'Number of versions (default 1)')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils changes-since
+  $ h5p utils changes-since 2 h5p-accordion`)
     .action(async (numVersions: string | undefined, libraries: string[]) => {
       let versions = 1;
       if (numVersions && numVersions.match(/^-?\d+$/i)) {
@@ -19,10 +22,10 @@ export function changesSinceCommand(service?: VersioningService): Command {
 
       try {
         const repos = libraries.length ? libraries : ['*'];
-        const results = await svc.changesSince(repos, versions);
+        const results = await changesSince(repos, versions);
         printVersionResults(results);
-      } catch (error: any) {
-        process.stdout.write(error.message + '\u000A');
+      } catch (error) {
+        ui.fail(error);
       }
     });
 }

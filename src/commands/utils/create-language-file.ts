@@ -1,25 +1,21 @@
 import { Command } from 'commander';
-import { TranslationService } from '../../services/translation-service.ts';
-import { TranslationAdapter } from '../../adapters/translation-adapter.ts';
+import { createLanguageFile } from '../../translations/translations.ts';
+import { reportResult } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
-export function createLanguageFileCommand(service?: TranslationService): Command {
-  const svc = service ?? new TranslationService(new TranslationAdapter());
+export function createLanguageFileCommand(): Command {
   return new Command('create-language-file')
     .description('Creates language file')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Library folder, e.g. h5p-accordion or H5P.Accordion-1.0')
     .argument('<languageCode>', 'Language code')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils create-language-file h5p-accordion nb`)
     .action(async (library: string, languageCode: string) => {
-      const lf = '\u000A';
-      const color = { default: '\x1B[0m', emphasize: '\x1B[1m', green: '\x1B[32m', yellow: '\x1B[33m', red: '\x1B[31m' };
       try {
-        const result = await svc.createLanguageFile(library, languageCode);
-        process.stdout.write(color.emphasize + result.name + color.default);
-        if (result.failed) process.stdout.write(' ' + color.red + 'FAILED' + color.default);
-        else process.stdout.write(' ' + color.green + 'OK' + color.default);
-        if (result.msg) process.stdout.write(' ' + result.msg);
-        process.stdout.write(lf);
-      } catch (error: any) {
-        process.stdout.write(error.message + lf);
+        reportResult(await createLanguageFile(library, languageCode));
+      } catch (error) {
+        ui.fail(error);
       }
     });
 }

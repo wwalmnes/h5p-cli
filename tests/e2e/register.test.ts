@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 
-vi.mock('../../src/logic/registry.ts', () => ({
+vi.mock('../../src/h5p/registry.ts', () => ({
   getRegistry: vi.fn().mockResolvedValue({ regular: {}, reversed: {} }),
   registryEntryFromRepoUrl: vi.fn().mockReturnValue({
     'H5P.ImageHotspots 1 0': { id: 'h5p-image-hotspots', org: 'h5p', repo: 'h5p-image-hotspots' },
@@ -43,8 +43,24 @@ describe('register — end-to-end', () => {
     expect(written).toMatchObject(entry);
   });
 
+  it('keeps the entries already in the registry', async () => {
+    const registry = await import('../../src/h5p/registry.ts');
+    vi.mocked(registry.getRegistry).mockResolvedValueOnce({
+      regular: {},
+      reversed: { 'H5P.Other 1 0': { id: 'h5p-other' } },
+    } as any);
+    const inputPath = path.join(fixture.dir, 'input-registry.json');
+    fs.writeFileSync(inputPath, JSON.stringify({ 'H5P.Blanks 1 14': { id: 'h5p-blanks' } }));
+
+    const { registerCommand } = await import('../../src/commands/register.ts');
+    await registerCommand().parseAsync(['node', 'h5p', inputPath]);
+
+    const written = JSON.parse(fs.readFileSync(path.join(fixture.dir, 'libraryRegistry.json'), 'utf-8'));
+    expect(Object.keys(written).sort()).toEqual(['H5P.Blanks 1 14', 'H5P.Other 1 0']);
+  });
+
   it('calls registryEntryFromRepoUrl when given an http URL', async () => {
-    const registry = await import('../../src/logic/registry.ts');
+    const registry = await import('../../src/h5p/registry.ts');
     const { registerCommand } = await import('../../src/commands/register.ts');
 
     await registerCommand().parseAsync(['node', 'h5p', 'https://github.com/h5p/h5p-image-hotspots']);

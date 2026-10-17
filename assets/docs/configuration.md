@@ -1,5 +1,5 @@
 # Configuration
-You can override the default [settings](../../src/config.ts) by creating a file named `config.js` in your development environment directory (the workspace root).
+You can override the default [settings](../../src/config/defaults.ts) by creating a file named `config.js` in your development environment directory (the workspace root).
 It exports only the settings you want to change; everything else keeps its default.
 ## Example
 ```

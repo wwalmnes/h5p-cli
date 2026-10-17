@@ -14,7 +14,8 @@ h5p git status
 ```
 
 A library argument names a subfolder of the current directory — `<name>`, not
-`libraries/<name>`. This is the opposite of the top-level
+`libraries/<name>`. That is `h5p-accordion` for a library cloned with `h5p utils get`, and
+`H5P.Accordion-1.0` for one installed with `h5p setup`. This is the opposite of the top-level
 [`h5p` commands](./commands.md), which run from the workspace root. If no git repository is
 found in the current folder, the command stops with a message instead of quietly doing
 nothing.
@@ -36,7 +37,7 @@ h5p git checkout <branch> [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `branch` | Yes | Branch name to check out. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -51,7 +52,7 @@ h5p git new-branch <branch> [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `branch` | Yes | Branch name. Must not start with `h5p-`. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -66,7 +67,7 @@ h5p git rm-branch <branch> [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `branch` | Yes | Branch name. Must not start with `h5p-` and must not be `master`. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -81,7 +82,7 @@ h5p git merge <branch> [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `branch` | Yes | Branch name to merge in. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---
 
@@ -99,7 +100,7 @@ h5p git status [options] [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to show all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to show all libraries. |
 
 | Option | Description |
 |--------|-------------|
@@ -134,7 +135,7 @@ h5p git commit <message> [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `message` | Yes | Commit message. Must be at least two words. |
-| `libraries...` | No | Library names. Omit to commit all repos. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to commit all repos. |
 
 ---
 
@@ -148,7 +149,7 @@ h5p git pull [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to pull all repos. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to pull all repos. |
 
 ---
 
@@ -162,7 +163,7 @@ h5p git push [options] [libraries...]
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `libraries...` | No | Library names. Omit to push all repos. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to push all repos. |
 
 | Option | Description |
 |--------|-------------|
@@ -181,6 +182,6 @@ h5p git tag <tagName> [libraries...]
 | Argument | Required | Description |
 |----------|----------|-------------|
 | `tagName` | Yes | Tag name. |
-| `libraries...` | No | Library names. Omit to apply to all libraries. |
+| `libraries...` | No | Library folder names (e.g. `h5p-accordion` or `H5P.Accordion-1.0`). Omit to apply to all libraries. |
 
 ---

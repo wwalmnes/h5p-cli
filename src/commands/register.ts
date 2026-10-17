@@ -1,36 +1,25 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { RegisterAdapter, type IRegisterAdapter } from '../adapters/register-adapter.ts';
-import { RegisterService } from '../services/register-service.ts';
-import { adapterRegistry } from '../lib/adapter-registry.ts';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import { register } from '../install/register.ts';
+import { ui } from '../ui/ui.ts';
 
 const registerArgsSchema = z.object({
   input: z.string(),
 });
 
-export async function runRegister(input: string): Promise<any> {
-  const svc = new RegisterService(
-    adapterRegistry.resolve<IRegisterAdapter>('register') ?? new RegisterAdapter(),
-    config.registry
-  );
-  return svc.register(input);
-}
-
-export function registerCommand(service?: RegisterService): Command {
+export function registerCommand(): Command {
   return new Command('register')
     .description('Updates local library registry entry')
     .argument('<input>', 'URL or path to registry file')
-    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
-    .action(async (input: string, options) => {
-      const svc = service ?? new RegisterService(
-        adapterRegistry.resolve<IRegisterAdapter>(options.adapter ?? 'register') ?? new RegisterAdapter(),
-        config.registry
-      );
+    .addHelpText('after', `
+Examples:
+  $ h5p register https://github.com/h5p/h5p-accordion
+  $ h5p register git@github.com:h5p/h5p-accordion.git
+  $ h5p register ./my-entry.json`)
+    .action(async (input: string) => {
       try {
         const args = registerArgsSchema.parse({ input });
-        await svc.register(args.input);
+        await register(args.input);
       } catch (error) {
         ui.fail(error);
       }

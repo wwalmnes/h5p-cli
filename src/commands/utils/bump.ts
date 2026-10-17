@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import bump from '../../utils/commands/bump.ts';
-import { ui } from '../../lib/ui.ts';
+import bump from '../../versioning/bump.ts';
+import { ui } from '../../ui/ui.ts';
 
 const bumpOptionsSchema = z.object({
   yes: z.boolean().optional(),
@@ -10,8 +10,11 @@ const bumpOptionsSchema = z.object({
 export function bumpCommand(): Command {
   return new Command('bump')
     .description('Bump the patch version of a library, then commit, tag and push it')
-    .argument('<library>', 'Library folder name (run from inside the libraries folder)')
+    .argument('<library>', 'Library folder, e.g. h5p-accordion or H5P.Accordion-1.0')
     .option('-y, --yes', 'Skip all prompts')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils bump h5p-accordion`)
     .action(async (library: string, options: { yes?: boolean }) => {
       try {
         const opts = bumpOptionsSchema.parse(options);

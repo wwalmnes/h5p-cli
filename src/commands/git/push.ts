@@ -1,16 +1,19 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
-import { processRepos, type RepoResult } from '../../lib/process-repos.ts';
-import { reportResults } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
-import type { GitOpResult } from '../../adapters/git-adapter.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos, type RepoResult } from '../../repos/process-repos.ts';
+import { reportResults } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
+import type { GitOpResult } from '../../repos/git.ts';
 
-export function pushCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function pushCommand(): Command {
   return new Command('push')
     .description('Push the given or all repos')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
     .option('--tags', 'Push tags')
+    .addHelpText('after', `
+Examples:
+  $ h5p git push h5p-accordion
+  $ h5p git push --tags h5p-accordion`)
     .action(async (libraries: string[], options: { tags?: boolean }) => {
       const pushOptions: string[] = options.tags ? ['--tags'] : [];
       const repos = libraries.length ? libraries : ['*'];

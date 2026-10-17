@@ -7,8 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 h5p-cli 2.0 is a rewrite. The tool is written in TypeScript, ships as a compiled ESM package with type
 declarations, parses its command line with [Commander](https://github.com/tj/commander.js),
-and is organised into a layered architecture (Command → Service → Adapter → Logic) that is covered by
-tests and extensible through plugins. Output goes through a single UI layer, failures set an exit code,
+and is organised as small command modules over focused logic modules, covered by tests and extensible
+through plugins. Output goes through a single UI layer, failures set an exit code,
 and every command is documented.
 
 Most command names and arguments are unchanged. The changes that will affect an existing workflow are
@@ -40,6 +40,8 @@ enforced instead of silently producing empty results.
   them no longer works — `require.main` is undefined under ESM — and stops every command with a message
   naming `config.js`.
 - **`h5p server` takes its port as an option**: `h5p server --port 8081` instead of `h5p server 8081`.
+- **`h5p setup` takes download as an option**: `h5p setup h5p-accordion master --download` instead of
+  `h5p setup h5p-accordion master 1`.
 - **`h5p @branches` takes the library folder first**: `h5p branches <library> <branches...>`, with
   `@branches` kept as an alias. It used to act on the current folder; from inside the library that is
   now `h5p @branches . master`.
@@ -52,8 +54,7 @@ enforced instead of silently producing empty results.
 - **`h5p utils list-deps` and `h5p utils recursive-minor-bump` were removed**, replaced by
   `h5p utils dependency-check` (report) and `h5p utils dependency-check --apply` (write).
 - **Internal file layout moved.** `cli.js`, `logic.js`, `config.js`, `configLoader.js`, `server.js`,
-  `api.js` and everything under `assets/utils/` are gone; source now lives under `src/` plus `logic.ts`,
-  `logic-content-upgrade.ts` and `configLoader.ts` in the repo root. `logic.log` and `logic.write` were
+  `api.js` and everything under `assets/utils/` are gone; all source now lives under `src/`. `logic.log` and `logic.write` were
   removed (use `ui` from `h5p-cli/ui`), and `logic.machineToShort` moved to `h5p-cli/utils`. Only
   relevant if you imported h5p-cli internals by file path — use the `exports` map instead:
 
@@ -64,7 +65,7 @@ enforced instead of silently producing empty results.
   | `h5p-cli/config` | Configuration loader (paths, settings) |
   | `h5p-cli/utils` | Utility helpers (`fromTemplate`, `parseGitUrl`, …) |
   | `h5p-cli/compute-dependencies` | Dependency resolution helpers |
-  | `h5p-cli/plugin-types` | `H5PPlugin` and `AdapterOverrides` types |
+  | `h5p-cli/plugin-types` | The `H5PPlugin` type |
   | `h5p-cli/ui` | Output helpers — messages, tables, progress, verbosity |
   | `h5p-cli/content-upgrade` | `upgradeContent`, for content parameter upgrades |
 
@@ -72,7 +73,7 @@ enforced instead of silently producing empty results.
 
 - **Plugin system.** `h5p plugin install <source>`, `h5p plugin list` and `h5p plugin uninstall <name>`
   install plugins from a local path or a GitHub URL (https or ssh). A plugin is a Node module that
-  default-exports an `H5PPlugin` and can add commands, override built-in adapters, or both. Installed
+  default-exports an `H5PPlugin` and can add commands or replace built-in ones. Installed
   plugins are recorded in `~/.h5p-cli/h5p.plugins.json` and loaded on every invocation; git installs
   are cloned into `~/.h5p-cli/plugins/` and get their dependencies installed. Keeping them in the home
   folder means they survive `npm update -g` and need no write access to a global install
@@ -81,10 +82,6 @@ enforced instead of silently producing empty results.
   written in TypeScript (types that can simply be erased: no `enum` or parameter properties) or ESM
   JavaScript, with no build step either way. The entry point is found as Node would: `exports`, then
   `main`, then `index.js`/`.mjs`/`.ts`. See `docs/plugins.md`.
-- **Adapter overrides.** Adapters are the I/O boundary (file access, git, HTTP). Eleven built-in adapters
-  can be replaced: `export`, `import`, `list`, `tags`, `deps`, `missing`, `install`, `verify`, `register`,
-  `create`, `core`. A plugin can replace one as the new default, or register it under a custom
-  name that users opt into per run with `--adapter <name>`, e.g. `h5p export MyLibrary --adapter s3-export`.
 - **`h5p create <name>`** — scaffolds a new H5P content type into `libraries/`.
 - **`h5p git`** — the git sweep commands as their own group, with their own reference (`docs/commands-git.md`).
 - **`h5p utils dependency-check <libraries...>`** — walks the *reverse* dependency graph to show which
@@ -110,11 +107,11 @@ enforced instead of silently producing empty results.
   - `docs/commands.md` — every top-level `h5p` command
   - `docs/commands-git.md` — the `h5p git` group
   - `docs/commands-utils.md` — the `h5p utils` group
-  - `docs/plugins.md` — plugin API: commands, adapters, interfaces, installation
+  - `docs/plugins.md` — plugin API: commands, output, installation
   - `docs/workspace-plugins.md` — developing plugins with npm workspaces
-- **Test suite** across commands, services, lib, logic, integration and end-to-end layers, plus a
+- **Test suite** covering the commands, each feature module, integration and end-to-end, plus a
   Playwright smoke test that boots the dev server. `npm test`, `test:unit`, `test:integration`,
-  `test:logic`, `test:e2e`, `test:watch`, `test:smoke`, and `npm run typecheck`.
+  `test:e2e`, `test:watch`, `test:smoke`, and `npm run typecheck`.
 - **A `files` allowlist** in `package.json`, so the published package ships the compiled sources,
   assets and docs only.
 - **`h5p utils pack -o, --output <file>`** names the output file. Passing it as a trailing `.h5p`
@@ -124,13 +121,15 @@ enforced instead of silently producing empty results.
 
 - Rewritten in TypeScript with `strict` mode enabled; `npm run typecheck` covers the whole tree.
 - Command line parsing moved from a hand-rolled argv switch to Commander v14.
-- Architecture split into **Command → Service → Adapter → Logic**: commands own the CLI contract,
-  services own the flow, adapters own I/O. This is what makes both the tests and the plugin adapter
-  overrides possible.
-- The monolithic `logic.js` (752 lines, mixed responsibilities) was split into a slimmer `logic.ts` plus
-  focused modules under `src/lib/` (`compute-dependencies`, `h5p-utils`, `semantics-utils`,
-  `archive-utils`, `process-repos`, `workspace`, `ui`) and `src/services/` (`translation-service`,
-  `versioning-service`, `dependency-analysis-service`, and others).
+- Each command is its own module under `src/commands/` that owns the CLI contract (arguments,
+  validation, output) and calls into a feature folder for the work. Flow that is more than one call,
+  such as `h5p setup`'s, is a plain function there (`src/install/setup.ts`) rather than inline in the
+  command.
+- The monolithic `logic.js` (752 lines, mixed responsibilities) and `assets/utils/h5p.js` were split
+  into feature folders under `src/`: `h5p/` (registry, metadata, git remote, subprocesses), `install/`,
+  `content/`, `repos/` (the multi-repo sweeps), `versioning/`, `translations/`, `packaging/`,
+  `dependency-check/`, `cli/`, `ui/` and `config/`. `src/logic.ts` is only the facade behind the
+  public `h5p-cli/logic` export.
 - `h5p git` and `h5p utils` subcommands were split out of a few large files into one module per
   subcommand under `src/commands/git/` and `src/commands/utils/`.
 - `.gitignore` now also covers `dist/`, `plugins/`, `h5p.plugins.json`, `playwright-report/` and
@@ -142,7 +141,7 @@ enforced instead of silently producing empty results.
   `logic.getWithDependencies` so a resolved graph can be installed without being resolved again;
   `getWithDependencies` remains as the one-shot pairing of the two.
 - **Dependency installs run through a bounded pool** rather than one library at a time in a serial
-  loop. `logic.installDependencies` hands its work to `runPool` (`src/lib/pool.ts`), four at a time by
+  loop. `logic.installDependencies` hands its work to `runPool` (`src/h5p/pool.ts`), four at a time by
   default, set with `-c, --concurrency <n>` on `h5p setup` or `H5P_CONCURRENCY`. Every library is
   reserved before any task starts, because the skip list is the only guard against installing one
   twice; a consequence is that a required unregistered library now aborts *before* anything installs,
@@ -266,9 +265,9 @@ enforced instead of silently producing empty results.
 
 ### Compatibility
 
-These keep their name and positional arguments: `setup`, `core`, `list`, `register`, `deps`, `missing`,
+These keep their name and positional arguments: `core`, `list`, `register`, `deps`, `missing`,
 `clone`, `install`, `verify`, `export`, `import`, `help` and the `utils` subcommands other than the two
-removed ones. The exceptions are the git subcommands, `server`, `@branches`, `tags` (no `mainBranch`) and
-the single-dash flags listed under breaking changes. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment
+removed ones. The exceptions are the git subcommands, `server`, `setup` (no `download`), `@branches`,
+`tags` (no `mainBranch`) and the single-dash flags listed under breaking changes. The `H5P_NO_UPDATES` and `H5P_SSH_CLONE` environment
 variables behave as before, and a `config.js` in the workspace root still overrides any setting, in the
 new format.

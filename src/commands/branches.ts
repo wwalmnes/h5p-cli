@@ -2,8 +2,8 @@ import { Command } from 'commander';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import config from '../config/loader.ts';
+import { ui } from '../ui/ui.ts';
 
 const gitRefExists = (ref: string, cwd: string): boolean => {
   try {
@@ -21,8 +21,12 @@ export function branchesCommand(): Command {
   return new Command('branches')
     .alias('@branches')
     .description('Clone library branches into @branch folders')
-    .argument('<library>', 'Library folder inside the libraries folder')
+    .argument('<library>', 'Path to the library folder, e.g. libraries/H5P.Accordion-1.0')
     .argument('<branches...>', 'Branch names to clone')
+    .addHelpText('after', `
+Examples:
+  $ h5p branches libraries/H5P.Accordion-1.0 master feat/example
+  $ cd libraries/H5P.Accordion-1.0 && h5p branches . feat/example`)
     .action((library: string, branches: string[]) => {
       try {
         const libDir = library;

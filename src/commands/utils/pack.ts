@@ -1,7 +1,7 @@
 import { Command } from 'commander';
-import pack, { defaultPackFile } from '../../utils/commands/pack.ts';
-import validate from '../../utils/commands/validate.ts';
-import { ui } from '../../lib/ui.ts';
+import pack, { defaultPackFile } from '../../packaging/pack.ts';
+import validate from '../../packaging/validate.ts';
+import { ui } from '../../ui/ui.ts';
 
 const H5P_PATTERN = /\.h5p$/;
 
@@ -17,10 +17,14 @@ function extractOutputFile(libraries: string[]): string | undefined {
 export function packCommand(): Command {
   return new Command('pack')
     .description('Packs the given libraries')
-    .argument('<libraries...>', 'Library names')
+    .argument('<libraries...>', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0')
     .option('-o, --output <file>', `Output .h5p file (default: ${defaultPackFile()})`)
     .option('-r', 'Recursive packaging')
     .option('-f', 'Skip library validation')
+    .addHelpText('after', `
+Examples:
+  $ h5p utils pack h5p-accordion -o accordion.h5p
+  $ h5p utils pack -r h5p-accordion`)
     .action(async (libraries: string[], options: { output?: string; r?: boolean; f?: boolean }) => {
       try {
         const names = [...libraries];

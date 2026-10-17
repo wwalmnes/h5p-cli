@@ -11,7 +11,7 @@ Some of the commands listed here are Linux & MacOS specific. On Windows it’s r
 | [Commands](docs/commands.md) | Reference for all `h5p` commands |
 | [Git commands](docs/commands-git.md) | Reference for `h5p git` subcommands |
 | [Utility commands](docs/commands-utils.md) | Reference for `h5p utils` subcommands |
-| [Creating plugins](docs/plugins.md) | Plugin API -- commands, adapters, interfaces |
+| [Creating plugins](docs/plugins.md) | Plugin API -- commands, output, installation |
 | [Workspace plugin development](docs/workspace-plugins.md) | Developing plugins with npm workspaces |
 
 # INSTALLATION

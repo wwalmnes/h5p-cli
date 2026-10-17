@@ -1,9 +1,8 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { InstallAdapter, type IInstallAdapter } from '../adapters/install-adapter.ts';
-import { adapterRegistry } from '../lib/adapter-registry.ts';
-import config from '../../configLoader.ts';
-import { ui } from '../lib/ui.ts';
+import { getWithDependencies } from '../install/install.ts';
+import config from '../config/loader.ts';
+import { ui } from '../ui/ui.ts';
 
 const cloneArgsSchema = z.object({
   library: z.string(),
@@ -12,16 +11,17 @@ const cloneArgsSchema = z.object({
   }).optional(),
 });
 
-export function cloneCommand(adapter?: IInstallAdapter): Command {
+export function cloneCommand(): Command {
   return new Command('clone')
     .description('Clones dependencies for h5p library')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion')
     .argument('[mode]', 'Mode (view or edit)')
-    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
-    .action(async (library: string, mode: 'view' | 'edit' | undefined, options) => {
-      const a = adapter ?? adapterRegistry.resolve<IInstallAdapter>(options.adapter ?? 'install') ?? new InstallAdapter();
+    .addHelpText('after', `
+Examples:
+  $ h5p clone h5p-accordion
+  $ h5p clone h5p-accordion edit`)
+    .action(async (library: string, mode: 'view' | 'edit' | undefined) => {
       const result = cloneArgsSchema.safeParse({ library, mode });
-
       if (!result.success) {
         for (const issue of result.error.issues) {
           ui.error(issue.message);
@@ -34,7 +34,7 @@ export function cloneCommand(adapter?: IInstallAdapter): Command {
 
       try {
         ui.info(`cloning ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
-        await a.getWithDependencies('clone', args.library, args.mode);
+        await getWithDependencies('clone', args.library, args.mode, false);
         ui.success(`done installing ${args.library}`);
       } catch (error) {
         ui.fail(error);

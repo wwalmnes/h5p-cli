@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { enforce, requireLibrariesCwd } from '../../lib/workspace.ts';
+import { enforce, requireLibrariesCwd } from '../../cli/workspace.ts';
 import { statusCommand } from './status.ts';
 import { diffCommand } from './diff.ts';
 import { commitCommand } from './commit.ts';
@@ -14,6 +14,10 @@ import { tagCommand } from './tag.ts';
 export function gitCommand(): Command {
   const git = new Command('git');
   git.description('Multi-repo git operations across H5P libraries');
+  git.addHelpText('after', `
+Run from inside libraries/. Library arguments are folder names there:
+h5p-accordion if it was cloned with "h5p utils get", H5P.Accordion-1.0 if it
+was installed with "h5p setup".`);
 
   // These sweep the checkouts in cwd, so they run from inside `libraries/`.
   git.hook('preAction', (_thisCommand, actionCommand) => {

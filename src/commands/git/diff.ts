@@ -1,10 +1,9 @@
 import { Command } from 'commander';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
-import { findRepos } from '../../lib/process-repos.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import { findRepos } from '../../repos/process-repos.ts';
+import { ui } from '../../ui/ui.ts';
 
-export function diffCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function diffCommand(): Command {
   return new Command('diff')
     .description('Prints combined diff for all repos')
     .action(async () => {

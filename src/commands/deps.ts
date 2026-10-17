@@ -1,9 +1,7 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { DepsAdapter, type IDepsAdapter } from '../adapters/deps-adapter.ts';
-import { DepsService } from '../services/deps-service.ts';
-import { adapterRegistry } from '../lib/adapter-registry.ts';
-import { ui } from '../lib/ui.ts';
+import { computeDependencies } from '../install/dependencies.ts';
+import { ui } from '../ui/ui.ts';
 
 const depsArgsSchema = z.object({
   library: z.string(),
@@ -14,16 +12,19 @@ const depsArgsSchema = z.object({
   folder: z.string().optional(),
 });
 
-export function depsCommand(service?: DepsService): Command {
+export function depsCommand(): Command {
   return new Command('deps')
     .description('Computes dependencies for h5p library')
-    .argument('<library>', 'Library name')
+    .argument('<library>', 'Repo name, e.g. h5p-accordion')
     .argument('[mode]', 'Mode (view or edit)')
-    .argument('[version]', 'Version')
-    .argument('[folder]', 'Folder')
-    .option('--adapter <name>', 'Use a named adapter from an installed plugin')
-    .action(async (library: string, mode: 'view' | 'edit' | undefined, version: string | undefined, folder: string | undefined, options) => {
-      const svc = service ?? new DepsService(adapterRegistry.resolve<IDepsAdapter>(options.adapter ?? 'deps') ?? new DepsAdapter());
+    .argument('[version]', 'Version or branch, e.g. 1.0 (default: master)')
+    .argument('[folder]', 'Read from libraries/<folder> instead of the remote, e.g. H5P.Accordion-1.0')
+    .addHelpText('after', `
+Examples:
+  $ h5p deps h5p-accordion
+  $ h5p deps h5p-accordion edit 1.0
+  $ h5p deps h5p-accordion edit master H5P.Accordion-1.0`)
+    .action(async (library: string, mode: 'view' | 'edit' | undefined, version: string | undefined, folder: string | undefined) => {
       const result = depsArgsSchema.safeParse({ library, mode, version, folder });
 
       if (!result.success) {
@@ -37,7 +38,14 @@ export function depsCommand(service?: DepsService): Command {
       const args = result.data;
 
       try {
-        await svc.deps(args.library, args.mode, args.version, args.folder);
+        const deps = await computeDependencies(args.library, args.mode, args.version, args.folder);
+        for (const item in deps) {
+          if (deps[item].id) {
+            ui.data(item);
+          } else {
+            ui.warn(`unregistered ${deps[item].optional ? 'optional' : 'required'} ${item} library`);
+          }
+        }
       } catch (error) {
         ui.fail(error);
       }

@@ -1,15 +1,18 @@
 import { Command } from 'commander';
-import { GitAdapter, type GitOpResult, type IGitAdapter } from '../../adapters/git-adapter.ts';
-import { resolveRepos } from '../../lib/process-repos.ts';
-import { reportResult } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import type { GitOpResult } from '../../repos/git.ts';
+import { resolveRepos } from '../../repos/process-repos.ts';
+import { reportResult } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
-export function newBranchCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function newBranchCommand(): Command {
   return new Command('new-branch')
     .description('Creates a new branch (local and remote)')
     .argument('<branch>', 'Branch name')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
+    .addHelpText('after', `
+Examples:
+  $ h5p git new-branch feat/example h5p-accordion h5p-blanks`)
     .action(async (branch: string, libraries: string[]) => {
       if (!branch || branch.startsWith('h5p-')) {
         ui.warn('That is a strange name for a branch..');

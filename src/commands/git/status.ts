@@ -1,21 +1,24 @@
 import { Command } from 'commander';
 import { z } from 'zod';
-import { GitAdapter, type IGitAdapter } from '../../adapters/git-adapter.ts';
-import { processRepos } from '../../lib/process-repos.ts';
-import { reportChanges } from '../../lib/repo-report.ts';
-import { ui } from '../../lib/ui.ts';
+import * as git from '../../repos/git.ts';
+import { processRepos } from '../../repos/process-repos.ts';
+import { reportChanges } from '../../repos/repo-report.ts';
+import { ui } from '../../ui/ui.ts';
 
 const statusArgsSchema = z.object({
   libraries: z.array(z.string().min(1, 'Library names cannot be empty')),
   f: z.boolean().optional(),
 });
 
-export function statusCommand(adapter?: IGitAdapter): Command {
-  const git = adapter ?? new GitAdapter();
+export function statusCommand(): Command {
   return new Command('status')
     .description('Show the status for the given or all libraries')
-    .argument('[libraries...]', 'Library names')
+    .argument('[libraries...]', 'Library folders, e.g. h5p-accordion or H5P.Accordion-1.0 (default: all)')
     .option('-f', 'Display which branch each library is on')
+    .addHelpText('after', `
+Examples:
+  $ h5p git status
+  $ h5p git status -f h5p-accordion h5p-blanks`)
     .action(async (libraries: string[], options: { f?: boolean }) => {
       const result = statusArgsSchema.safeParse({ libraries, f: options.f });
 
