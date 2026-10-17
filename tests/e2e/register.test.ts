@@ -59,7 +59,7 @@ describe('register — end-to-end', () => {
     expect(Object.keys(written).sort()).toEqual(['H5P.Blanks 1 14', 'H5P.Other 1 0']);
   });
 
-  it('calls registryEntryFromRepoUrl when given an http URL', async () => {
+  it('derives the entry from an http URL and writes it to libraryRegistry.json', async () => {
     const registry = await import('../../src/h5p/registry.ts');
     const { registerCommand } = await import('../../src/commands/register.ts');
 
@@ -68,17 +68,7 @@ describe('register — end-to-end', () => {
     expect(registry.registryEntryFromRepoUrl).toHaveBeenCalledWith(
       'https://github.com/h5p/h5p-image-hotspots'
     );
-  });
-
-  it('writes the URL-derived entry to libraryRegistry.json', async () => {
-    const { registerCommand } = await import('../../src/commands/register.ts');
-
-    await registerCommand().parseAsync(['node', 'h5p', 'https://github.com/h5p/h5p-image-hotspots']);
-
-    const outputPath = path.join(fixture.dir, 'libraryRegistry.json');
-    expect(fs.existsSync(outputPath)).toBe(true);
-
-    const written = JSON.parse(fs.readFileSync(outputPath, 'utf-8'));
+    const written = JSON.parse(fs.readFileSync(path.join(fixture.dir, 'libraryRegistry.json'), 'utf-8'));
     expect(written).toHaveProperty('H5P.ImageHotspots 1 0');
   });
 });
