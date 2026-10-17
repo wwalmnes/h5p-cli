@@ -1,4 +1,4 @@
-import type { Registry } from './library-types.ts';
+import type { Registry, LibraryEntry, LibraryVersionMap } from './library-types.ts';
 export type ParsedGitUrl = {
   host: string;
   org: string;
@@ -143,6 +143,28 @@ export const parseSemanticLibraries = (entries: unknown): Record<string, Semanti
   }
   return output;
 }
+
+/* folder holding `version` (major.minor) of a library; the highest installed
+version when that one is not installed or no version is asked for */
+export const pickLibraryFolder = (versions: LibraryVersionMap, machineName: string, version?: string): string | undefined => {
+  const installed = versions[machineName];
+  if (!installed) {
+    return undefined;
+  }
+  if (version && installed[version]) {
+    return installed[version];
+  }
+  const latest = Object.keys(installed).sort((a, b) => {
+    const [aMajor, aMinor] = a.split('.').map(Number);
+    const [bMajor, bMinor] = b.split('.').map(Number);
+    return aMajor - bMajor || aMinor - bMinor;
+  }).pop();
+  return latest ? installed[latest] : undefined;
+}
+
+// folder of a library at the version computeDependencies resolved it to
+export const resolvedLibraryFolder = (versions: LibraryVersionMap, entry: LibraryEntry): string | undefined =>
+  pickLibraryFolder(versions, entry.id, entry.version && `${entry.version.major}.${entry.version.minor}`);
 
 export const machineToShort = (machineName: string): string => {
   machineName = machineName.replace('H5PEditor', 'H5P-Editor');

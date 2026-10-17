@@ -1,8 +1,9 @@
 import fs from 'fs';
 import config from '../config/loader.ts';
-import { parseGitUrl, machineToShort, normalizeRegistry } from './h5p-utils.ts';
+import { parseGitUrl, machineToShort, normalizeRegistry, pickLibraryFolder } from './h5p-utils.ts';
 import type { ParsedGitUrl } from './h5p-utils.ts';
 import type { LibraryEntry, Registry } from '../install/compute-dependencies.ts';
+import type { LibraryVersionMap } from './library-types.ts';
 import { ui } from '../ui/ui.ts';
 import { getFile } from './files.ts';
 import { getRepoFile, _refreshClone } from './repo.ts';
@@ -33,9 +34,20 @@ export const getRegistry = async (ignoreFile?: boolean): Promise<Registry> => {
   return output;
 };
 
+/* machineName -> folder of its highest installed version */
 export const parseLibraryFolders = async (): Promise<LibraryFolderMap> => {
-  const registry = await getRegistry();
+  const versions = await parseLibraryVersions();
   const output: LibraryFolderMap = {};
+  for (const id in versions) {
+    output[id] = pickLibraryFolder(versions, id)!;
+  }
+  return output;
+};
+
+/* machineName -> major.minor -> folder, for every installed version */
+export const parseLibraryVersions = async (): Promise<LibraryVersionMap> => {
+  const registry = await getRegistry();
+  const output: LibraryVersionMap = {};
   const dirs = fs.readdirSync(config.folders.libraries);
   for (let folder of dirs) {
     const libraryFile = `${config.folders.libraries}/${folder}/library.json`;
@@ -44,7 +56,8 @@ export const parseLibraryFolders = async (): Promise<LibraryFolderMap> => {
     }
     const info = (await getFile(libraryFile, true)) as any;
     const id = info.machineName;
-    output[id] = folder;
+    output[id] ??= {};
+    output[id][`${info.majorVersion}.${info.minorVersion}`] = folder;
     if (!registry.reversed[id]) {
       registry.reversed[id] = {
         id: id,

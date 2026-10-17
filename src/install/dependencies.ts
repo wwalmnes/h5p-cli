@@ -3,12 +3,12 @@ import { computeDependencies as _computeDependencies } from './compute-dependenc
 import type { IComputeDependenciesPort, DependencyMap } from './compute-dependencies.ts';
 import { getFile } from '../h5p/files.ts';
 import { getMetadataFile } from '../h5p/metadata.ts';
-import { getRegistry, parseLibraryFolders } from '../h5p/registry.ts';
+import { getRegistry, parseLibraryVersions } from '../h5p/registry.ts';
 import { tags } from '../h5p/repo.ts';
 
 class DefaultComputeDependenciesPort implements IComputeDependenciesPort {
   getRegistry() { return getRegistry(); }
-  parseLibraryFolders() { return parseLibraryFolders(); }
+  parseLibraryVersions() { return parseLibraryVersions(); }
   getLibraryJson(folder: string | null | undefined, org: string, repoName: string, version: string) {
     if (folder) return getFile(`${config.folders.libraries}/${folder}/library.json`, true) as Promise<any>;
     return getMetadataFile(org, repoName, version, 'library.json');

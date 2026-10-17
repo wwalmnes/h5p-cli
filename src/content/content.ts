@@ -3,9 +3,10 @@ import fs from 'fs';
 import admZip from 'adm-zip';
 import config from '../config/loader.ts';
 import { upgradeContent } from './content-upgrade.ts';
-import type { LibraryDependency } from '../install/compute-dependencies.ts';
+import type { LibraryDependency, LibraryVersionMap } from '../install/compute-dependencies.ts';
 import { getFileList } from '../h5p/files.ts';
-import { getRegistry, parseLibraryFolders } from '../h5p/registry.ts';
+import { pickLibraryFolder, resolvedLibraryFolder } from '../h5p/h5p-utils.ts';
+import { getRegistry, parseLibraryFolders, parseLibraryVersions } from '../h5p/registry.ts';
 import { computeDependencies } from '../install/dependencies.ts';
 
 // imports content type from zip archive file in the .h5p format
@@ -18,11 +19,18 @@ export const importContent = (folder: string, archive?: string): string => {
   return folder;
 };
 
+// library folder for the version of machineName that content/<folder> was saved with
+export const contentLibraryFolder = (folder: string, machineName: string, versions: LibraryVersionMap): string | undefined => {
+  const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
+  const saved = info.preloadedDependencies?.find((item: LibraryDependency) => item.machineName === machineName);
+  return pickLibraryFolder(versions, machineName, saved && `${saved.majorVersion}.${saved.minorVersion}`);
+};
+
 // creates zip archive export file in the .h5p format
 export const exportContent = async (library: string, folder?: string): Promise<string> => {
   const registry = await getRegistry();
-  const libraryDirs = await parseLibraryFolders();
-  const libFolder = libraryDirs[registry.regular[library].id];
+  const libraryVersions = await parseLibraryVersions();
+  const libFolder = contentLibraryFolder(folder!, registry.regular[library].id, libraryVersions);
   const target = `${config.folders.temp}/${folder}`;
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(target);
@@ -35,7 +43,7 @@ export const exportContent = async (library: string, folder?: string): Promise<s
       // unregistered dependency: reported by `h5p missing`, nothing on disk to pack
       continue;
     }
-    const folder = libraryDirs[libs[item].id];
+    const folder = resolvedLibraryFolder(libraryVersions, libs[item]);
     fs.cpSync(`${config.folders.libraries}/${folder}`, `${target}/${folder}`, { recursive: true });
   }
   const files = getFileList(target);
@@ -57,12 +65,8 @@ export const exportContent = async (library: string, folder?: string): Promise<s
   return zipped;
 };
 
-// generates h5p.json file with info describing the library in the specified folder
-export const generateInfo = async (folder: string, library: string): Promise<void> => {
-  const registry = await getRegistry();
-  const libraryDirs = await parseLibraryFolders();
-  const libFolder = libraryDirs[registry.regular[library].id];
-  const target = `content/${folder}`;
+// h5p.json preloadedDependencies for content made with the library in libFolder
+export const contentDependencies = async (library: string, libFolder?: string): Promise<LibraryDependency[]> => {
   const libs = await computeDependencies(library, 'edit', null, libFolder);
   const map: Record<string, boolean> = {};
   const preloadedDependencies: LibraryDependency[] = [];
@@ -80,10 +84,20 @@ export const generateInfo = async (folder: string, library: string): Promise<voi
     minorVersion: libs[library].version!.minor,
     majorVersion: libs[library].version!.major,
   });
+  return preloadedDependencies;
+};
+
+// generates h5p.json file with info describing the library in the specified folder
+export const generateInfo = async (folder: string, library: string): Promise<void> => {
+  const registry = await getRegistry();
+  const libraryDirs = await parseLibraryFolders();
+  const libFolder = libraryDirs[registry.regular[library].id];
+  const target = `content/${folder}`;
+  const preloadedDependencies = await contentDependencies(library, libFolder);
   const info = {
     title: folder,
     language: 'en',
-    mainLibrary: libs[library].id,
+    mainLibrary: registry.regular[library].id,
     license: 'U',
     defaultLanguage: 'en',
     embedTypes: ['div'],

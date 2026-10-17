@@ -78,7 +78,7 @@ function makeRegistry(entries: Record<string, typeof BLANKS_ENTRY>): Registry {
 
 const makePort = (overrides: Partial<IComputeDependenciesPort> = {}): IComputeDependenciesPort => ({
   getRegistry: vi.fn().mockResolvedValue(makeRegistry({ joubel: JOUBEL_ENTRY, blanks: BLANKS_ENTRY })),
-  parseLibraryFolders: vi.fn().mockResolvedValue({}),
+  parseLibraryVersions: vi.fn().mockResolvedValue({}),
   getLibraryJson: vi.fn().mockImplementation(() => Promise.resolve(structuredClone(JOUBEL_LIBRARY_JSON))),
   getSemanticsJson: vi.fn().mockResolvedValue([]),
   getTags: vi.fn().mockReturnValue([]),
@@ -341,5 +341,23 @@ describe('computeDependencies', () => {
       .map(([, , , version]) => version);
     expect(blanksSemantics).toContain('feat/my-pr');
     expect(blanksSemantics).not.toContain('1.14.0');
+  });
+
+  it('reads each local dependency from the folder of the version its parent names', async () => {
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ blanks: BLANKS_ENTRY, joubel: JOUBEL_ENTRY })),
+      parseLibraryVersions: vi.fn().mockResolvedValue({
+        'H5P.Blanks': { '1.14': 'H5P.Blanks-1.14' },
+        'H5P.JoubelUI': { '3.3': 'H5P.JoubelUI-3.3', '3.4': 'H5P.JoubelUI-3.4' },
+      }),
+      getLibraryJson: vi.fn()
+        .mockResolvedValueOnce(structuredClone(BLANKS_LIBRARY_JSON))
+        .mockResolvedValueOnce(structuredClone(JOUBEL_LIBRARY_JSON)),
+    });
+
+    await computeDependencies('h5p-blanks', 'view', null, 'H5P.Blanks-1.14', port);
+
+    const folders = (port.getLibraryJson as any).mock.calls.map((call: unknown[]) => call[0]);
+    expect(folders).toEqual(['H5P.Blanks-1.14', 'H5P.JoubelUI-3.3']);
   });
 });

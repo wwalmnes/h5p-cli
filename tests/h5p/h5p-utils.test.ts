@@ -6,6 +6,7 @@ import {
   pathHasDuplicates,
   parseSemanticLibraries,
   normalizeRegistry,
+  pickLibraryFolder,
   isReleaseVersion,
   isPinnedRelease,
   isSafeGitRef,
@@ -189,5 +190,27 @@ describe('git ref helpers', () => {
 
   it('flattens slashes so a branch cannot nest under temp/', () => {
     expect(sanitizeRefForPath('feat/my-pr')).toBe('feat_my-pr');
+  });
+});
+
+describe('pickLibraryFolder', () => {
+  const versions = {
+    'H5P.Blanks': { '1.9': 'H5P.Blanks-1.9', '1.10': 'H5P.Blanks-1.10', '1.2': 'H5P.Blanks-1.2' },
+  };
+
+  it('returns the folder of the requested version', () => {
+    expect(pickLibraryFolder(versions, 'H5P.Blanks', '1.9')).toBe('H5P.Blanks-1.9');
+  });
+
+  it('returns the highest version, compared numerically, when none is requested', () => {
+    expect(pickLibraryFolder(versions, 'H5P.Blanks')).toBe('H5P.Blanks-1.10');
+  });
+
+  it('returns the highest version when the requested one is not installed', () => {
+    expect(pickLibraryFolder(versions, 'H5P.Blanks', '1.5')).toBe('H5P.Blanks-1.10');
+  });
+
+  it('returns undefined for a library with no installed version', () => {
+    expect(pickLibraryFolder(versions, 'H5P.Missing')).toBeUndefined();
   });
 });

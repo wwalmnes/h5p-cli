@@ -42,3 +42,6 @@ export type Registry = {
 };
 
 export type DependencyMap = Record<string, LibraryEntry>;
+
+/** Installed library folders, keyed by machine name and then by `major.minor`. */
+export type LibraryVersionMap = Record<string, Record<string, string>>;
