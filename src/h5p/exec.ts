@@ -21,12 +21,16 @@ times a second, so the user sees a frozen row and never the prompt.
 GIT_TERMINAL_PROMPT=0 disables git's own username/password prompt without
 touching credential helpers. BatchMode=yes makes ssh fail instead of asking
 for a passphrase or a host-key confirmation, and leaves ssh-agent alone. Both
-are inherited by grandchildren, which is what reaches that nested clone. */
-const _nonInteractiveEnv = (): NodeJS.ProcessEnv => ({
-  ...process.env,
-  GIT_TERMINAL_PROMPT: '0',
-  GIT_SSH_COMMAND: `${process.env.GIT_SSH_COMMAND ?? 'ssh'} -o BatchMode=yes`,
-});
+are inherited by grandchildren, which is what reaches that nested clone.
+
+A GIT_SSH the user set without GIT_SSH_COMMAND is left alone */
+export const _nonInteractiveEnv = (): NodeJS.ProcessEnv => {
+  const env: NodeJS.ProcessEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+  if (process.env.GIT_SSH_COMMAND || !process.env.GIT_SSH) {
+    env.GIT_SSH_COMMAND = `${process.env.GIT_SSH_COMMAND || 'ssh'} -o BatchMode=yes`;
+  }
+  return env;
+};
 
 const _timedOut = (command: string, cwd: string | undefined, ms: number): Error =>
   new Error(`Command timed out after ${Math.round(ms / 1000)}s: ${command}${cwd ? `\n  in ${cwd}` : ''}`);

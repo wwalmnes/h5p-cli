@@ -1,6 +1,7 @@
 import https from 'https';
 import { spawn } from 'child_process';
-import { GIT_SSH, sshError } from '../repos/git.ts';
+import { sshError } from '../repos/git.ts';
+import { _nonInteractiveEnv } from './exec.ts';
 
 /* The h5p.org library registry, which `h5p utils list` and `h5p utils get` read.
 This is a different list from the one `getRegistry` (registry.ts) manages. */
@@ -61,7 +62,7 @@ export function cloneLibrary(
   const resolvedUrl = fetchWithHttps ? url.replace('git@github.com:', 'https://github.com/') : url;
 
   return new Promise((resolve) => {
-    const proc = spawn('git', ['clone', resolvedUrl, name], { env: { ...process.env, GIT_SSH } });
+    const proc = spawn('git', ['clone', resolvedUrl, name], { env: _nonInteractiveEnv() });
 
     let stderr = '';
     proc.stderr.on('data', data => { stderr += data.toString(); });

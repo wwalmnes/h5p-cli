@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { execSync } from 'child_process';
-import { _exec as execCommand, _execSync as execCommandSync } from '../../src/h5p/exec.ts';
+import { _exec as execCommand, _execSync as execCommandSync, _nonInteractiveEnv } from '../../src/h5p/exec.ts';
 
 // We want to test and verify that subprocesses don't wait for user input. If they wait, they are killed.
 describe('subprocess contract', () => {
@@ -78,6 +78,24 @@ describe('subprocess contract', () => {
     it('reports a timeout as a timeout', () => {
       process.env.H5P_EXEC_TIMEOUT = '1';
       expect(() => execCommandSync('sleep 30')).toThrow(/timed out after 1s/);
+    });
+  });
+
+  describe('_nonInteractiveEnv', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('runs plain ssh in batch mode when the user set nothing', () => {
+      vi.stubEnv('GIT_SSH_COMMAND', '');
+      vi.stubEnv('GIT_SSH', '');
+      expect(_nonInteractiveEnv().GIT_SSH_COMMAND).toBe('ssh -o BatchMode=yes');
+    });
+
+    it('composes onto GIT_SSH_COMMAND when both are set, as git uses that one', () => {
+      vi.stubEnv('GIT_SSH_COMMAND', 'ssh -i /keys/id');
+      vi.stubEnv('GIT_SSH', '/usr/bin/other-ssh');
+      expect(_nonInteractiveEnv().GIT_SSH_COMMAND).toBe('ssh -i /keys/id -o BatchMode=yes');
     });
   });
 });
