@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { execSync } from 'child_process';
 import { EventEmitter } from 'events';
-import { _exec as execCommand, _execSync as execCommandSync, _nonInteractiveEnv } from '../../src/h5p/exec.ts';
+import { _exec as execCommand, _nonInteractiveEnv } from '../../src/h5p/exec.ts';
 
 // We want to test and verify that subprocesses don't wait for user input. If they wait, they are killed.
 describe('subprocess contract', () => {
@@ -18,6 +18,10 @@ describe('subprocess contract', () => {
   describe('execCommand', () => {
     it('captures stdout', async () => {
       expect(await execCommand('echo hello')).toBe('hello\n');
+    });
+
+    it('runs in the given folder', async () => {
+      expect((await execCommand('pwd', '/')).trim()).toBe(execSync('cd / && pwd').toString().trim());
     });
 
     it('rejects with the command and its stderr on a non-zero exit', async () => {
@@ -60,25 +64,6 @@ describe('subprocess contract', () => {
       const started = Date.now();
       await expect(execCommand('sleep 30 && echo never')).rejects.toThrow(/timed out/);
       expect(Date.now() - started).toBeLessThan(10_000);
-    });
-  });
-
-  describe('execCommandSync', () => {
-    it('returns stdout', () => {
-      expect(execCommandSync('echo hello')).toBe('hello\n');
-    });
-
-    it('runs in the given folder', () => {
-      expect(execCommandSync('pwd', '/').trim()).toBe(execSync('cd / && pwd').toString().trim());
-    });
-
-    it('throws with the command and its stderr on a non-zero exit', () => {
-      expect(() => execCommandSync('echo boom >&2; exit 3')).toThrow(/Command failed.*boom/s);
-    });
-
-    it('reports a timeout as a timeout', () => {
-      process.env.H5P_EXEC_TIMEOUT = '1';
-      expect(() => execCommandSync('sleep 30')).toThrow(/timed out after 1s/);
     });
   });
 

@@ -35,36 +35,6 @@ export const _nonInteractiveEnv = (): NodeJS.ProcessEnv => {
 const _timedOut = (command: string, cwd: string | undefined, ms: number): Error =>
   new Error(`Command timed out after ${Math.round(ms / 1000)}s: ${command}${cwd ? `\n  in ${cwd}` : ''}`);
 
-/* execSync inherits stderr, so git/npm write straight past ui — which both
-leaks output under --quiet and shreds the live progress frame. spawnSync
-captures both streams so everything reaches the terminal through emit().
-*/
-export const _execSync = (command: string, cwd?: string): string => {
-  const budget = resolveExecTimeout();
-  const result = spawnSync(command, {
-    shell: true,
-    cwd,
-    encoding: 'utf-8',
-    env: _nonInteractiveEnv(),
-    timeout: budget,
-  });
-  if (result.error) {
-    // node reports the timeout as ETIMEDOUT; say what actually happened
-    throw (result.error as NodeJS.ErrnoException).code === 'ETIMEDOUT'
-      ? _timedOut(command, cwd, budget)
-      : result.error;
-  }
-  _debug(result.stdout ?? '');
-  _debug(result.stderr ?? '');
-  if (result.signal) {
-    throw _timedOut(command, cwd, budget);
-  }
-  if (result.status !== 0) {
-    throw _failed(command, result.stderr ?? '');
-  }
-  return result.stdout ?? '';
-};
-
 const _children = new Set<ReturnType<typeof spawn>>();
 
 /* `shell: true` means the direct child is /bin/sh, and for a compound script

@@ -81,7 +81,7 @@ const makePort = (overrides: Partial<IComputeDependenciesPort> = {}): IComputeDe
   parseLibraryFolders: vi.fn().mockResolvedValue({}),
   getLibraryJson: vi.fn().mockImplementation(() => Promise.resolve(structuredClone(JOUBEL_LIBRARY_JSON))),
   getSemanticsJson: vi.fn().mockResolvedValue([]),
-  getTags: vi.fn().mockReturnValue([]),
+  getTags: vi.fn().mockResolvedValue([]),
   ...overrides,
 });
 
@@ -230,7 +230,7 @@ describe('computeDependencies', () => {
       getRegistry: vi.fn().mockResolvedValue(makeRegistry({ blanks: BLANKS_ENTRY, joubel: JOUBEL_ENTRY })),
       getLibraryJson,
       // as logic.tags returns them: descending, so 1.11.0 is seen before 1.1.9
-      getTags: vi.fn().mockReturnValue(['1.11.0', '1.1.9', '1.1.0']),
+      getTags: vi.fn().mockResolvedValue(['1.11.0', '1.1.9', '1.1.0']),
     });
 
     await computeDependencies('h5p-blanks', 'view', '1.14.0', undefined, port);
@@ -251,7 +251,7 @@ describe('computeDependencies', () => {
     const port = makePort({
       getRegistry: vi.fn().mockResolvedValue(makeRegistry({ joubel: JOUBEL_ENTRY })),
       getLibraryJson,
-      getTags: vi.fn().mockReturnValue(['3.3.9', '3.3.1']),
+      getTags: vi.fn().mockResolvedValue(['3.3.9', '3.3.1']),
     });
 
     await computeDependencies('h5p-joubel-ui', 'view', '3.3', undefined, port);
@@ -261,7 +261,7 @@ describe('computeDependencies', () => {
 
   it('leaves a fully-qualified root version alone', async () => {
     const getLibraryJson = vi.fn().mockResolvedValue(structuredClone(JOUBEL_LIBRARY_JSON));
-    const getTags = vi.fn().mockReturnValue(['3.3.9']);
+    const getTags = vi.fn().mockResolvedValue(['3.3.9']);
     const port = makePort({
       getRegistry: vi.fn().mockResolvedValue(makeRegistry({ joubel: JOUBEL_ENTRY })),
       getLibraryJson,
@@ -331,7 +331,7 @@ describe('computeDependencies', () => {
       getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) =>
         structuredClone(repoName === 'h5p-blanks' ? BLANKS_LIBRARY_JSON : JOUBEL_LIBRARY_JSON)),
       getSemanticsJson,
-      getTags: vi.fn().mockReturnValue(['3.3.0']),
+      getTags: vi.fn().mockResolvedValue(['3.3.0']),
     });
 
     await computeDependencies('h5p-blanks', 'view', 'feat/my-pr', undefined, port);

@@ -62,14 +62,14 @@ export const parseLibraryFolders = async (): Promise<LibraryFolderMap> => {
   return output;
 };
 
-export const registryEntryFromRepoUrl = (
+export const registryEntryFromRepoUrl = async (
   gitUrl: string,
-): Record<string, LibraryEntry> => {
+): Promise<Record<string, LibraryEntry>> => {
   const { host, org, repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
   // no raw fallback on this path, and the result is written into the
   // registry, so a stale checkout here outlives the invocation
-  _refreshClone(repoName, 'master');
-  const list = getRepoFile(gitUrl, 'library.json', 'master', true) as any;
+  await _refreshClone(repoName, 'master');
+  const list = await getRepoFile(gitUrl, 'library.json', 'master', true) as any;
   const shortName = machineToShort(list.machineName);
   const type = host.split('.')[0];
   const output: Record<string, LibraryEntry> = {};

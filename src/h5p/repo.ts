@@ -8,10 +8,10 @@ import config from '../config/loader.ts';
 import { fromTemplate, parseGitUrl, isPinnedRelease, sanitizeRefForPath } from './h5p-utils.ts';
 import type { ParsedGitUrl } from './h5p-utils.ts';
 import { ui } from '../ui/ui.ts';
-import { _execSync } from './exec.ts';
+import { _exec } from './exec.ts';
 
 // clone repo and retrieve file
-export const getRepoFile = (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean, shallow?: boolean): string | object => {
+export const getRepoFile = async (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean, shallow?: boolean): Promise<string | object> => {
   const { repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
   const target = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(branch)}`;
   const filePath = `${target}/${path}`;
@@ -20,10 +20,10 @@ export const getRepoFile = (gitUrl: string, path: string, branch = 'master', par
   }
   if (!fs.existsSync(target)) {
     const depth = shallow ? ' --depth 1 --single-branch' : '';
-    /* same non-interactive contract as _exec: this is the clone transport's
+    /* _exec's non-interactive contract: this is the clone transport's
     fallback, and a private repo whose credentials are not cached would
     otherwise sit on a prompt the progress area has already painted over. */
-    _execSync(`git clone ${gitUrl} ${target} --branch ${branch}${depth}`);
+    await _exec(`git clone ${gitUrl} ${target} --branch ${branch}${depth}`);
   }
   if (!fs.existsSync(filePath)) {
     return '';
@@ -35,7 +35,7 @@ export const getRepoFile = (gitUrl: string, path: string, branch = 'master', par
 // Repos whose branch checkout in temp/ this process has already dealt with.
 const _refreshed = new Set<string>();
 
-export const _refreshClone = (repoName: string, version: string): void => {
+export const _refreshClone = async (repoName: string, version: string): Promise<void> => {
   if (isPinnedRelease(version)) {
     return;
   }
@@ -51,16 +51,15 @@ export const _refreshClone = (repoName: string, version: string): void => {
 
   /* The low-speed bound covers the one failure git does not end on its own. A dead
   resolver or a refused connection exits in seconds; a socket that opens and
-  then stops delivering bytes stays alive, and git waits on it indefinitely.
-  _execSync is spawnSync, so that wait blocks the whole process - the progress
-  area stops repainting and the CLI reads as wedged - until the ten-minute exec
-  budget fires. Ten seconds under a kilobyte a second ends it instead. Tripping
+  then stops delivering bytes stays alive, and git waits on it indefinitely -
+  the resolve waiting with it until the ten-minute exec budget fires. Ten
+  seconds under a kilobyte a second ends it instead. Tripping
   the bound on a merely slow fetch costs nothing: the catch below falls back to
   the checkout already on disk. */
   const depth = fs.existsSync(`${target}/.git/shallow`) ? ' --depth 1' : '';
   try {
-    _execSync(`git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --no-tags${depth} origin ${version}`, target);
-    _execSync('git reset --hard FETCH_HEAD', target);
+    await _exec(`git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch --no-tags${depth} origin ${version}`, target);
+    await _exec('git reset --hard FETCH_HEAD', target);
   }
   catch (error) {
     // the fetch failed or the branch is gone: the checkout on disk is still
@@ -85,10 +84,10 @@ const _archiveRef = (version: string): string =>
   isPinnedRelease(version) ? `refs/tags/${version}` : `refs/heads/${version}`;
 
 // list tags for library, straight off the remote
-export const tags = (org: string, repo: string): string[] => {
+export const tags = async (org: string, repo: string): Promise<string[]> => {
   const url = fromTemplate(config.urls.library.clone, { org, repo });
   // --refs drops the ^{} peeled duplicates annotated tags would otherwise add
-  const output = _execSync(`git ls-remote --tags --refs ${url}`)
+  const output = (await _exec(`git ls-remote --tags --refs ${url}`))
     .split('\n')
     .map(line => line.split('refs/tags/')[1]?.trim())
     .filter((tag): tag is string => Boolean(tag));
@@ -132,6 +131,6 @@ export const download = async (org: string, repo: string, version: string, targe
 };
 
 // clone repository using git
-export const clone = (org: string, repo: string, branch: string, target: string): string => {
-  return _execSync(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, config.folders.libraries);
+export const clone = (org: string, repo: string, branch: string, target: string): Promise<string> => {
+  return _exec(`git clone ${fromTemplate(config.urls.library.clone, {org, repo})} ${target} --branch ${branch}`, config.folders.libraries);
 };

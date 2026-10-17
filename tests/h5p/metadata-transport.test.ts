@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
-import { spawnSync } from 'child_process';
+import { EventEmitter } from 'events';
+import { spawn } from 'child_process';
 // @ts-ignore - no type declarations for superagent v8 in this project
 import superAgent from 'superagent';
 import { createEmptyProject, type Fixture } from '../helpers/fixture.ts';
 import logic from '../../src/logic.ts';
 
 vi.mock('child_process', () => ({
-  spawnSync: vi.fn(() => ({ status: 0, stdout: '', stderr: '', error: undefined })),
+  spawnSync: vi.fn(),
   spawn: vi.fn(),
 }));
 
@@ -40,15 +41,28 @@ const rawRoutes = (routes: Record<string, [number, string]>) =>
     return respond(status, text);
   });
 
-/* the clone transport goes through logic's _execSync, which is spawnSync - it
-has to, so a prompt is impossible and git's stderr cannot bypass ui */
+const fakeChild = (status = 0, stderr = '') => {
+  const child: any = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.stdout.setEncoding = () => {};
+  child.stderr.setEncoding = () => {};
+  process.nextTick(() => {
+    child.stderr.emit('data', stderr);
+    child.emit('close', status);
+  });
+  return child;
+};
+
+/* the clone transport goes through _exec, so a prompt is impossible and git's
+stderr cannot bypass ui */
 const gitCloneCalls = () =>
-  vi.mocked(spawnSync).mock.calls.filter(c => String(c[0]).startsWith('git clone'));
+  vi.mocked(spawn).mock.calls.filter(c => String(c[0]).startsWith('git clone'));
 
 /* _refreshClone's fetch carries -c http.lowSpeedLimit flags before the
 subcommand, so match on the subcommand rather than the start of the string */
 const gitCalls = (subcommand: string) =>
-  vi.mocked(spawnSync).mock.calls.filter(c => String(c[0]).includes(` ${subcommand}`));
+  vi.mocked(spawn).mock.calls.filter(c => String(c[0]).includes(` ${subcommand}`));
 
 /* A checkout that looks like one to _refreshClone, unlike the bare folders
 tests/h5p/registry-memo.test.ts seeds */
@@ -77,7 +91,7 @@ describe('metadata transport', () => {
     delete process.env.H5P_NO_RAW;
 
     // a "successful" clone materialises the files getRepoFile then reads
-    vi.mocked(spawnSync).mockImplementation(((command: string) => {
+    vi.mocked(spawn).mockImplementation(((command: string) => {
       const match = /^git clone \S+ (\S+)/.exec(command);
       if (match) {
         fs.mkdirSync(match[1], { recursive: true });
@@ -86,7 +100,7 @@ describe('metadata transport', () => {
         fs.writeFileSync(`${match[1]}/library.json`, JSON.stringify(LIBRARY_JSON));
         fs.writeFileSync(`${match[1]}/semantics.json`, JSON.stringify([]));
       }
-      return { status: 0, stdout: '', stderr: '', error: undefined };
+      return fakeChild();
     }) as any);
   });
 
@@ -294,10 +308,10 @@ describe('metadata transport', () => {
   it('serves the checkout on disk when the refresh fails', async () => {
     process.env.H5P_NO_RAW = '1';
     seedClone('temp/h5p-blanks_master');
-    vi.mocked(spawnSync).mockImplementation(((command: string) =>
+    vi.mocked(spawn).mockImplementation(((command: string) =>
       String(command).includes(' fetch')
-        ? { status: 1, stdout: '', stderr: 'could not resolve host', error: undefined }
-        : { status: 0, stdout: '', stderr: '', error: undefined }) as any);
+        ? fakeChild(1, 'could not resolve host')
+        : fakeChild()) as any);
 
     const result = await logic.computeDependencies('h5p-blanks', 'view');
 
