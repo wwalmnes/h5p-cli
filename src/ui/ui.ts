@@ -27,6 +27,12 @@ type ColorName = keyof typeof CODES;
 
 const HIDE_CURSOR = '\x1b[?25l';
 const SHOW_CURSOR = '\x1b[?25h';
+const ERASE_LINE_END = '\x1b[K';
+const ERASE_DOWN = '\x1b[0J';
+/* Synchronized output: a terminal that supports it shows everything between
+the two as one update. Terminals that do not ignore both. */
+const SYNC_START = '\x1b[?2026h';
+const SYNC_END = '\x1b[?2026l';
 
 // ---------------------------------------------------------------- verbosity
 
@@ -313,10 +319,10 @@ function terminalWidth(): number {
   return (process.stderr.columns ?? 80) - 1;
 }
 
-/** Erases the current frame, leaving the cursor where the frame began. */
-function clearSequence(): string {
+/** Moves the cursor back to where the current frame began, erasing nothing. */
+function rewindSequence(): string {
   if (paintedLines === 0) return '';
-  const sequence = `\x1b[${paintedLines}A\r\x1b[0J`;
+  const sequence = `\x1b[${paintedLines}A\r`;
   paintedLines = 0;
   return sequence;
 }
@@ -337,22 +343,29 @@ function frameSequence(): string {
   return `${lines.join('\n')}\n`;
 }
 
-function writeRegion(text: string): void {
-  if (text) process.stderr.write(text);
-}
-
 function clearRegion(): void {
-  writeRegion(clearSequence());
+  const rewind = rewindSequence();
+  if (rewind) process.stderr.write(`${rewind}${ERASE_DOWN}`);
 }
 
 function paintRegion(): void {
-  writeRegion(frameSequence());
+  const text = frameSequence();
+  if (text) process.stderr.write(text);
 }
 
-/* Erase and redraw in a single write. As separate writes the terminal may
-render in between and show the area empty, which blinks on every tick. */
-function repaint(): void {
-  writeRegion(clearSequence() + frameSequence());
+/* Draws `text` and a fresh frame over the old frame, in one write. Erasing
+first leaves a moment where the area is blank, and a terminal that renders
+then shows it as a blink on every tick. Instead each line clears only its own
+tail, and whatever the old frame had below the new one is erased last. */
+function repaint(text = ''): void {
+  const rewind = rewindSequence();
+  const frameText = frameSequence();
+  if (!rewind && !frameText) {
+    if (text) process.stderr.write(text);
+    return;
+  }
+  const body = `${text}${frameText}`.replaceAll('\n', `${ERASE_LINE_END}\n`);
+  process.stderr.write(`${SYNC_START}${rewind}${body}${ERASE_DOWN}${SYNC_END}`);
 }
 
 function hideCursor(): void {
@@ -450,7 +463,7 @@ function emit(record: UiRecord): void {
   }
 
   if (record.stream === 'stderr') {
-    writeRegion(clearSequence() + text + frameSequence());
+    repaint(text);
     return;
   }
 
