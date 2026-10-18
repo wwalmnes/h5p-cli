@@ -358,6 +358,19 @@ describe('ui', () => {
         expect(repaintAt).toBeGreaterThan(lineAt);
       });
 
+      it('erases and redraws the frame in a single write', () => {
+        ui.progress('a', 50, { label: 'H5P.Blanks' });
+        const write = vi.mocked(process.stderr.write);
+        write.mockClear();
+
+        ui.progress('a', 75);
+
+        expect(write).toHaveBeenCalledTimes(1);
+        const [chunk] = write.mock.calls[0];
+        expect(chunk).toContain('\x1b[0J');
+        expect(chunk).toContain('H5P.Blanks');
+      });
+
       it('clears the area and restores the cursor on the last row', () => {
         ui.progress('a', 50, { label: 'H5P.Blanks' });
         stderr = '';

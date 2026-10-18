@@ -1,5 +1,3 @@
-import { cursorTo, moveCursor, clearScreenDown } from 'node:readline';
-
 /** Severity of a single record. */
 export type UiKind = 'info' | 'step' | 'success' | 'warn' | 'error' | 'data' | 'debug' | 'list';
 
@@ -315,17 +313,16 @@ function terminalWidth(): number {
   return (process.stderr.columns ?? 80) - 1;
 }
 
-/** Erase the current frame, leaving the cursor where the frame began. */
-function clearRegion(): void {
-  if (paintedLines === 0) return;
-  moveCursor(process.stderr, 0, -paintedLines);
-  cursorTo(process.stderr, 0);
-  clearScreenDown(process.stderr);
+/** Erases the current frame, leaving the cursor where the frame began. */
+function clearSequence(): string {
+  if (paintedLines === 0) return '';
+  const sequence = `\x1b[${paintedLines}A\r\x1b[0J`;
   paintedLines = 0;
+  return sequence;
 }
 
-function paintRegion(): void {
-  if (!liveEnabled() || rows.size === 0) return;
+function frameSequence(): string {
+  if (!liveEnabled() || rows.size === 0) return '';
 
   const lines = renderRows([...rows.values()], {
     width: terminalWidth(),
@@ -334,10 +331,28 @@ function paintRegion(): void {
     color: colorEnabled(),
     now: Date.now(),
   });
-  if (lines.length === 0) return;
+  if (lines.length === 0) return '';
 
-  process.stderr.write(`${lines.join('\n')}\n`);
   paintedLines = lines.length;
+  return `${lines.join('\n')}\n`;
+}
+
+function writeRegion(text: string): void {
+  if (text) process.stderr.write(text);
+}
+
+function clearRegion(): void {
+  writeRegion(clearSequence());
+}
+
+function paintRegion(): void {
+  writeRegion(frameSequence());
+}
+
+/* Erase and redraw in a single write. As separate writes the terminal may
+render in between and show the area empty, which blinks on every tick. */
+function repaint(): void {
+  writeRegion(clearSequence() + frameSequence());
 }
 
 function hideCursor(): void {
@@ -374,8 +389,7 @@ function startTimer(): void {
   if (timer || !liveEnabled()) return;
   timer = setInterval(() => {
     frame += 1;
-    clearRegion();
-    paintRegion();
+    repaint();
   }, REPAINT_MS);
   // Never keep the process alive just to spin.
   timer.unref();
@@ -429,14 +443,19 @@ function emit(record: UiRecord): void {
   if (!passesLevel(record.kind)) return;
 
   hookBrokenPipe();
-  clearRegion();
 
-  const stream = record.stream === 'stdout' ? process.stdout : process.stderr;
-  stream.write(`${formatRecord(record)}\n`);
+  let text = `${formatRecord(record)}\n`;
   if (record.detail) {
-    stream.write(`${paint(record.detail, 'dim')}\n`);
+    text += `${paint(record.detail, 'dim')}\n`;
   }
 
+  if (record.stream === 'stderr') {
+    writeRegion(clearSequence() + text + frameSequence());
+    return;
+  }
+
+  clearRegion();
+  process.stdout.write(text);
   paintRegion();
 }
 
@@ -604,8 +623,7 @@ export const ui = {
     hookExit();
     hideCursor();
     startTimer();
-    clearRegion();
-    paintRegion();
+    repaint();
   },
 
   /** Retire a row and free its slot. The row vanishes; no line is committed. */
@@ -613,9 +631,8 @@ export const ui = {
     if (!rows.delete(id)) return;
     if (!liveEnabled()) return;
 
-    clearRegion();
     if (rows.size === 0) teardown();
-    else paintRegion();
+    else repaint();
   },
 
   /**
