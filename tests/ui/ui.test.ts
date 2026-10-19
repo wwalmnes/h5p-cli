@@ -344,18 +344,39 @@ describe('ui', () => {
         expect(stderr).toContain('⠋ H5P.Blanks  ████████░░░░░░░░   50%');
       });
 
-      it('clears the frame, writes the log line, then repaints', () => {
+      it('writes the log line over the frame, then repaints', () => {
         ui.progress('a', 50, { label: 'H5P.Blanks' });
         stderr = '';
 
         ui.info('fetching registry');
 
-        const clearAt = stderr.indexOf('\x1b[0J');
+        const rewindAt = stderr.indexOf('\x1b[1A');
         const lineAt = stderr.indexOf('> fetching registry');
         const repaintAt = stderr.indexOf('H5P.Blanks');
-        expect(clearAt).toBeGreaterThanOrEqual(0);
-        expect(lineAt).toBeGreaterThan(clearAt);
+        expect(rewindAt).toBeGreaterThanOrEqual(0);
+        expect(lineAt).toBeGreaterThan(rewindAt);
         expect(repaintAt).toBeGreaterThan(lineAt);
+      });
+
+      it('redraws over the old frame in a single write, erasing only leftovers', () => {
+        ui.progress('a', 50, { label: 'H5P.Blanks' });
+        const write = vi.mocked(process.stderr.write);
+        write.mockClear();
+
+        ui.progress('a', 75);
+
+        expect(write).toHaveBeenCalledTimes(1);
+        const [chunk] = write.mock.calls[0] as [string];
+        const frameAt = chunk.indexOf('H5P.Blanks');
+        expect(frameAt).toBeGreaterThan(chunk.indexOf('\x1b[1A'));
+        // nothing is erased before the new frame is drawn
+        expect(chunk.indexOf('\x1b[0J')).toBeGreaterThan(frameAt);
+        expect(chunk).toContain('\x1b[K\n');
+      });
+
+      it('writes plain lines when no frame is on screen', () => {
+        ui.info('fetching registry');
+        expect(stderr).toBe('> fetching registry\n');
       });
 
       it('clears the area and restores the cursor on the last row', () => {

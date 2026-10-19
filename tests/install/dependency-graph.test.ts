@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { computeDependencies } from '../../src/install/compute-dependencies.ts';
-import type { IComputeDependenciesPort, Registry, DependencyMap } from '../../src/install/compute-dependencies.ts';
+import type { IComputeDependenciesPort, Registry, DependencyMap, LibraryVersionMap } from '../../src/install/compute-dependencies.ts';
 
 /* `h5p setup`, `h5p missing` and the content commands (`logic.export`,
 `logic.verifySetup`, `logic.generateInfo`) each perform a single edit
@@ -46,15 +46,15 @@ const GRAPH: Record<string, Lib> = {
   'h5p-editor-widget': { machineName: 'H5PEditor.Widget' },
 };
 
-/* What parseLibraryFolders returns: machineName -> installed folder. A non-empty
-map is what makes compute() take its `folder ? libraryDirs[...] : null` branch
-for every child, so the whole traversal runs off local folders the way it does
-under export/verifySetup/generateInfo. */
-const LIBRARY_DIRS: Record<string, string> = Object.fromEntries(
-  Object.values(GRAPH).map(lib => [lib.machineName, `${lib.machineName}-1.0`])
+/* What parseLibraryVersions returns: machineName -> major.minor -> installed
+folder. A non-empty map is what makes compute() take its `folder ? pickLibraryFolder(...) : null`
+branch for every child, so the whole traversal runs off local folders the way it
+does under export/verifySetup/generateInfo. */
+const LIBRARY_VERSIONS: LibraryVersionMap = Object.fromEntries(
+  Object.values(GRAPH).map(lib => [lib.machineName, { '1.0': `${lib.machineName}-1.0` }])
 );
 
-const ROOT_FOLDER = LIBRARY_DIRS['H5P.Root'];
+const ROOT_FOLDER = LIBRARY_VERSIONS['H5P.Root']['1.0'];
 
 /* Fresh objects per call, because computeDependencies records requiredBy paths
 on the registry entries it walks. logic.getRegistry hands out a new object per
@@ -71,9 +71,9 @@ function makeRegistry(): Registry {
   return { regular, reversed };
 }
 
-const makePort = (libraryDirs: Record<string, string> = {}): IComputeDependenciesPort => ({
+const makePort = (libraryVersions: LibraryVersionMap = {}): IComputeDependenciesPort => ({
   getRegistry: vi.fn().mockImplementation(async () => makeRegistry()),
-  parseLibraryFolders: vi.fn().mockResolvedValue({ ...libraryDirs }),
+  parseLibraryVersions: vi.fn().mockResolvedValue(structuredClone(libraryVersions)),
   getTags: vi.fn().mockResolvedValue([]),
   getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) => {
     const lib = GRAPH[repoName];
@@ -99,7 +99,7 @@ const resolve = (mode: 'view' | 'edit', port = makePort()): Promise<DependencyMa
   computeDependencies('h5p-root', mode, null, undefined, port);
 
 // from installed folders, the way the content commands call it
-const resolveLocal = (mode: 'view' | 'edit', port = makePort(LIBRARY_DIRS)): Promise<DependencyMap> =>
+const resolveLocal = (mode: 'view' | 'edit', port = makePort(LIBRARY_VERSIONS)): Promise<DependencyMap> =>
   computeDependencies('h5p-root', mode, null, ROOT_FOLDER, port);
 
 /* Only the libraries an install pass would actually fetch: entries without an
@@ -127,7 +127,7 @@ describe('dependency graph', () => {
   });
 
   it('an edit resolution contains every key the view resolution has', async () => {
-    const port = makePort(LIBRARY_DIRS);
+    const port = makePort(LIBRARY_VERSIONS);
 
     const view = await resolveLocal('view', port);
     const edit = await resolveLocal('edit', port);
@@ -139,11 +139,11 @@ describe('dependency graph', () => {
   });
 
   it('reads every library.json from an installed folder when given one', async () => {
-    const port = makePort(LIBRARY_DIRS);
+    const port = makePort(LIBRARY_VERSIONS);
 
     await resolveLocal('edit', port);
 
-    /* this is the branch a null libraryDirs would silently skip, taking the
+    /* this is the branch an empty LIBRARY_VERSIONS would silently skip, taking the
     whole graph back over the network */
     const folders = (port.getLibraryJson as any).mock.calls.map((call: unknown[]) => call[0]);
     expect(folders).toContain(ROOT_FOLDER);
@@ -204,7 +204,7 @@ describe('dependency graph', () => {
         }
         return registry;
       },
-      parseLibraryFolders: async () => ({}),
+      parseLibraryVersions: async () => ({}),
       getTags: async () => [],
       getLibraryJson: async (_folder, _org, repoName: string) => ({
         machineName: graph[repoName].machineName,

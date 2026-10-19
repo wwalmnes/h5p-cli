@@ -13,6 +13,7 @@
   "lang_dashboard": "dashboard",
   "lang_running": "springer",
   "lang_contentCreatedFor": "innehåll skapat för",
+  "lang_versionNotInstalled": "är inte installerad, så det här innehållet körs på en annan version utan att ha uppgraderats och fungerar kanske inte som förväntat.",
   "lang_userStateSession": "användartillståndssession",
   "lang_newSession": "ny session",
   "lang_sessionName": "sessionens namn",

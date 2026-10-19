@@ -13,6 +13,7 @@
   "lang_dashboard": "cruscotto",
   "lang_running": "correre",
   "lang_contentCreatedFor": "contenuto creato per",
+  "lang_versionNotInstalled": "non è installato, quindi questo contenuto viene eseguito con un'altra versione senza essere aggiornato e potrebbe non funzionare come previsto.",
   "lang_userStateSession": "sessione stato utente",
   "lang_newSession": "nuova sessione",
   "lang_sessionName": "nome sessione",

@@ -1,7 +1,7 @@
 import { ui } from '../ui/ui.ts';
-import { fromTemplate, parseGitUrl, pathHasDuplicates, parseSemanticLibraries } from '../h5p/h5p-utils.ts';
+import { fromTemplate, parseGitUrl, pathHasDuplicates, parseSemanticLibraries, pickLibraryFolder } from '../h5p/h5p-utils.ts';
 import type { ParsedGitUrl } from '../h5p/h5p-utils.ts';
-import type { LibraryDependency, LibraryEntry, Registry, DependencyMap } from '../h5p/library-types.ts';
+import type { LibraryDependency, LibraryEntry, Registry, DependencyMap, LibraryVersionMap } from '../h5p/library-types.ts';
 
 // Library shapes live in ./library-types.ts so that h5p-utils.ts can use them
 // without importing this module back. Re-exported here to keep the public
@@ -11,11 +11,12 @@ export type {
   LibraryEntry,
   Registry,
   DependencyMap,
+  LibraryVersionMap,
 } from '../h5p/library-types.ts';
 
 export type IComputeDependenciesPort = {
   getRegistry(): Promise<Registry>;
-  parseLibraryFolders(): Promise<Record<string, string>>;
+  parseLibraryVersions(): Promise<LibraryVersionMap>;
   getLibraryJson(
     folder: string | null | undefined,
     org: string,
@@ -54,7 +55,7 @@ export async function computeDependencies(
     version,
     folder
   };
-  const libraryDirs = await io.parseLibraryFolders();
+  const libraryVersions = await io.parseLibraryVersions();
   const getOptionals = async (dep: string, org: string, repoName: string, version: string, dir: string | null | undefined) => {
     if (cache[dep].optionals) {
       return cache[dep].optionals;
@@ -206,19 +207,19 @@ export async function computeDependencies(
     if (list.preloadedDependencies) {
       for (let item of list.preloadedDependencies) {
         const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
-        const dir = folder ? libraryDirs[item.machineName] : null;
+        const dir = folder ? pickLibraryFolder(libraryVersions, item.machineName, `${item.majorVersion}.${item.minorVersion}`) : null;
         await handleDepListEntry(item.machineName, dep, ver, dir);
       }
     }
     for (let item in optionals) {
       const ver = version === 'master' ? version : optionals[item].version;
-      const dir = folder ? libraryDirs[item] : null;
+      const dir = folder ? pickLibraryFolder(libraryVersions, item, optionals[item].version) : null;
       await handleDepListEntry(item, dep, ver, dir);
     }
     if (mode === 'edit' && list.editorDependencies) {
       for (let item of list.editorDependencies) {
         const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
-        const dir = folder ? libraryDirs[item.machineName] : null;
+        const dir = folder ? pickLibraryFolder(libraryVersions, item.machineName, `${item.majorVersion}.${item.minorVersion}`) : null;
         await handleDepListEntry(item.machineName, dep, ver, dir);
       }
     }

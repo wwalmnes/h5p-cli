@@ -3,7 +3,8 @@ import path from 'path';
 import he from 'he';
 import imageSize from 'image-size';
 import logic from '../logic.ts';
-import { fromTemplate } from '../h5p/h5p-utils.ts';
+import { fromTemplate, pickLibraryFolder, resolvedLibraryFolder } from '../h5p/h5p-utils.ts';
+import { contentLibraryFolder, contentLibraryVersion, contentDependencies } from '../content/content.ts';
 import { ui } from '../ui/ui.ts';
 import config from '../config/loader.ts';
 import l10n from '../../assets/l10n.json' with { type: 'json' };
@@ -219,7 +220,7 @@ export default {
       const page = parseInt(request.query.page) || 0;
       const start = page * limit;
       const end = start + limit;
-      const libraryDirs = await logic.parseLibraryFolders();
+      const libraryVersions = await logic.parseLibraryVersions();
       const output: { list: any[]; total: number } = {
         list: [],
         total: 0
@@ -255,10 +256,11 @@ export default {
       for (let i = start; i < Math.min(end, list.length); i++) {
         let entry = registry.reversed?.[list[i].id];
         const library = entry.shortName;
-        entry = (await logic.computeDependencies(library, 'view', null, libraryDirs[registry.regular[library].id]))[library];
+        const libFolder = contentLibraryFolder(list[i].folder, list[i].id, libraryVersions);
+        entry = (await logic.computeDependencies(library, 'view', null, libFolder))[library];
         let icon = '/assets/icon.svg';
         if (entry.version) {
-          const libraryFolder = `${config.folders.libraries}/${libraryDirs[list[i].id]}`;
+          const libraryFolder = `${config.folders.libraries}/${libFolder}`;
           const iconFile = `${libraryFolder}/icon.svg`;
           if (fs.existsSync(libraryFolder)) {
             if (fs.existsSync(iconFile)) {
@@ -345,15 +347,28 @@ export default {
     }
   },
   // updates content.json file with data from content type editor form
-  saveContent: (request: any, response: any, next: any) => {
+  saveContent: async (request: any, response: any, next: any) => {
     try {
       const input = JSON.parse(request.body.parameters);
       const currentParams = fs.readFileSync(`content/${request.params.folder}/content.json`, 'utf-8');
       const newParams = JSON.stringify(input.params);
-      fs.writeFileSync(`content/${request.params.folder}/content.json`, newParams);
       const infoFile = `content/${request.params.folder}/h5p.json`;
-      let info = JSON.parse(fs.readFileSync(infoFile, 'utf-8'));
+      const currentInfo = fs.readFileSync(infoFile, 'utf-8');
+      let info = JSON.parse(currentInfo);
+      /* the editor upgrades the params to the newest installed version of the
+      main library before submitting, and names that version in `library` */
+      const [machineName, version] = String(request.body.library ?? '').split(' ');
+      const saved = info.preloadedDependencies?.find((item: any) => item.machineName === machineName);
+      const savedVersion = saved && `${saved.majorVersion}.${saved.minorVersion}`;
+      // metadata is the whole h5p.json the edit page handed the editor, old preloadedDependencies included
       info = {...info, ...input.metadata};
+      if (version && savedVersion && version !== savedVersion) {
+        fs.writeFileSync(`content/${request.params.folder}/${savedVersion}_content.json`, currentParams);
+        fs.writeFileSync(`content/${request.params.folder}/${savedVersion}_h5p.json`, currentInfo);
+        const libraryVersions = await logic.parseLibraryVersions();
+        info.preloadedDependencies = await contentDependencies(request.params.library, pickLibraryFolder(libraryVersions, machineName, version));
+      }
+      fs.writeFileSync(`content/${request.params.folder}/content.json`, newParams);
       if (info.authors && !info.authors.length) {
         delete info.authors;
       }
@@ -394,13 +409,13 @@ export default {
     try {
       const library = request.params.library;
       const registry = await logic.getRegistry();
-      const libraryDirs = await logic.parseLibraryFolders();
-      const libFolder = libraryDirs[registry.regular[library].id];
+      const libraryVersions = await logic.parseLibraryVersions();
+      const libFolder = contentLibraryFolder(request.params.folder, registry.regular[library].id, libraryVersions);
       const libs = await logic.computeDependencies(library, 'view', null, libFolder);
       const translations: Record<string, any> = {};
       for (let item of request.body.libraries) {
         const entry = libs[registry.reversed[item.split(' ')[0]].shortName];
-        const folder = libraryDirs[entry.id];
+        const folder = resolvedLibraryFolder(libraryVersions, entry);
         const idx = `${entry.id} ${entry.version!.major}.${entry.version!.minor}`;
         const languageFolder = `${config.folders.libraries}/${folder}/language`;
         const langFile = `${languageFolder}/${request.query.language}.json`;
@@ -421,7 +436,8 @@ export default {
       const output = await ajaxLibraries({
         library: request.params.library,
         libraries: request.body.libraries,
-        machineName: request.query.machineName
+        machineName: request.query.machineName,
+        version: request.query.majorVersion !== undefined ? `${request.query.majorVersion}.${request.query.minorVersion}` : undefined
       });
       response.set('Content-Type', 'application/json');
       response.end(JSON.stringify(output));
@@ -437,13 +453,14 @@ export default {
       const library = request.params.library;
       const folder = request.params.folder;
       const registry = await logic.getRegistry();
-      const libraryDirs = await logic.parseLibraryFolders();
+      const libraryVersions = await logic.parseLibraryVersions();
       if (!await verifySetup(library, response)) {
         return;
       }
+      const libFolder = contentLibraryFolder(folder, registry.regular[library].id, libraryVersions);
       const metadataSemantics = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'metadataSemantics.json'), 'utf-8');
       const copyrightSemantics = fs.readFileSync(path.join(rootFolder, config.folders.assets, 'copyrightSemantics.json'), 'utf-8');
-      const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
+      const libs = await logic.computeDependencies(library, 'edit', null, libFolder);
       const jsonContent = fs.readFileSync(`./content/${folder}/content.json`, 'utf8');
       let preloadedJs: string[] = [];
       let preloadedCss: string[] = [];
@@ -455,19 +472,19 @@ export default {
         if (!entry.id) {
           continue;
         }
-        const libFolder = libraryDirs[entry.id];
-        if (!libFolder) {
+        const entryFolder = resolvedLibraryFolder(libraryVersions, entry);
+        if (!entryFolder) {
           continue;
         }
         for (let jsItem of entry.preloadedJs ?? []) {
-          preloadedJs.push(`"/${config.folders.libraries}/${libFolder}/${jsItem.path}"`);
+          preloadedJs.push(`"/${config.folders.libraries}/${entryFolder}/${jsItem.path}"`);
         }
         for (let cssItem of entry.preloadedCss ?? []) {
-          preloadedCss.push(`"/${config.folders.libraries}/${libFolder}/${cssItem.path}"`);
+          preloadedCss.push(`"/${config.folders.libraries}/${entryFolder}/${cssItem.path}"`);
         }
       }
-      const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
-      const mathDisplayLabel = libraryDirs[mathDisplay.id];
+      const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, pickLibraryFolder(libraryVersions, registry.regular['h5p-math-display'].id)))['h5p-math-display'];
+      const mathDisplayLabel = resolvedLibraryFolder(libraryVersions, mathDisplay)!;
       preloadedJs.push(`"/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js"`);
       const libraryConfig = JSON.parse(fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
         baseUrl,
@@ -494,7 +511,10 @@ export default {
       }
       const labels = await getLangLabels();
       const machineName = `${libs[library].id} ${libs[library].version!.major}.${libs[library].version!.minor}`;
-      const libraryDirectories = JSON.stringify((await ajaxLibraries({ machineName: id })).directories);
+      const libraryDirectories = JSON.stringify((await ajaxLibraries({
+        machineName: id,
+        version: `${libs[library].version!.major}.${libs[library].version!.minor}`
+      })).directories);
       let input: Record<string, any> = {
         assets: config.folders.assets,
         libraries: config.folders.libraries,
@@ -534,12 +554,12 @@ export default {
       const library = request.params.library;
       const folder = request.params.folder;
       const registry = await logic.getRegistry();
-      const libraryDirs = await logic.parseLibraryFolders();
+      const libraryVersions = await logic.parseLibraryVersions();
       if (!await verifySetup(library, response)) {
         return;
       }
-      await logic.upgrade(folder, library);
-      const libs = await logic.computeDependencies(library, 'view', null, libraryDirs[registry.regular[library].id]);
+      const contentVersion = contentLibraryVersion(folder, registry.regular[library].id, libraryVersions);
+      const libs = await logic.computeDependencies(library, 'view', null, contentVersion.folder);
       const jsonContent = fs.readFileSync(`./content/${folder}/content.json`, 'utf8');
       const sessions = manageSession(request.params.folder, {
         language: request.query?.language,
@@ -556,19 +576,19 @@ export default {
         if (!entry.id) {
           continue;
         }
-        const libFolder = libraryDirs[entry.id];
-        if (!libFolder) {
+        const entryFolder = resolvedLibraryFolder(libraryVersions, entry);
+        if (!entryFolder) {
           continue;
         }
         for (let jsItem of entry.preloadedJs ?? []) {
-          preloadedJs.push(`/${config.folders.libraries}/${libFolder}/${jsItem.path}`);
+          preloadedJs.push(`/${config.folders.libraries}/${entryFolder}/${jsItem.path}`);
         }
         for (let cssItem of entry.preloadedCss ?? []) {
-          preloadedCss.push(`/${config.folders.libraries}/${libFolder}/${cssItem.path}`);
+          preloadedCss.push(`/${config.folders.libraries}/${entryFolder}/${cssItem.path}`);
         }
       }
-      const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, libraryDirs[registry.regular['h5p-math-display'].id]))['h5p-math-display'];
-      const mathDisplayLabel = libraryDirs[mathDisplay.id];
+      const mathDisplay = (await logic.computeDependencies('h5p-math-display', 'view', null, pickLibraryFolder(libraryVersions, registry.regular['h5p-math-display'].id)))['h5p-math-display'];
+      const mathDisplayLabel = resolvedLibraryFolder(libraryVersions, mathDisplay)!;
       preloadedJs.push(`/${config.folders.libraries}/${mathDisplayLabel}/dist/h5p-math-display.js`);
       const libraryConfig = JSON.parse(fromTemplate(fs.readFileSync(path.join(rootFolder, config.folders.assets, 'libraryConfig.json'), 'utf-8'), {
         baseUrl,
@@ -586,7 +606,10 @@ export default {
       }
       const machineName = `${id} ${libs[library].version!.major}.${libs[library].version!.minor}`;
       const labels = await getLangLabels();
-      const libraryDirectories = JSON.stringify((await ajaxLibraries({ machineName: id })).directories);
+      const libraryDirectories = JSON.stringify((await ajaxLibraries({
+        machineName: id,
+        version: `${libs[library].version!.major}.${libs[library].version!.minor}`
+      })).directories);
       let input: Record<string, any> = {
         assets: config.folders.assets,
         libraries: config.folders.libraries,
@@ -613,6 +636,7 @@ export default {
         watcher: config.files.watch,
         themeControls: config.themeControls ?? false,
         simple: request.query.simple ? 'hidden' : '',
+        versionWarning: contentVersion.saved && contentVersion.saved !== contentVersion.running ? '' : 'hidden',
         saveFreq: config.saveFreq
       }
       input = {...input, ...labels};
@@ -716,10 +740,9 @@ const parseContentFiles = (entries: any[]): Record<string, any> => {
   return output;
 }
 
-const computePreloaded = async (library: string, baseUrl: string) => {
-  const registry = await logic.getRegistry();
-  const libraryDirs = await logic.parseLibraryFolders();
-  const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
+const computePreloaded = async (library: string, libFolder: string | undefined, baseUrl: string) => {
+  const libraryVersions = await logic.parseLibraryVersions();
+  const libs = await logic.computeDependencies(library, 'edit', null, libFolder);
   const directories: Record<string, string> = {};
   const translations: Record<string, any> = {};
   const languages: string[] = [];
@@ -730,7 +753,7 @@ const computePreloaded = async (library: string, baseUrl: string) => {
     if (!entry.id) {
       continue;
     }
-    const folder = libraryDirs[entry.id];
+    const folder = resolvedLibraryFolder(libraryVersions, entry);
     if (!folder) {
       continue;
     }
@@ -769,41 +792,55 @@ const computePreloaded = async (library: string, baseUrl: string) => {
   return { library, preloadedJs, preloadedCss, languages, translations, directories };
 }
 
-const ajaxLibraries = async (options: { library?: string; libraries?: any[]; machineName?: string }) => {
+const ajaxLibraries = async (options: { library?: string; libraries?: any[]; machineName?: string; version?: string }) => {
   const baseUrl = config.api;
   const registry = await logic.getRegistry();
-  const libraryDirs = await logic.parseLibraryFolders();
-  let libraries: string[] = [options.library!];
-  if (Array.isArray(options.libraries)) {
-    libraries = [];
+  const libraryVersions = await logic.parseLibraryVersions();
+  let libraries: Array<{ library: string; folder?: string; isOld?: boolean }> = [];
+  if (options.machineName) {
+    libraries.push({
+      library: registry.reversed[options.machineName].shortName,
+      folder: pickLibraryFolder(libraryVersions, options.machineName, options.version)
+    });
+  }
+  else if (Array.isArray(options.libraries)) {
     for (let item of options.libraries) {
-      item = item.split(' ')[0];
-      if (!registry.reversed[item] || !libraryDirs[item]) {
+      const [machineName, version] = item.split(' ');
+      if (!registry.reversed[machineName] || !libraryVersions[machineName]) {
         continue;
       }
-      libraries.push(registry.reversed[item].shortName);
+      libraries.push({
+        library: registry.reversed[machineName].shortName,
+        folder: pickLibraryFolder(libraryVersions, machineName, version)
+      });
     }
   }
-  if (options.machineName) {
-    libraries = [];
-    libraries.push(registry.reversed[options.machineName].shortName);
+  else {
+    /* every installed version, older ones flagged the way H5P core does, so the
+    selector shows the content's own version and the editor upgrades it to the
+    newest one on save */
+    const id = registry.regular[options.library!].id;
+    const latest = pickLibraryFolder(libraryVersions, id);
+    const folders = Object.values(libraryVersions[id] ?? {});
+    for (let folder of folders.length ? folders : [latest]) {
+      libraries.push({ library: options.library!, folder, isOld: folder !== latest });
+    }
   }
   const toDo: Promise<any>[] = [];
   for (let item of libraries) {
-    toDo.push(computePreloaded(item, baseUrl));
+    toDo.push(computePreloaded(item.library, item.folder, baseUrl));
   }
   const preloaded = await Promise.all(toDo);
   let output: any;
   if (options.machineName) {
-    const library = libraries[0];
-    const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
+    const { library, folder } = libraries[0];
+    const libs = await logic.computeDependencies(library, 'edit', null, folder);
     const version = libs[library].version;
-    const folder = libraryDirs[libs[library].id];
     output = {
       name: libs[library].id,
       version,
       title: libs[library].title,
-      upgradesScript: `${baseUrl}/${config.folders.libraries}/${folder}/upgrades.js`,
+      upgradesScript: fs.existsSync(`${config.folders.libraries}/${folder}/upgrades.js`) ? `${baseUrl}/${config.folders.libraries}/${folder}/upgrades.js` : undefined,
       semantics: JSON.parse(fs.readFileSync(`${config.folders.libraries}/${folder}/semantics.json`, 'utf-8')),
       language: null,
       defaultLanguage: null,
@@ -816,9 +853,9 @@ const ajaxLibraries = async (options: { library?: string; libraries?: any[]; mac
   }
   else {
     output = [];
-    for (let item of preloaded) {
+    for (let item of libraries) {
       const library = item.library;
-      const libs = await logic.computeDependencies(library, 'edit', null, libraryDirs[registry.regular[library].id]);
+      const libs = await logic.computeDependencies(library, 'edit', null, item.folder);
       output.push({
         uberName: `${libs[library].id} ${libs[library].version!.major}.${libs[library].version!.minor}`,
         name: libs[library].id,
@@ -827,6 +864,7 @@ const ajaxLibraries = async (options: { library?: string; libraries?: any[]; mac
         title: libs[library].title,
         runnable: libs[library].runnable,
         restricted: false,
+        isOld: item.isOld,
         metadataSettings: libs[library].metadataSettings
       });
     }

@@ -13,6 +13,7 @@
   "lang_dashboard": "Dashboard",
   "lang_running": "läuft",
   "lang_contentCreatedFor": "Inhalt erstellt für",
+  "lang_versionNotInstalled": "ist nicht installiert. Dieser Inhalt läuft daher ohne Aktualisierung mit einer anderen Version und funktioniert möglicherweise nicht wie erwartet.",
   "lang_userStateSession": "Benutzerstatussitzung",
   "lang_newSession": "neue Sitzung",
   "lang_resetSession": "Sitzung zurücksetzen",

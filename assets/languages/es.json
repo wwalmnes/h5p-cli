@@ -13,6 +13,7 @@
   "lang_dashboard": "panel de control",
   "lang_running": "en ejecución",
   "lang_contentCreatedFor": "contenido creado para",
+  "lang_versionNotInstalled": "no está instalado, por lo que este contenido se ejecuta con otra versión sin actualizarse y puede que no funcione como se espera.",
   "lang_userStateSession": "sesión de estado del usuario",
   "lang_newSession": "nueva sesión",
   "lang_resetSession": "restablecer sesión",
