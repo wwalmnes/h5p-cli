@@ -7,7 +7,6 @@ export function serverCommand(): Command {
     .description('Run the dev server')
     .option('--port <port>', 'Override the default port')
     .action(async (options) => {
-      console.log('options: ', options)
       // logic/* is shared with the CLI; suppress its progress chrome so it
       // never animates into the server log. Replaces the old
       // `process.argv[2] !== 'server'` checks in compute-dependencies.
