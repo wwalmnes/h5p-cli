@@ -312,6 +312,53 @@ describe('computeDependencies', () => {
     expect(Object.keys(result).sort()).toEqual(['h5p-blanks', 'h5p-editor-blanks', 'h5p-joubel-ui']);
   });
 
+  /* With a ref, every edge looked its child's tags up again, one ls-remote at a
+  time — minutes for h5p-column. */
+  it('reads each repo\'s tags once, however many edges reach it', async () => {
+    const root = { ...BLANKS_LIBRARY_JSON, preloadedDependencies: [
+      { machineName: 'H5P.JoubelUI', majorVersion: 3, minorVersion: 3 },
+      { machineName: 'H5PEditor.Blanks', majorVersion: 1, minorVersion: 14 },
+    ] };
+    const editor = { ...EDITOR_LIBRARY_JSON, preloadedDependencies: [{ machineName: 'H5P.JoubelUI', majorVersion: 3, minorVersion: 3 }] };
+    const files: Record<string, object> = { 'h5p-blanks': root, 'h5p-editor-blanks': editor, 'h5p-joubel-ui': JOUBEL_LIBRARY_JSON };
+    const getTags = vi.fn().mockImplementation(async (_org, repo: string) => repo === 'h5p-joubel-ui' ? ['3.3.9'] : ['1.14.2']);
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ blanks: BLANKS_ENTRY, editor: EDITOR_ENTRY, joubel: JOUBEL_ENTRY })),
+      getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) => structuredClone(files[repoName])),
+      getTags,
+    });
+
+    await computeDependencies('h5p-blanks', 'view', 'feat/my-pr', undefined, port);
+
+    expect(getTags.mock.calls.filter(([, repo]) => repo === 'h5p-joubel-ui')).toHaveLength(1);
+  });
+
+  it('looks up the tags of a library\'s children concurrently', async () => {
+    const root = { ...BLANKS_LIBRARY_JSON, preloadedDependencies: [
+      { machineName: 'H5P.JoubelUI', majorVersion: 3, minorVersion: 3 },
+      { machineName: 'H5PEditor.Blanks', majorVersion: 1, minorVersion: 14 },
+    ] };
+    const files: Record<string, object> = { 'h5p-blanks': root, 'h5p-editor-blanks': EDITOR_LIBRARY_JSON, 'h5p-joubel-ui': JOUBEL_LIBRARY_JSON };
+    let inFlight = 0;
+    let peak = 0;
+    const port = makePort({
+      getRegistry: vi.fn().mockResolvedValue(makeRegistry({ blanks: BLANKS_ENTRY, editor: EDITOR_ENTRY, joubel: JOUBEL_ENTRY })),
+      getLibraryJson: vi.fn().mockImplementation(async (_folder, _org, repoName: string) => structuredClone(files[repoName])),
+      getTags: vi.fn().mockImplementation(async (_org, repo: string) => {
+        inFlight++;
+        peak = Math.max(peak, inFlight);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        inFlight--;
+        return repo === 'h5p-joubel-ui' ? ['3.3.9'] : ['1.14.2'];
+      }),
+    });
+
+    const result = await computeDependencies('h5p-blanks', 'view', 'feat/my-pr', undefined, port);
+
+    expect(peak).toBe(2);
+    expect(result['h5p-joubel-ui'].version).toEqual({ major: 3, minor: 3, patch: 0 });
+  });
+
   /* Prefetch is best-effort warming; a failure there must not change how or
   where the resolve reports the problem. */
   it('still reports a missing library.json when the prefetch fails', async () => {

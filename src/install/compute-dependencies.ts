@@ -65,8 +65,43 @@ export async function computeDependencies(
     return cache[dep].optionals;
   }
 
+  /* Tags are read once per repo. A library is reached over many edges, and
+  each one used to ls-remote it again, one edge at a time. */
+  const tagLists: Record<string, Promise<string[]>> = {};
+  const getTags = (org: string, repo: string): Promise<string[]> => {
+    const key = `${org}/${repo}`;
+    if (!tagLists[key]) {
+      const pending = io.getTags(org, repo);
+      tagLists[key] = pending;
+      // a failure is not remembered: the edge that needs the tags asks again and throws itself
+      pending.catch(() => {
+        if (tagLists[key] === pending) {
+          delete tagLists[key];
+        }
+      });
+    }
+    return tagLists[key];
+  }
+  // start the tag lookups a library's children will need, so compute() finds them in flight
+  const warmTags = (list: any, optionals: Record<string, any> | undefined, version: string) => {
+    if (version === 'master') {
+      return;
+    }
+    const children: string[] = [
+      ...(list.preloadedDependencies ?? []).map((item: LibraryDependency) => item.machineName),
+      ...Object.keys(optionals ?? {}),
+      ...(mode === 'edit' ? (list.editorDependencies ?? []).map((item: LibraryDependency) => item.machineName) : []),
+    ];
+    for (const machineName of children) {
+      const lib = registry.reversed[machineName];
+      if (lib?.shortName) {
+        void getTags(lib.org, lib.shortName);
+      }
+    }
+  }
+
   const latestPatch = async (org: string, repo: string, version: string) => {
-    const tags = await io.getTags(org, repo);
+    const tags = await getTags(org, repo);
     let patch = -1;
     for (const item of tags) {
       if (!item.startsWith(`${version}.`)) {
@@ -81,7 +116,7 @@ export async function computeDependencies(
         patch = candidate;
       }
     }
-    return patch > -1 ? `${version}.${patch}` : version;
+    return patch > -1 ? `${version}.${patch}` : 'master';
   }
   // determine if dependency needs to be processed
   const handleDepListEntry = async (machineName: string, parent: string, ver: string, dir: string | null | undefined) => {
@@ -151,6 +186,7 @@ export async function computeDependencies(
         // 404s when that patch is unreleased.
         cache[dep].semantics = await io.getSemanticsJson(dir, entry.org, repoName, version);
         cache[dep].optionals = parseSemanticLibraries(cache[dep].semantics);
+        warmTags(list, cache[dep].optionals, version);
       }
       catch {
         delete cache[dep];
@@ -204,6 +240,7 @@ export async function computeDependencies(
     done[level][dep].requiredBy!.push(requiredByPath);
     done[level][dep].level = level;
     const optionals = await getOptionals(dep, org, repoName, version, toDo[dep].folder);
+    warmTags(list, optionals, version);
     if (list.preloadedDependencies) {
       for (let item of list.preloadedDependencies) {
         const ver = version === 'master' ? version : `${item.majorVersion}.${item.minorVersion}`;
