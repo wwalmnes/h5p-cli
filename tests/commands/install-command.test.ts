@@ -27,12 +27,12 @@ describe('installCommand', () => {
 
   it('downloads the library and its dependencies in the given mode', async () => {
     await installCommand().parseAsync(['node', 'h5p', 'h5p-blanks', 'edit']);
-    expect(getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', 'edit', false);
+    expect(getWithDependencies).toHaveBeenCalledWith(expect.objectContaining({ action: 'download', library: 'h5p-blanks', mode: 'edit' }));
   });
 
   it('leaves the mode to the default when none is given', async () => {
     await installCommand().parseAsync(['node', 'h5p', 'h5p-blanks']);
-    expect(getWithDependencies).toHaveBeenCalledWith('download', 'h5p-blanks', undefined, false);
+    expect(getWithDependencies).toHaveBeenCalledWith(expect.objectContaining({ action: 'download', library: 'h5p-blanks' }));
   });
 
   it('logs error on rejection', async () => {

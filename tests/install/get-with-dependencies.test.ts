@@ -91,7 +91,7 @@ describe('logic.getWithDependencies', () => {
     fs.mkdirSync('libraries/H5P.JoubelUI-3.3', { recursive: true });
     fs.mkdirSync('libraries/H5P.Blanks-1.14', { recursive: true });
 
-    const result = await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
+    const result = await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false });
 
     expect(result).toContain('h5p-joubel-ui');
     expect(result).toContain('h5p-blanks');
@@ -106,7 +106,7 @@ describe('logic.getWithDependencies', () => {
   'master', so a pinned setup resolved the requested tag and cloned the tip
   anyway — while `download`, given the same arguments, honoured it. */
   it('clones the resolved tag when a version is pinned, not master', async () => {
-    await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
+    await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false });
 
     const cloneCalls = vi.mocked(spawn).mock.calls
       .map(args => String(args[0]))
@@ -117,7 +117,7 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('clones master when tracking latest', async () => {
-    await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+    await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
     const cloneCalls = vi.mocked(spawn).mock.calls
       .map(args => String(args[0]))
@@ -156,7 +156,7 @@ describe('logic.getWithDependencies', () => {
     const ran = () => vi.mocked(spawn).mock.calls.map(args => String(args[0]));
 
     it('pulls a clean master checkout', async () => {
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
       expect(ran()).toContain('git pull origin');
     });
@@ -166,7 +166,7 @@ describe('logic.getWithDependencies', () => {
     it('leaves a library with uncommitted changes alone', async () => {
       gitOutput['git status --porcelain'] = ' M src/blanks.js\n';
 
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
       expect(ran()).not.toContain('git pull origin');
       expect(stderr).toContain('uncommitted changes');
@@ -177,7 +177,7 @@ describe('logic.getWithDependencies', () => {
     it('leaves a library that is not a git checkout alone', async () => {
       fs.rmSync(`${folder}/.git`, { recursive: true, force: true });
 
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
       // only H5P.JoubelUI, which is still a checkout, is inspected and pulled
       expect(ran().filter(cmd => cmd === 'git status --porcelain')).toHaveLength(1);
@@ -188,7 +188,7 @@ describe('logic.getWithDependencies', () => {
     it('leaves a library checked out on another branch alone', async () => {
       gitOutput['git rev-parse --abbrev-ref HEAD'] = 'feature/thing\n';
 
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
       expect(ran()).not.toContain('git pull origin');
       expect(stderr).toContain('not master');
@@ -221,7 +221,7 @@ describe('logic.getWithDependencies', () => {
         return child;
       }) as any);
 
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
       const builds = vi.mocked(spawn).mock.calls.filter(
         ([cmd, options]) => String(cmd) === 'npm run build' && (options as any)?.cwd === folder,
@@ -232,7 +232,7 @@ describe('logic.getWithDependencies', () => {
     it('does not rebuild when the pull changed nothing', async () => {
       fs.writeFileSync(`${folder}/package.json`, JSON.stringify({ scripts: { build: 'rollup -c' } }));
 
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', true);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true });
 
       expect(ran()).not.toContain('npm run build');
     });
@@ -244,7 +244,7 @@ describe('logic.getWithDependencies', () => {
     });
 
     await expect(
-      logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+      logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false }),
     ).resolves.toBeDefined();
 
     expect(stderr).toContain('skipping optional unregistered');
@@ -256,17 +256,17 @@ describe('logic.getWithDependencies', () => {
     });
 
     await expect(
-      logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+      logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false }),
     ).rejects.toThrow('unregistered H5P.Required library');
   });
 
   it('toSkip accumulates — passing result of first call skips all already-processed libs', async () => {
-    const first = await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
+    const first = await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false });
 
     vi.mocked(spawn).mockClear();
 
     // Second call with toSkip = result of first; no clones should happen
-    await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false, first);
+    await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false, toSkip: first });
 
     const cloneCalls = vi.mocked(spawn).mock.calls.filter(
       (args) => typeof args[0] === 'string' && (args[0] as string).startsWith('git clone'),
@@ -298,7 +298,7 @@ describe('logic.getWithDependencies', () => {
   it('installs libraries concurrently', async () => {
     const state = trackingSpawn();
 
-    await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
+    await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false });
 
     expect(state.peak).toBeGreaterThan(1);
   });
@@ -306,7 +306,7 @@ describe('logic.getWithDependencies', () => {
   it('concurrency of 1 serialises installs', async () => {
     const state = trackingSpawn();
 
-    await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false, [], 1);
+    await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false, concurrency: 1});
 
     expect(state.peak).toBe(1);
   });
@@ -319,7 +319,7 @@ describe('logic.getWithDependencies', () => {
     } as any);
 
     await expect(
-      logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+      logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false }),
     ).rejects.toThrow('unregistered H5P.Required library');
 
     expect(state.peak).toBe(0);
@@ -352,7 +352,7 @@ describe('logic.getWithDependencies', () => {
     }) as any);
 
     await expect(
-      logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+      logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false }),
     ).rejects.toThrow('Command failed');
 
     kill.mockRestore();
@@ -362,7 +362,12 @@ describe('logic.getWithDependencies', () => {
   });
 
   it('clones only the root library at a git ref; deps stay on their tags', async () => {
-    await logic.installDependencies('clone', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+    await logic.installDependencies({
+      action:'clone',
+      list: DEP_MAP, 
+      concurrency: 1,
+      rootRef: { library: 'h5p-blanks', ref: 'feat/my-pr' },
+    });
 
     const cloneCalls = vi.mocked(spawn).mock.calls
       .map(args => String(args[0]))
@@ -389,7 +394,12 @@ describe('logic.getWithDependencies', () => {
       return child;
     }) as any);
 
-    await logic.installDependencies('clone', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+    await logic.installDependencies({
+      action: 'clone',
+      list: DEP_MAP,
+      concurrency: 1, 
+      rootRef: { library: 'h5p-blanks', ref: 'feat/my-pr' },
+    });
 
     const cloneCalls = vi.mocked(spawn).mock.calls
       .map(args => String(args[0]))
@@ -404,14 +414,24 @@ describe('logic.getWithDependencies', () => {
     }) as any);
 
     await expect(
-      logic.installDependencies('clone', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' }),
+      logic.installDependencies({
+        action: 'clone',
+        list: DEP_MAP,
+        concurrency: 1,
+        rootRef: { library: 'h5p-blanks', ref: 'feat/my-pr' },
+      }),
     ).rejects.toThrow('Command failed');
   });
 
   it('clones the root at a git ref even when the action is download', async () => {
     vi.spyOn(repo, 'download').mockResolvedValue(undefined);
 
-    await logic.installDependencies('download', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+    await logic.installDependencies({
+      action: 'download',
+      list: DEP_MAP,
+      concurrency: 1,
+      rootRef: { library: 'h5p-blanks', ref: 'feat/my-pr' },
+    });
 
     const cloneCalls = vi.mocked(spawn).mock.calls
       .map(args => String(args[0]))
@@ -423,7 +443,12 @@ describe('logic.getWithDependencies', () => {
   it('downloads dependencies when the action is download', async () => {
     const download = vi.spyOn(repo, 'download').mockResolvedValue(undefined);
 
-    await logic.installDependencies('download', DEP_MAP, false, [], 1, { library: 'h5p-blanks', ref: 'feat/my-pr' });
+    await logic.installDependencies({
+      action: 'download',
+      list: DEP_MAP,
+      concurrency: 1,
+      rootRef: { library: 'h5p-blanks', ref: 'feat/my-pr' },
+    });
 
     expect(download).toHaveBeenCalledWith('h5p', 'h5p-joubel-ui', '3.3.0', 'libraries/H5P.JoubelUI-3.3');
     expect(download.mock.calls.some(args => args[1] === 'h5p-blanks')).toBe(false);
@@ -440,7 +465,11 @@ describe('logic.getWithDependencies', () => {
       }
     });
 
-    await logic.installDependencies('download', DEP_MAP, false, [], 1);
+    await logic.installDependencies({
+      action: 'download',
+      list: DEP_MAP,
+      concurrency: 1
+    });
 
     expect(download).toHaveBeenCalledWith('h5p', 'h5p-joubel-ui', 'master', 'libraries/H5P.JoubelUI-3.3');
     expect(download).toHaveBeenCalledWith('h5p', 'h5p-blanks', 'master', 'libraries/H5P.Blanks-1.14');
@@ -452,8 +481,11 @@ describe('logic.getWithDependencies', () => {
       Object.assign(new Error('cannot download … (500)'), { status: 500 }),
     );
 
-    await expect(logic.installDependencies('download', DEP_MAP, false, [], 1))
-      .rejects.toThrow('(500)');
+    await expect(logic.installDependencies({
+      action: 'download',
+      list: DEP_MAP,
+      concurrency: 1
+    })).rejects.toThrow('(500)');
   });
 
   /* fs.existsSync(folder) is the whole already-installed test in _install, so a
@@ -501,7 +533,7 @@ describe('logic.getWithDependencies', () => {
       cloningSpawn({ buildStatus: 1 });
 
       await expect(
-        logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+        logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false }),
       ).rejects.toThrow('Command failed');
 
       expect(fs.existsSync(blanks)).toBe(false);
@@ -516,7 +548,7 @@ describe('logic.getWithDependencies', () => {
       cloningSpawn({ cloneStatus: 1 });
 
       await expect(
-        logic.getWithDependencies('clone', 'h5p-blanks', 'view', false),
+        logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false }),
       ).rejects.toThrow('Command failed');
 
       expect(fs.existsSync(blanks)).toBe(false);
@@ -560,7 +592,7 @@ describe('logic.getWithDependencies', () => {
       }) as any);
 
       await expect(
-        logic.getWithDependencies('clone', 'h5p-blanks', 'view', true),
+        logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: true }),
       ).rejects.toThrow('Command failed');
 
       expect(fs.existsSync(blanks)).toBe(true);
@@ -570,7 +602,7 @@ describe('logic.getWithDependencies', () => {
     it('claims nothing once every install has completed', async () => {
       cloningSpawn();
 
-      await logic.getWithDependencies('clone', 'h5p-blanks', 'view', false);
+      await logic.getWithDependencies({ action: 'clone', library: 'h5p-blanks', mode: 'view', latest: false });
 
       expect(incompleteInstalls.size).toBe(0);
     });

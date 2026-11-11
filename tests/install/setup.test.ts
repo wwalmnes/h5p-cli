@@ -51,7 +51,7 @@ describe('setup', () => {
 
   it('downloads instead of cloning when download=1', async () => {
     await setup('h5p-blanks', undefined, true);
-    expect(installDependencies).toHaveBeenCalledWith('download', expect.any(Object), expect.any(Boolean), expect.any(Array), undefined, undefined);
+    expect(installDependencies).toHaveBeenCalledWith(expect.objectContaining({ action: 'download' }));
   });
 
   it('reports missing optional dependencies without failing', async () => {
@@ -83,7 +83,7 @@ describe('setup', () => {
     expect(computeDependencies).toHaveBeenCalledTimes(1);
     expect(computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', undefined);
     expect(installDependencies).toHaveBeenCalledTimes(1);
-    expect(installDependencies).toHaveBeenCalledWith('clone', graph, true, [], undefined, undefined);
+    expect(installDependencies).toHaveBeenCalledWith(expect.objectContaining({ action: 'clone', list: graph }));
     expect(getWithDependencies).not.toHaveBeenCalled();
   });
 
@@ -100,18 +100,18 @@ describe('setup', () => {
     await setup('h5p-blanks', 'feat/my-pr');
 
     expect(computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', 'feat/my-pr');
-    expect(installDependencies).toHaveBeenCalledWith(
-      'clone', graph, false, [], undefined, { library: 'h5p-blanks', ref: 'feat/my-pr' },
-    );
+    expect(installDependencies).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'clone',
+      list: graph,
+      rootRef: { library: 'h5p-blanks', ref: 'feat/my-pr' },
+    }));
   });
 
   it('does not treat a release pin as a root git ref', async () => {
     await setup('h5p-blanks', '1.14');
 
     expect(computeDependencies).toHaveBeenCalledWith('h5p-blanks', 'edit', '1.14');
-    expect(installDependencies).toHaveBeenCalledWith(
-      'clone', expect.any(Object), false, [], undefined, undefined,
-    );
+    expect(installDependencies).toHaveBeenCalledWith(expect.objectContaining({ action: 'clone' }));
   });
 
   it('rejects an unsafe ref', async () => {

@@ -10,8 +10,23 @@ import type { ParsedGitUrl } from './h5p-utils.ts';
 import { ui } from '../ui/ui.ts';
 import { _exec } from './exec.ts';
 
+type getRepoFileParams = {
+  gitUrl: string;
+  path: string;
+  branch: string;
+  parseJson?: boolean;
+  cleanStart?: boolean;
+  shallow?: boolean;
+};
 // clone repo and retrieve file
-export const getRepoFile = async (gitUrl: string, path: string, branch = 'master', parseJson?: boolean, cleanStart?: boolean, shallow?: boolean): Promise<string | object> => {
+export const getRepoFile = async ({
+  gitUrl,
+  path,
+  branch = 'master',
+  parseJson = false,
+  cleanStart = false,
+  shallow = false
+}: getRepoFileParams): Promise<string | object> => {
   const { repoName } = parseGitUrl(gitUrl) as ParsedGitUrl;
   const target = `${config.folders.temp}/${repoName}_${sanitizeRefForPath(branch)}`;
   const filePath = `${target}/${path}`;

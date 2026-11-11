@@ -82,7 +82,12 @@ export const registryEntryFromRepoUrl = async (
   // no raw fallback on this path, and the result is written into the
   // registry, so a stale checkout here outlives the invocation
   await _refreshClone(repoName, 'master');
-  const list = await getRepoFile(gitUrl, 'library.json', 'master', true) as any;
+  const list = await getRepoFile({
+    gitUrl,
+    path: 'library.json',
+    branch: 'master',
+    parseJson: true
+  }) as any;
   const shortName = machineToShort(list.machineName);
   const type = host.split('.')[0];
   const output: Record<string, LibraryEntry> = {};

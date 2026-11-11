@@ -37,17 +37,17 @@ export async function setup(library: string, ref?: string, download?: boolean, c
   // deps still follow that ref's library.json.
   const rootRef = ref && !isReleaseVersion(ref) ? { library, ref } : undefined;
 
-  const result = await computeDependencies(library, 'edit', ref);
-  for (const item in result) {
-    if (result[item].id) continue;
-    if (!result[item].optional) {
-      throw new Error(`unregistered ${item} library required by ${result[item].parent}`);
+  const dependencies = await computeDependencies(library, 'edit', ref);
+  for (const item in dependencies) {
+    if (dependencies[item].id) continue;
+    if (!dependencies[item].optional) {
+      throw new Error(`unregistered ${item} library required by ${dependencies[item].parent}`);
     }
-    missingOptionals[item] ??= result[item];
+    missingOptionals[item] ??= dependencies[item];
   }
 
   ui.info(`${action} ${library} library dependencies into "${config.folders.libraries}" folder`);
-  await installDependencies(action, result, latest, [], concurrency, rootRef);
+  await installDependencies({action, list: dependencies, latest, concurrency, rootRef});
 
   if (Object.keys(missingOptionals).length) {
     ui.warn('missing optional libraries');

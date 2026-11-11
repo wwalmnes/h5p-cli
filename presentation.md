@@ -69,3 +69,4 @@ Logic - Currently too many responsibilities: mix of pure computational functions
 - `h5p branches` overwrites library.json -> should probably just add like `h5p utils dependency-check --apply` does.
 - Command to update folders in `libraries` to match the version they are? Perhaps `h5p utils dependency-check` can have an option to rename folder as well?
 - `h5p utils dependency-check` can exclude some libraries?
+- many new repoes get `main` as default branch instead of `master`. Need to handle default `master` and `main`

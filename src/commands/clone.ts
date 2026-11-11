@@ -34,7 +34,7 @@ Examples:
 
       try {
         ui.info(`cloning ${args.library} library and dependencies into "${config.folders.libraries}" folder`);
-        await getWithDependencies('clone', args.library, args.mode, false);
+        await getWithDependencies({ action: 'clone', library: args.library, mode: args.mode, latest: false });
         ui.success(`done installing ${args.library}`);
       } catch (error) {
         ui.fail(error);
