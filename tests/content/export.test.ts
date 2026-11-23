@@ -25,14 +25,14 @@ const writeLibrary = (machineName: string, minorVersion: number, preloadedDepend
   fs.writeFileSync(`${folder}/semantics.json`, '[]');
 };
 
-const writeContent = (folder: string, minorVersion: number) => {
+const writeContent = (folder: string, minorVersion: number, depMinorVersion = minorVersion) => {
   fs.mkdirSync(`content/${folder}`, { recursive: true });
   fs.writeFileSync(`content/${folder}/content.json`, '{}');
   fs.writeFileSync(`content/${folder}/h5p.json`, JSON.stringify({
     title: folder,
     mainLibrary: 'H5P.Foo',
     preloadedDependencies: [
-      { machineName: 'H5P.Dep', majorVersion: 1, minorVersion },
+      { machineName: 'H5P.Dep', majorVersion: 1, minorVersion: depMinorVersion },
       { machineName: 'H5P.Foo', majorVersion: 1, minorVersion },
     ],
   }));
@@ -75,5 +75,26 @@ describe('logic.export', () => {
     const file = await logic.export('h5p-foo', 'my-content');
 
     expect(packedLibraries(file)).toEqual([`H5P.Dep-1.${minorVersion}`, `H5P.Foo-1.${minorVersion}`]);
+  });
+
+  it('refuses when the version the content was saved with is not installed', async () => {
+    writeContent('my-content', 2);
+
+    await expect(logic.export('h5p-foo', 'my-content')).rejects.toThrow(
+      'content/my-content was saved with library versions the export would not contain:\n'
+      + '  H5P.Dep 1.2: the export would contain 1.1\n'
+      + '  H5P.Foo 1.2: the export would contain 1.1\n'
+      + 'Install those versions, or upgrade the content to the installed ones, then export again.'
+    );
+    expect(fs.existsSync('temp/my-content.h5p')).toBe(false);
+    expect(fs.existsSync('temp/my-content')).toBe(false);
+  });
+
+  it('refuses when a dependency was saved at another version than the library requires', async () => {
+    writeContent('my-content', 1, 0);
+
+    await expect(logic.export('h5p-foo', 'my-content')).rejects.toThrow(
+      /^content\/my-content was saved with library versions the export would not contain:\n  H5P\.Dep 1\.0: the export would contain 1\.1\n/
+    );
   });
 });

@@ -3,7 +3,7 @@ import fs from 'fs';
 import admZip from 'adm-zip';
 import config from '../config/loader.ts';
 import { upgradeContent } from './content-upgrade.ts';
-import type { LibraryDependency, LibraryVersionMap } from '../install/compute-dependencies.ts';
+import type { DependencyMap, LibraryDependency, LibraryVersionMap } from '../install/compute-dependencies.ts';
 import { getFileList } from '../h5p/files.ts';
 import { pickLibraryFolder, resolvedLibraryFolder } from '../h5p/h5p-utils.ts';
 import { getRegistry, parseLibraryFolders, parseLibraryVersions } from '../h5p/registry.ts';
@@ -41,18 +41,36 @@ export const contentLibraryVersion = (folder: string, machineName: string, versi
 export const contentLibraryFolder = (folder: string, machineName: string, versions: LibraryVersionMap): string | undefined =>
   contentLibraryVersion(folder, machineName, versions).folder;
 
+// refuses an export whose libraries differ from the versions content/<folder>/h5p.json was saved with
+const assertSavedVersionsExported = (folder: string, libs: DependencyMap): void => {
+  const info = JSON.parse(fs.readFileSync(`content/${folder}/h5p.json`, 'utf-8'));
+  const exported: Record<string, string> = {};
+  for (let item in libs) {
+    if (libs[item].id && libs[item].version) {
+      exported[libs[item].id] = `${libs[item].version.major}.${libs[item].version.minor}`;
+    }
+  }
+  const mismatches = (info.preloadedDependencies ?? [])
+    .filter((item: LibraryDependency) => exported[item.machineName] !== `${item.majorVersion}.${item.minorVersion}`)
+    .map((item: LibraryDependency) => `  ${item.machineName} ${item.majorVersion}.${item.minorVersion}: the export would contain ${exported[item.machineName] ?? 'none'}`);
+  if (mismatches.length) {
+    throw new Error(`content/${folder} was saved with library versions the export would not contain:\n${mismatches.join('\n')}\nInstall those versions, or upgrade the content to the installed ones, then export again.`);
+  }
+};
+
 // creates zip archive export file in the .h5p format
 export const exportContent = async (library: string, folder?: string): Promise<string> => {
   const registry = await getRegistry();
   const libraryVersions = await parseLibraryVersions();
   const libFolder = contentLibraryFolder(folder!, registry.regular[library].id, libraryVersions);
+  const libs = await computeDependencies(library, 'edit', null, libFolder);
+  assertSavedVersionsExported(folder!, libs);
   const target = `${config.folders.temp}/${folder}`;
   fs.rmSync(target, { recursive: true, force: true });
   fs.mkdirSync(target);
   fs.cpSync(`content/${folder}`, `${target}/content`, { recursive: true });
   fs.renameSync(`${target}/content/h5p.json`, `${target}/h5p.json`);
   fs.rmSync(`${target}/content/sessions`, { recursive: true, force: true });
-  const libs = await computeDependencies(library, 'edit', null, libFolder);
   for (let item in libs) {
     if (!libs[item].id) {
       // unregistered dependency: reported by `h5p missing`, nothing on disk to pack
