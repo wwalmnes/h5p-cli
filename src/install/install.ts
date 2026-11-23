@@ -153,7 +153,7 @@ type InstallOptions = {
   build?: boolean;
 };
 
-const _install = async (
+type _installProps = {
   action: 'clone' | 'download',
   org: string,
   repoName: string,
@@ -161,8 +161,20 @@ const _install = async (
   listVersion: string,
   version: string,
   folder: string,
-  { latest, isRootRef, build = true }: InstallOptions = {},
-): Promise<void> => {
+  options: InstallOptions,
+};
+
+const _install = async ({
+  action,
+  org,
+  repoName,
+  label,
+  listVersion,
+  version,
+  folder,
+  options = {},
+}: _installProps): Promise<void> => {
+  const { latest, isRootRef, build = true } = options;
   const shown = latest ? listVersion : version;
   if (fs.existsSync(folder)) {
     if (latest && !process.env.H5P_NO_UPDATES) {
@@ -311,16 +323,16 @@ export const installCore = async (items: CoreRepo[], latest?: boolean, concurren
     }
     const target = item.target!;
     folders[index] = target;
-    await _install(
-      'clone',
-      item.org,
-      item.repo,
-      target,
-      'master',
-      'master',
-      `${config.folders.libraries}/${target}`,
-      { latest, build: false },
-    );
+    await _install({
+      action: 'clone',
+      org: item.org,
+      repoName: item.repo,
+      label: target,
+      listVersion: 'master',
+      version: 'master',
+      folder: `${config.folders.libraries}/${target}`,
+      options: { latest, build: false },
+    });
   });
   try {
     await runPool(tasks, resolveConcurrency(concurrency));
@@ -333,6 +345,14 @@ export const installCore = async (items: CoreRepo[], latest?: boolean, concurren
   return folders;
 };
 
+type installDependenciesProps = {
+  action: 'clone' | 'download';
+  list: DependencyMap;
+  latest?: boolean;
+  toSkip?: string[];
+  concurrency?: number;
+  rootRef?: RootRef
+};
 /**
  * Installs an already-resolved dependency map into the libraries folder
  * @param action if dependencies should be installed with git or download
@@ -342,7 +362,14 @@ export const installCore = async (items: CoreRepo[], latest?: boolean, concurren
  * @param concurrency how many workers to run the task of installing
  * @returns
  */
-export const installDependencies = async (action: 'clone' | 'download', list: DependencyMap, latest?: boolean, toSkip: string[] = [], concurrency?: number, rootRef?: RootRef): Promise<string[]> => {
+export const installDependencies = async ({
+  action,
+  list,
+  latest = false,
+  toSkip = [],
+  concurrency,
+  rootRef,
+}: installDependenciesProps): Promise<string[]> => {
   const tasks: Array<() => Promise<void>> = [];
   for (let item in list) {
     if (toSkip.indexOf(item) != -1) {
@@ -364,7 +391,16 @@ export const installDependencies = async (action: 'clone' | 'download', list: De
     const useRootRef = Boolean(rootRef && item === rootRef.library);
     const version = useRootRef ? rootRef!.ref : (latest ? 'master' : listVersion);
     const folder = `${config.folders.libraries}/${label}`;
-    tasks.push(() => _install(action, entry.org, entry.repoName, label, listVersion, version, folder, { latest, isRootRef: useRootRef }));
+    tasks.push(() => _install({
+      action,
+      org: entry.org,
+      repoName: entry.repoName,
+      label,
+      listVersion,
+      version,
+      folder,
+      options: { latest, isRootRef: useRootRef }
+    }));
   }
   try {
     await runPool(tasks, resolveConcurrency(concurrency));
@@ -377,12 +413,27 @@ export const installDependencies = async (action: 'clone' | 'download', list: De
   return toSkip;
 };
 
+type getWithDependenciesProps = {
+  action: 'clone' | 'download';
+  library: string;
+  mode?: 'view' | 'edit';
+  latest?: boolean;
+  toSkip?: string[];
+  concurrency?: number;
+};
 /* resolves a library's dependencies and installs them; kept as the public
 one-shot entry point, now a thin pairing of the two halves above
 mode - 'view' or 'edit' to fetch non-editor or editor libraries */
-export const getWithDependencies = async (action: 'clone' | 'download', library: string, mode?: 'view' | 'edit', latest?: boolean, toSkip: string[] = [], concurrency?: number): Promise<string[]> => {
-  const list = await computeDependencies(library, mode ?? 'view');
-  return installDependencies(action, list, latest, toSkip, concurrency);
+export const getWithDependencies = async ({
+  action,
+  library,
+  mode = 'view',
+  latest = false,
+  toSkip = [],
+  concurrency,
+}: getWithDependenciesProps): Promise<string[]> => {
+  const list = await computeDependencies(library, mode);
+  return installDependencies({action, list, latest, toSkip, concurrency});
 };
 
 /* checks if dependencies are installed for a given library;
